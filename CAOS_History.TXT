@@ -1,0 +1,2581 @@
+Uebersicht der CAOS-Menueworte in CAOS 4.8:
+==========================================
+? = ?c, ?i
+A = ASM
+B = BASIC, BSAVE
+C = CD, COLOR
+D = DEVICE, DIR, DISASS, DISPLAY, DUMP
+E = EDIT, ERA
+F = (FORTH)
+G = GO
+H = HELP
+I = INIT
+J = JEDIT, JUMP
+K = KEY
+L = LOAD, LSTDEV
+M = MENU, MODIFY
+N =
+O =
+P = PRINT
+Q = QMR
+R = REASM, REBASIC, REEDIT, REN, RETEMO, (REFORTH)
+S = SAVE, SETRO, SETWR, STACK, SWITCH
+T = TEMO, TIME, TYPE
+U =
+V = V24DUP, VERIFY, VIEW
+W = WINDOW
+X =
+Y =
+Z =
+
+
+Speicherbelegung CAOS 4.8 (20.06.2021):
+======================	mit CAOS2	mit SYSROM	mit CAOS2+SYSROM
+CAOS 4.8
+CAOS-C:   54 Byte frei	46 Byte frei	25 Byte frei	17 Byte frei
+CAOS-E:    4 Byte frei	 4 Byte frei	 4 Byte frei	 4 Byte frei
+CAOS-F:    5 Byte frei	 5 Byte frei	 0 Byte frei	 0 Byte frei
+
+USER-C:    0 Byte frei	(BASIC)
+USER-D:   31 Byte frei	(Reassembler, Debugger, Jedit, Calc, Bsave)
+USER-E:   64 Byte frei	(EDAS 1.7)    1706 Byte frei	(ASM 2.0, ext. Editor)
+USER-F:  131 Byte frei	(Editor 0.5 mit IMPORT.KCC/HILFE.KCC extern)
+M052-C:  318 Byte frei	(mit Tastatur)	1012 Byte frei (ohne Tastatur)
+
+
+History:
+========
+
+22.08.2021:
+- CAOS48.Z80 kommentiert und ROM-Adressen eingetragen fuer Veroeffentlichung
+  der Quelltexte im KC85-Labor
+
+20.06.2021:
+- Zaehler ruecksetzen in der JUMP-Erweiterung beboetigt zusaetzlich noch einen
+  Taktimpuls um zu wirken: Deshalb JUMPC noch einmal ergaenzt.
+
+19.06.2021:
+- Keine Anzeige der CAOS-ROM-Ebene mehr in der SWITCH-Uebersicht wenn der
+  Zeichensatz umgeschaltet wurde mit Bit 4 von Port 86h bzw. SWITCH 5 umgeschal-
+  tet wurde. Dann sieht es wieder wie vorher aus und wer das nicht nutzt, merkt
+  gar nichts von dieser Option - spart ausserdem 19 Byte im CAOS-ROM-C
+
+14.06.2021:
+- Code im Modulcheck (interne Module) optimiert: Register B und DJNZ statt
+  Register A und DEC A, JR NZ, - spart 4 Byte
+- JUMP-Erweiterung nun komplett untergebracht
+
+13.06.2021:
+- Option SYSROM reduziert auf die JUMP-Erweiterung
+- Code zur Anzeige der Zeichensatz-Ebene optimiert (2 Byte gespart im ROM C)
+- Code fuer die JUMP-Erweiterung der internen Module begonnen. Es fehlen noch
+  7 Byte im ROM-C, es sind aber noch 4 Byte frei im ROM-E.
+
+07.06.2021:
+- CAOS: Bit 4(Port 86h) zur Umschaltung des Zeichensatzes definiert.
+  Dazu SWITCH-Kommando 5 erweitert und den Systemcheck der CAOS-ROM-Ebenen
+  mit 0/1 versehen. (Optional zuschaltbar mit dem Schalter CAOS2)
+  Das ist fuer die Flash-ROM-Erweiterung von Andreas Schlechte vorgesehen.
+  Alternativ auch Austausch der CAOS-ROM C E gegen einen 16K-Typ 27128
+
+05.06.2021:
+- USB: Initialisierung nochmals etwas veraendert
+  1. Abwarten (2,5sek), ob bereits Initialisierungsdaten anliegen.
+     Fuer den VCN2 wuerden zwar 1,25sek ausreichen, der VNC1 braucht aber mehr
+  2. Falls keine Daten kommen: VNC-Reset ausloesen und "RESET" anzeigen
+  3. Abwarten (2,5sek), ob jetzt Daten anliegen.
+     Falls nicht, "No Data TimeOut" anzeigen und Abbruch
+  Damit soll ausgeschlossen werden, dass kein doppelter VNC2-Reset ausgeloest
+  wird, nur wenn dieser beim Tasten-Reset nicht automatisch vom Modul erzeugt
+  wird. Offensichtlich verhalten sich die PIO's im PLCC-Gehaeuse bei einem
+  PIO-Reset etwas anders als die PIO's im DIL-Gehaeuse.
+
+30.05.2021:
+- EDIT: Argument bei PRINT und PPRINT dezimal erfassen mit dem neuen CAOS-UP
+  GARGC (spart 31 Byte)
+- Zeiger ZEI2 und ZEI3 wieder auf die gleichen Adressen verschoben wie in
+  CAOS 4.7. so steht es auch in CAOS48.INC und damit funktioniert auch die
+  Druckausgabe im Editor wieder. (Fehler seit 20.12.2020)
+
+29.05.2021:
+- BASIC: Notizspeicher-Erstbelegung korrigiert auf Adresse 0300H. Der Sprung zu
+  BASIC-Warmstart fuehrte 3 Byte vor das eigentliche Ziel aus nicht erklaertem
+  Grund.
+
+28.05.2021:
+- Strichcursor in beiden Zeichensaetzen jetzt 7 Pixel breit bemacht und Zeichen-
+  code fuer Dummy-Zeichen ebenfalls in allen Zeichensaetzen (auch IBM), damit
+  diese Zeichen nicht mehr zusammenkleben.
+- CAOS UP 4CH GARGC definiert zur Erfassung von Argumenten mit beliebiger
+  Zahlenbasis
+
+26.05.2021:
+- UP MULT in den ROM-F verschoben, da die Verwendung innerhalb RZAHL, innerhalb
+  RHEX den CAOS-ROM-C abschaltetet und die Menueworte im CAOS-ROM-C damit in's
+  Leere gelaufen sind (bei view)
+
+22.05.2021:
+- Menuewort COLOR auf dezimale Argumente und Anzeige umgestellt
+- WININC optimiert (3 Byte gespart)
+
+21.05.2021:
+- Bedeutung der Argumente beim CAOS-Kommando WINDOW analog der von BASIC
+  angepasst. spart ausserdem noch 3 Byte
+- BASIC: doppelte Fehlerueberwachung entfernt, da WININ dieses bereits
+  kontrolliert. -> 4 Byte gespart
+
+20.05.2021:
+- Schattenspeicher fuer 2-Bild-Modus bei RESET auch initialisieren und nicht
+  nur bei POWER-ON (+3 Byte im ROM C)
+- WINDC optimiert -> 3 Byte gespart
+
+19.05.2021:
+- CALC: RHEX modifiziert wie im CAOS und Sonderbehandlung fr die Zeichenfolge
+  "DEF" eingebaut. Diese wurde bisher als Token 94h uebersetzt und verursachte
+  eine SN-Error. (Frank Ludwig)
+- UP 4AH (HLDEZ) vom ROM-C in den ROM E verschoben. Damit kann es nun auch vom
+  Editor benutzt werden mit der 80-Zeichenroutine im USER-ROM.
+  (29 Byte im ROM-C gespart, dafuer 24 Byte im ROM-E belegt)
+  Routine HLDEZ im Editor ersetzt durch das CAOS-UP (26 Byte gespart)
+
+18.05.2021:
+- ASM: Fehlernummer mit HLDEZ anzeigen statt bisher HLHX, das Zaehlen der Fehler
+  kann nun einfach mit INC HL statt ADD + DAA gemacht werden
+- JEDIT: Kommando .WAIT an die Dezimal-Funktionen angepasst (spart 28 Byte)
+
+17.05.2021:
+- RZAHL nochmals angepasst nach Vorschlag von Frank Ludwig (1x RET C eingespart)
+
+15.05.2021:
+- Bei LOAD werden jetzt wieder bis zu 12 Zeichen Dateiname aus dem Vorblock
+  angezeit, bei TAPELIST aber nur 11 (wegen BASIC-Dateien, die ab dem 12. Byte
+  bereits Daten enthalten)
+
+13.05.2021:
+- DEP 3.5 USER-Bereiche bis 31 freigegeben (waren bisher nur bis 15 erlaubt)
+- USER-Bereich wird bei CD jetzt dezimal angezeigt und ist auch so einzugeben
+- GARG erweitert auf dezimal/hexadezimal Argumente
+- Bit 4 vom Epilogbyte umgewidmet. Bisher bedeutete es, dass genau die Anzahl
+  an Argumenten erforderlich war mit Ueberwachung "Zu viele Argumente". Das
+  wurde aber nicht wirklich benutzt. Deshalb kann nun mit Bit4=1 festgelegt
+  werden, dass die Argumente als Dezimalzahl gewertet werden.
+-> CAOS-Kommando "WINDOW" auf dezimale Argumente umgestellt.
+- UP TON: statt 90grad Phasenverschiebung nach Zeitkonstante versuchsweise
+  einen festen Wert von 10 als Verschiebung fuer CTC-Kanal 1 eingebaut.
+  Aber wieder verworfen, da bei BREAKOUT dann ein Dauerton entstand ...
+
+12.05.2021:
+- Anpassung der Funktion MULT (Vorbereitung fuer RDEZ)
+- Zahlenerfassung RZAHL mit beliebiger Basis -> neues RHEX und RDEZ
+- neues UP CALLC/CLROMC zum Aufruf eines Unterprogramms im ROM-C
+  -> benoetigt 14 zusaetzliche Bytes
+  Routinen mit Aufruf CON/COFF umgestellt auf neues UP "CLROMC"
+  <SWITCH>, <MODUL>, <WINAK>, <V24OUT>, <SIXD>, <SETDEV>, <MODI>, <WININ>,
+  <KEYLI>, <KEY>, <CIRCL>, <LINE>, <HLDEZ>, <MENU>, <V24DUP>, <PRINT>, 2x <PRAT>
+  -> 20 Byte frei im ROM-E und 33 Byte frei im ROM-F
+- PV7 nochmals korrigiert bezueglich Fehlerauswertung bei Nr. > 11
+
+09.05.2021:
+- Optimierung PV7 nach Vorschlag von Frank Ludwig uebernommen: 14 Byte gespart
+
+08.05.2021:
+- TEMO: SWITCH-Kommando korrigiert. schaltete Module nicht, da Register D von
+  UP 26H benutzt wird, der Parameter aber in Register E stand.
+  (Fehler vermutlich seit Optimierung am 28.03.2021 drin)
+
+02.05.2021:
+- Durch die gesparten Bytes bei der Menuewortsuche konnte ein neues CAOS-UP
+  zur Anzeige von Dezimalzahlen integriert werden, U:-Nr. 4AH
+  Im Editor kann die Routine aber dennoch nicht ersetzt werden, da die Dezimal-
+  Anzeige auch im 80-Zeichen-Modus benutzt wird (Spalte/Zeile) und der Sprung
+  zur benutzten CRT-Routine dann in den USER-ROM fuehren muesste und nicht in
+  den aktuell aktiven CAOS-ROM-C.
+- USB: Vorbereitungen getroffen, damit VNC-Type in Bit 7(MODE) gespeichert
+  werden kann. Bit 7 darf im Treiber nicht veraendert werden - nur bei INIT.
+
+01.05.2021:
+- UP TON nochmals geaendert nach neuer Idee von Frank Ludwig.
+  Das Ruecksetzen der Symmetrie-FF wurde wieder rausgenommen. Stattdessen wird
+  CTC1 so programmiert, das die Schwingungen um 90ø phasenverschoben sind (um
+  eine halbe Zeitkonstante versetzt). Dadurch ist es nicht mehr moeglich, dass
+  sich die Toene der beiden Kanaele aufheben. (spart ausserdem noch 2 Byte)
+- Code-Optimierung bei Menuewortsuche (aus Idee und Code von Frank Ludwig)
+  Sonderbehandlung Epilogbyte 1EH aber verworfen - spart 9 Byte im ROM-F
+
+30.04.2021:
+- USB: ISR so modifiziert, dass bei losgelassener Taste (Code 00h) auch noch
+  einmal nach FIFO-Daten geschaut wird. Das war vorher nicht der Fall, weil
+  ein RET Z die ISR bei Code 00h beendet hatte.
+- EDIT: Fuer Menuewortsuche bei ZSUCH das Menuewort von EDIT als Vergleichs-
+  Zeichenkette benutzt. Das funktioniert, weil das Zeichenkettenende ein belie-
+  biges Steuerzeichen sein kann. (spart 5 Byte ein)
+- JEDIT: Vergleichszeichenkette "MENU" siehe EDIT (spart auch dort 5 Byte ein)
+- USB: Vergleichszeichenkette "MENU" siehe EDIT (spart auch dort 5 Byte ein)
+- USB: Abbruch mit CY=0 bei CD ohne Argument und ohne Eingabe oder BRK
+  (sonst kam xy-ERROR mit undefinierten Daten in Register DE)
+
+26.04.2021:
+- USB: DIR-Kommando im Terminal brachte keinen Fehler, wenn kein Stick ange-
+  steckt war: Zusaetzliche Abfrage eingebaut. Als erstes kommt beim DIR ein
+  einzelnes CR, ansonsten ist es ein Fehlercode!
+
+25.04.2021:
+- USB: CD / brachte Fehler "ND-ERROR" nicht zur Anzeige, da DE-Register im
+  Fehlerfall trotzdem den Zeiger auf den Pfad enthielt -> korrigiert.
+- USB: Bei Suche der Datei INITIAL.UUU wurde in den Filemode geschaltet und
+  danach nicht wieder zurck. Deshalb funktionierte die USB-Tastatur beim
+  Anstecken eines USB-Sticks nicht mehr. (CALL TEST statt CALL TEST2 benutzt)
+
+20.04.2021:
+- USB: Damit USB-Tastatur auch bei CAOS 4.2 auf Anhieb funktioniert, muessen
+  die beim Booten anliegenden Daten abgeholt werden
+- USB: Absturz, falls bei UISRI der Pfad fehlerhaft war -> JR	C,UMBI3 statt
+  RET C
+ 
+19.04.2021:
+- USB: RESET-Impuls kommt jetzt nur noch bei Tasten-RESET und nicht mehr bei
+  POWER-ON.
+
+18.04.2021:
+- USB: Anzeige der USB-Version in der Bootmeldung bei CAOS 4.8 integriert
+- USB: Reihenfolge der Port-Initialisierung geaendert, damit RESET-Ausgang
+  von hochohmig nach High geht und nicht erst kurz Low wird
+
+17.04.2021:
+- M052: USB-Tastatur zusatzlich Bit 0 als Interrupt-Ausloeser freigegeben
+  hat aber keine Verbesserung gebracht, also wieder zurueck genommen.
+
+13.04.2021:
+- M052-Interrupt im Terminal-Mode: Nach Einlesen einer Tastensequenz wird nun
+  noch kontrolliert, ob eventuell auch noch FIFO-Daten anliegen und abgeholt
+  werden muessen.
+
+12.04.2021:
+- Versuch, die FIFO-ISR im Terminalmodus noch etwas stabiler zu machen. Dazu am
+  Ende noch einmal kontrollieren, ob inzwischen nicht doch noch Daten gekommen
+  sind. (Fehler von DL beschrieben, dass sich die Anzeige im Terminalmodus
+  sporadisch aufhaengt unter CAOS 4.2, warum nur dort ???)
+
+04.04.2021:
+- Im Disassembler hatte sich ein Fehler eingeschlichen: High(HLRET) war nicht
+  mehr gleich der High-Adressen der Macro-Sprungtabelle. (Optimierung fuer FIND)
+  -> HLRET wieder an alte Stelle gesetzt
+  -> CALL PV1, DB RHEX an allen Stellen durch CALL GETHEX ersetzt
+
+03.04.2021:
+- wegen zweimal 3EH hintereinander bei Marke SUP5: erschien eine leere Menue-
+  zeile im VINCULUM-Menu -> Reihenfolge der Befehle umgestellt, sodass nach den
+  2x 3EH kein Byte folgt, das kleiner als 20h ist.
+
+02.04.2021:
+- Fehlerhafte Uebergabe der Dateimaske bei USB:FFIRST korrigiert
+- TAPELIST zeigt bei BASIC-Dateien falsche Daten an, da das 12. Zeichen bereits
+  gueltigen Inhalt haben kann: Namensanzeige wieder auf 11+3 zurueck geaendert
+  00 im Dateinamen nicht mehr weglassen sondern durch Leerzeichen ersetzen
+  Adressen auf feste Spalte anzeigen
+- UP HLDEZ in ROM-D eingebaut zur Anzeige der Anzahl Dateien bei TAPELIST
+
+01.04.2021:
+- BASIC: MBIN zeigt bei erwartetem Kopfblock jetzt auch die gelesene Blocknummer
+  mit an und nicht nur einen Stern.
+
+31.03.2021:
+- RDBLK: Bei fehlerhaftem Block fehlte ein CR+LF -> ergaenzt
+  Erkennung korrekte Blocknummer vereinfacht
+
+30.03.2021:
+- Versuch, die Blocknummernanzeige zu vereinheitlichen bei MBIN genauso wie
+  bei LOAD und bei MBOUT so wie bei SAVE (Speicher im ROM-F reicht noch nicht)
+  Dazu BRKT von ROM-E nach ROM-F verschoben und CSTB von ROM-F nach ROM-E
+  -> im ROM-E und im ROM-F je 1 Byte frei
+
+29.03.2021:
+- MBIN: Blocknummernunterdrueckung funktionierte nur bei TAPE -> korrigiert
+  MBIN nutzt nun zur Blocknummernanzeige das Unterprogramm LUP5
+  MBOUT nutzt nun zur Blocknummernanzeige das Unterprogramm SUP5
+  Blocknummernausgabeunterdrueckung jetzt auch bei MBOUT aktivierbar
+
+28.03.2021:
+- Code-Optimierung in USER-ROM: Debugger-Ebene (REAS, TEMO, JEDIT, CALC)
+  Hilfe-Funktion optimiert mit CALL HELP, DB 'Zeichenkette'
+  TEMO: Kommando FIND neu aufgenommen
+
+27.03.2021:
+- UP TON: bei gleichen Parametern (ARG1=ARG2) Symmetrie-FlipFlop ruecksetzen
+- TAPELIST schaltete den CAOS-ROM-C nicht wieder weg (bemerkt von Frank Ludwig)
+  Ursache war der verschachtelte Aufruf von PV7 (MBI) innerhalb von TLIST
+  -> geaendert in CALL TMBI (ist ja sowieso nur bei TAPE im Einsatz)
+- USB:CREATE hier fehlte noch ein RET C nach dem Aufruf von APP1
+  USB:OPEN meldet die Dateigroesse zurueck in Register DEBC
+
+26.03.2021:
+- USB: Funktion #15 zum Test, ob USB-Stick vorhanden ist.
+
+21.03.2021:
+- CAOS-UP 49H verbessert: gibt in A jetzt immer die Treibernummer und in HL den
+  Namen des aktiven Treibers zurueck. Im ROM-C dafuer nur noch 26 Byte frei
+- EDIT/ASM: Abfrage DEVICE=Kassette von A=8 auf A=0FDH geaendert
+- DEVICE-Test Kassette mit DEVICE-Ermittlung kombiniert -> 4 Byte ROM-E gespart
+- USB: Beim Ueberschreib-Test TESTX auf CY-Flag testen, nicht auf Z-Flag
+
+20.03.2021:
+- USB: Maskenpruefung bei FindFirst/FindNext optimiert und getestet
+
+15.03.2021:
+- USB: erste Vorbereitungen zu Unter-Funktionen FindFirst und FindNext
+  neue Fehlercodes NF und DE fuer Verzeichnisroutinen definiert
+  (Maskenauswertung funktioniert noch nicht)
+
+14.03.2021:
+- USB: ERA/REN Dateinamensabfrage (NAME6) fuer USB-Tastatur korrigiert bezueg-
+  lich MODE-Umschaltung bei Eingabe. Bei ERA und REN darf jetzt auch ein Pfad
+  vorangestellt werden (REN nur beim ersten Dateinamen!)
+- USB: RD128 beschreibt den letzten (nicht vollstaendigen) Block nicht mehr
+  komplett mit 03, sondern mit 00 und nur das erste Byte nach den Daten mit 03.
+  Das ist fuer TYPE bei sehr kleinen Dateien besser, weil es sonst mit 03 einen
+  gueltigen CAOS-Vorblock vermutete.
+
+10.03.2021:
+- USB: WRITE umbenannt in WR128, nutzt jetzt WRITEX mit
+
+08.03.2021:
+- USB: UDIR funktionierte noch nicht mit Pfadangabe weil PFAD vor USYNC
+  aufgerufen wurde -> Reihenfolge geaendert
+  PUTX und GETX bei Fehler POP AF / RET C direkt eine Ebene hoeher!
+  (das erspart ein RET C nach jedem PUTX/GETX)
+
+07.03.2021:
+- USB: bei "uload" und "usave" ebenfalls den Pfad mit ermoeglicht
+- BASIC: UP MASK ueberarbeitet sodass jetzt auch laengere Pfadnamen bei den
+  Befehlen CHDIR, BLOAD (und FILES) uebergeben werden koennen
+  FILES funktioniert noch nicht, weil UDIR noch keine Pfadnamen kennt.
+
+06.03.2021:
+- USB: bei UISRI und UISRO Pfad ermoeglicht
+	LOAD und RD128 nutzt jetzt READX mit
+	UP HLDEZ optimiert
+	Datum im Terminalfenster mit fuehrenden Nullen angezeigt
+	IBM-Zeichensatz im Terminalfenster
+	Sonderbehandlung fuer Zeichencode 7EH (Tilde) im Terminalfenster
+	(ab CAOS 4.3 IBM-Zeichensatz, sonst modifizierter CCTL0)
+
+05.03.2021:
+- UBASEX: ueberfluessigen Befehl CALL UOPENR entfernt
+- USB: Rueckgabe der Dateigroesse bei TEST in 32 Bit (bis zu 4 GByte)
+       UTEST nutzt TESTX mit Pruefung, ob Datei vorhanden ist
+       UOPENR nutzt TESTX (Dateigroesse fuer NUMVX/NUMNX) und OPEN1 mit
+       UOPENW nutzt APP2 mit
+
+03.03.2021:
+- CALC: neue Version von Frank Ludwig erhalten, funktioniert jetzt mit 24 Bit
+  HEX-Zahlen und ist 25 Byte kuerzer. -> 26 Byte frei
+
+02.03.2021:
+- JEDIT: korrigiert durch Frank Ludwig (Es wurde nur der erste Parameter
+  ausgewertet) -> 13 Byte frei im Debugger-ROM
+- CALC: neue Version rechnet jetzt mit 24 Bit HEX-Zahlen -> 1 Byte frei
+  aber wieder verworfen, da HEX-Zahl-Erfassung nicht funktioniert.
+
+28.01.2021:
+- USB: RAWIN und RAWOUT ueberwachen jetzt die korrekte Betriebsart (USER-Mode)
+  und kommen mit Fehlercode "MD" zurueck, falls dieser nicht ansteht.
+
+22.01.2021:
+- USB: APPEND, CREATE, WRITE1 und WRITEN programmiert
+
+21.02.2021:
+- USB: OPEN, READ1, READN und CLOSE programmiert
+- USB: TEST konvertiert Dateiname 8.3 wie bei OPEN, damit wird verhindert, dass
+  ohne Dateityp Verzeichnisse gefunden werden. Ohne Dateityp wird dann KCC ange-
+  fuegt.
+
+20.02.2021:
+- USB: Pfad-Unterstuetzung nach Vorschlag von Jens Mueller eingebaut.
+  * beginnt Pfad mit "/" oder "\", dann ist es ein absoluter Pfad, also ab dem
+    Wurzelverzeichnis
+  * bei CD wird der gesamte String als Pfad ausgewertet, Fehlerrueckmeldung per
+    CY-Flag und Fehlercode in DE 
+  Unterprogramm EXEC holt Fehlercode nur noch nach DE und zeigt nichts mehr an
+  Suche der INITIAL.UUU mit Unterprogramm TEST
+  Alle Unterprogramme von PUTW/GET umgestellt auf PUTX/GETX
+
+16.02.2021:
+- USB: USYNC umgestellt auf PUTX/GETX und Fehlerrueckgabe in DE geprueft
+- CR+LF an Meldung "Keine MC-Datei" angehaengt (war frueher in CSRI enthalten)
+  -> JEDIT.Z80 umgestellt von CAOS47.INC auf CAOS48.INC
+
+15.02.2021:
+- JEDIT an CAOS 4.8 angepasst nach Vorschlag von Frank Ludwig
+- Vereinbarungen in EQU48.INC und CAOS48.INC synchronisiert
+  -> M052USB.Z80 umgestellt con CAOS47.INC auf CAOS48.INC
+  -> M064GIDE.Z80 umgestellt con CAOS47.INC auf CAOS48.INC
+  -> EEPSDP31.Z80 umgestellt con CAOS47.INC auf CAOS48.INC
+  -> HILFE.Z80 umgestellt von CAOS47.INC auf CAOS48.INC
+  -> IMPORT.Z80 umgestellt von CAOS47.INC auf CAOS48.INC
+  -> EDITOR.Z80 umgestellt von CAOS47.INC auf CAOS48.INC
+  -> EDAS.Z80 umgestellt von CAOS47.INC auf CAOS48.INC
+
+14.02.2021:
+- DEVICE-Treiber-Funktion 6 dient jetzt nur noch zur Versionsabfrage. Bei TAPE
+  und DISK wird Version 0 zurueck gemeldet.
+- Treiber-spezifische Funktionen sind nun ueber Funktion 7 aufzurufen.
+- USB: USER-Routine fuer Test vorhandene Datei und Dateigtroesse erstellt und
+  getestet
+
+12.02.2021:
+- USB: USER-Routinen fuer byteweise I/O-Routinen begonnen
+
+11.02.2021:
+- USB: Versionsabfrage und Treiberfunktionen auf Funktion 6 umgelegt. File-Mode
+  schaltet jetz die PIO mit ein und CAOS-Mode wieder aus.
+
+10.02.2021:
+- DEVICE-Treiber-Kennung fuer M052 auf 46h belassen, obwohl die Routinen MBIN
+  und MBOUT nicht mehr enthalten sind. Aber CAOS 4.7 suchte noch keine Treiber
+  im Modul und CAOS 4.7 bzw. 4.8 nutzt MBIN/MBOUT nicht mehr.
+
+09.02.2021:
+- USB-Version 3.0 ermoeglicht den Wechsel zwischen File-Mode und CAOS-Mode per
+  Aufruf ueber PV7, Funktion 7
+  ( Funktion Nr. 6 weiterhin unbenutzt )
+
+07.02.2021:
+- EDIT: LOAD ueberschreibt den aktuellen Dateinamen nicht, wenn schon einer
+  im Speicher steht. Zum Beispiel beim Nachladen von Text-Teilen.
+- CF48.INC: Kommentare bei BASIC-Token ergaenzt
+
+06.02.2021:
+- EDIT: Bei Anzeige von Textzeilen mit genau 80 Zeichen wurde nach dem CR/LF
+  noch eine zweite Leerzeile angezeigt. -> CR/LF komplett uebergehen!
+
+27.01.2021:
+- Bei V.24-Modul im System wurde HCADR mit 0000 initialisiert statt mit NOOP.
+  (Fehler seit CAOS 4.6 enthalten) => Adresse NOOP im UP SIOADR an einer
+  anderen Stelle vorgegeben.
+- RANDOMIZE-Funktion von BASIC optimiert nach Vorschlag von Frank Ludwig
+
+16.01.2021:
+- Strukturbyte 76h definiert als 4MB ROM-Modul (geplant von Bert Lange)
+  255 Segmente zu je 16 KByte auf Adresse C000H fest
+
+10.01.2021:
+- Zeichencode 5FH im duennen Zeichensatz auch wieder von der vorletzten auf die
+  letzte Zeile gelegt, da dieser vielmals als Linie genutzt wird (z.B. Editor,
+  ASM, WordPro), damit die Aenderung vom 15.10.2020 komplett zurueck genommen.
+
+02.01.2021:
+- Zeichencode 5FH im duennen Zeichensatz wieder mit 8 Pixeln gezeichnet, da
+  dieser vielmals als Linie genutzt wird (z.B. Editor, ASM, WordPro), damit die
+  Aenderung vom 15.10.2020 wieder zurueck genommen.
+
+30.12.2020:
+- Bei Druckerinitialisierung nur noch ein CR senden (statt bisher CR+LF), sonst
+  wird jedes Mal eine Zeile weiter geschaltet...
+
+29.12.2020:
+- BASIC PRINT AT zerstoerte im Fenstervektor die Daten von Fenster Nr. 8+9, da
+  diese als Zwischenspeicher der aktuellen Werte missbraucht wurden
+  -> in CAOS 3.4 abgeschaut: aktuelle Daten im Vektorspeicher des aktuellen
+  Fensters zwischenspeichern (spart ausserdem noch 7 Byte im ROM-E)
+
+20.12.2020:
+- fuer bessere Kompatibilitaet den Sprung zu PV1 im ROM-F wieder als JP einge-
+  tragen und dafuer den Sprung zu PV5 als JR
+  (Es gibt Programme, welche die Adresse von PV1 aus F004H auslesen und direkt
+  dorthin springen, z.B. BigTurn)
+
+12.12.2020:
+- BASIC-Schutz teilweise deaktiviert: Beim Einlesen einer geschuetzten wird das
+  Flag fuer den Schutz nicht mehr gesetzt und bei BYE das Programm nicht mehr
+  geloescht. -> spart 15 Byte im ROM-F und 3 Byte im ROM-C
+
+08.12.2020:
+- Durch die Verlagerung von BASON in den ROM-F (siehe 16.09.2020) funktionierte
+  der Autostart der KCB-Dateien nicht mehr. Die Autostart-Routine springt BASON
+  auf E02FH an! Also BASON wieder in den ROM-E gebracht und dafuer MBO...CSRI
+  sowie WAIT in den ROM-F verlagert.
+
+28.11.2020:
+- Pufferloeschen CLC nach Ausgabe des Datenblocks bei MBOUT wieder entfernt.
+  (CLC war in CAOS 4.7 enthalten seit dem 07.04.2017)
+- Vortonlaenge konnte jetzt auch wieder euf 160 reduziert werden.
+
+24.11.2020:
+- Idee mit dem Einlesen des Datenblocks bei leerem Puffer wieder verworfen,
+  denn jetzt wird nach dem letzten Byte 03H noch versucht, einen weiteren Block
+  zu lesen, der aber nicht mehr vorhanden ist -> also wird nun bei Kassette der
+  Endeblock von BASIC-Dateien wieder 2x ausgegeben.
+- Vortonlaenge wieder von 160 auf 200 erhoeht, damit das Einlesen auch wieder
+  fehlerfrei und in anderen CAOS-Versionen funktioniert.
+
+23.11.2020:
+- Aufspaltung der Option SYSROM in SYSROM und USER8, damit kann man auch nur die
+  Verdoppelung der USER-ROM-Ebenen aktivieren.
+
+21.11.2020:
+- MBIN so geaendert wie beim KC87 - jetzt wird der Puffer bereits neu gefuellt,
+  wenn das letzte Byte entnommen wurde und nicht erst, wenn das erste Byte
+  benoetigt wird. Dadurch wird der letzte Block nun wieder korrekt eingelesen.
+  Die Vortonlaenge jetzt wieder auf 160 zurueck geaendert.
+
+11.11.2020:
+- Fuer das BASIC-Problem koennte auch NUR bei TAPE der letzte Block 2x
+  ausgegeben werden. Dann waere das wie zuvor und bei USB/DISK stimmt die
+  Dateigroesse auch. Das benoetigt aber zusaetzliche 9 Byte im ROM-C
+
+10.11.2020:
+- Frank Ludwig hat bemerkt, dass durch den weggelassenen zusaetzlichen Endeblock
+  BASIC-Dateien nicht mehr korrekt eingelesen werden wenn das Ende-Kennbyte 03h
+  das erste Byte im Endeblock ist (siehe 17.02.2019)
+  --> Vortonlaenge von 160 auf 200 erhoeht
+
+15.10.2020:
+- Zeichencode 5FH im duennen Zeichensatz geaendert (Strich auf vorletzter Zeile
+  und nur 7 Pixel breit)
+
+01.10.2020:
+- Lage der CAOS-Arbeitszellen im IRM-Bereich von AAxxh nochmals neu sortiert,
+  sodass jetzt nach der SUTAB der freie Bereich liegt und die SUTAB dort direkt
+  erweitert werden koennte. Dazu auch die Laenge der SUTAB auf AA00H eingetragen
+	sulen	aa00			1 Byte
+	sutab	aa01 - aa94		148 Byte
+	frei	aa95 - aabf	42 Byte
+		=> z.B. fuer 21 Routinen (4ah bis max. 5eh)
+	joyirm	aac0 - aacb		12 Byte
+	jwork	aacc - aadc		17 Byte
+	win2	aadd - aae7		11 Byte
+	wtemo	aae8 - aaff		24 Byte
+
+30.09.2020:
+- Lage des Schattenspeichers noch einmal geaendert, da sich dieser mit dem
+  INITIAL-UUU-Speicher ueberlagerte.
+- Reihenfolge der Fenster-Initialisierung geaendert, sodass nach dem Einschalten
+  Fenster Nr. 0 aktiv ist und nicht mehr wie von CAOS 4.1 bis 4.7 Fenster Nr. 9
+
+29.09.2020:
+- Strichcursor bei duennem Zeichensatz von 7 auf 6 Pixel verkuerzt und ganz
+  links begonnen
+
+20.09.2020:
+- EDIT: Bildschirm loeschen bei EDIT/REEDIT optimiert und an 2-Monitor-Modus
+  angepasst
+
+19.09.2020:
+- Kontrolle auf Vertraeglichkeit mit 2 Bildern
+  M052USB: OK
+  TEMO: speichert Fensterdaten selbst ab und ruft danach ESC-1 oder ESC-2 auf
+        das duerfte aber nicht weiter stoeren. Setzt STBT fuer das Fenster 2
+        auf 0 und damit Fenstermode = alt. Beim Zurueckschalten auf das Anwen-
+        derfenster 1 werden aber die vorherigen Einstellungen wieder aktiv.
+  CALC: Setzt STBT auf einen festen Wert waehrend der Abarbeitung im eigenen
+        Fenster. Dir Original-Werte werden rerettet und regeneriert: OK
+  EDAS: setzt Farbe Schreiben AUS, sonst nichts
+        Beim Start wird mit ESC-3, ESC-1 definierte Anfangseinstellung erzeugt.
+  EDIT: initialisiert erst das Fenster, dann mit ESC-3 und ESC-1 den Bildschirm
+        dabei koennte das Fenster wieder verstellt werden.
+
+16.09.2020:
+- 1 Byte gespart durch Verlagerung des UP "BASON" direkt vor "SCROFF", dadurch
+  JR statt JP verwendbar.
+- 1 Byte gespart durch JR IAD1 bei DABR
+- 20 Byte vom ROM-F in den ROM-E verlagert (BUPTAB und String INITIAL.UUU)
+-> jetzt 0 Byte frei im ROM-E und 0 Byte frei im ROM-F
+
+23.08.2020:
+- Bildmodus-Umschaltung mit ESC-G von Bit 6,(IX+7) auf Bit 7,(STBT) verlegt
+- RHEX darf doch nicht in den ROM-C, da Aufruf innerhalb GARG und dann bei
+  Menueworten im ROM-C dieser abgeschalten wird...
+  -> RHEX wieder im ROM-F, ZIBM wieder im ROM-D (8 Byte fehlen noch im ROM-F)
+- 1 Byte gespart in Routine RHEX durch Optimierung der Ende-Abfrage
+- 1 Byte gespart in Routine SAVE durch 1-Byte-Sprungbefehl
+  -> 6 Byte noch zu optimieren.
+
+13.08.2020:
+- ESC-G zur Umschaltung des Grafikmodus probiert - wirkt auf Bit 6,(IX+7)
+  wird aber von LOAD/VERIFY noch zurueckgesetzt
+  -> oder Bit 7(STBT) verwenden?
+- Module MP3 und MT02 freigegeben in Moduldefinitionsliste
+- UP RHEX in den ROM-C ausgelagert
+- ZIBM dafuer in den ROM-F verschoben weil ROM-C jetzt voll ist!
+
+08.08.2020:
+- IBM-Zeichensatz (normal) nochmals angepasst, sodass die Bytefolge 7F, 7F, 00
+  nicht mehr auftritt.
+- Unterdrueckung leere Menuezeile (23.07.2020) wieder verworfen
+- Abspeichern der Fensterpositionen beim Wechsel zwischen Bild 0<->1 eingebaut
+
+27.07.2020:
+- PWRON schaltet vor dem Speicherloeschen jetzt die Module ab.
+  (Wunsch von Tim Hennig)
+
+24.07.2020:
+- duennen Zeichensatz bei einigen Zeichen korrigiert
+
+23.07.2020:
+- leere Zeile im MENU unterdruecken
+
+23.07.2020:
+- kleine Korrekturen beim Standard-Zeichensatz vorgenommen, speziell die
+  "Rahmen und Linien" doppelt und links/oben justiert.
+
+20.07.2020:
+- makefile angepasst, dass beide Zeichensaetze automatisch erzeugt werden
+
+18.06.2020:
+- "duennen" Zeichensatz eingebunden (von Rene Nitzsche)
+
+15.04.2020:
+- Anzeige Dateiname in FDIR ueber PV1(ZKOUT) geleitet, damit sich dieser wie
+  bei UDIR filtern laesst, z.B. fuer WordPro7
+
+23.03.2020:
+- Wegen Absturz bei ESC-F (von USB-Tastatur und M003-Tastatur) die ISR-Tabelle
+  bei POWER-ON ab 01D0H mit gueltigen Adressen vorbelegen, sodass ein Interrupt
+  vor Laden aller Treiber nicht gleich einen Absturz verursacht.
+  Benoetigt 16 Byte im ROM-C -> mit USB-Tastatur jetzt OK
+- USB-Software holt jetzt nach der Pruefung auf Vorhandensein der Datei
+  INITIAL.UUU alle ggf. nach anstehenden Daten ab, sonst geht USB-Tastatur
+  nicht, wenn kein Stick steckt.
+
+25.03.2020:
+- Warteschleife bei V24PR (V.24-Druckerausgabe) komplett raus genommen
+  -> 3 Byte gespart
+
+22.03.2020:
+- Nach ESC-H Cursor auf Spalte 0 setzen, Prolog-Anzeige ergaenzt
+- Autostart-Modul (Kennbyte 01 auf Steckplatz 8) setzt INIT-Kommando zurueck.
+- Stackverwendung bei CUCP optimiert, damit POP4 verwendbar: 2 Byte gespart
+
+18.03.2020:
+- Kassettenpuffer nach HELP-Kommando wieder loeschen
+  Zum Platz schaffen fuer die Optionen HCPGM vom ROM-F in den ROM-E verschoben
+
+17.03.2020:
+- HELP-Funktion weiter optimiert, ESC-E (Soft-Reset), ESC-F (Soft-Power-On) und
+  ESC-H (HELP) eingebaut.
+  Menuewortsuche optimiert, statt INC HL, DEC BC un Test auf BC=0: CPI
+  -> spart 1 Byte
+- Option "Turbo" endgltig aus Quelltexten entfernt
+
+16.03.2020:
+- HELP erweitert mit Auflistung aller Menueworte, Abarbeitung im Kassettenpuffer
+  aber noch nicht ganz funktionstuechtig...
+
+15.03.2020:
+- CAOS-Versionsanzeige in ein gemeinsames UP in den ROM-D ausgelagert
+  -> spart 19 Byte im ROM-F
+
+13.03.2020:
+- TCIF-Test bei Steuerzeichen wieder rausgenommen, sonst setzt ein CLS oder
+  HOME den Cursor nicht wieder innerhaslb das Fensters
+
+09.03.2020:
+- EDIT: Fehler bei CLS am Programmanfang behoben.
+
+08.03.2020:
+- UP10H (LOAD) Anzeige des Dateinamens ueber OCHR und nicht CRT, sonst wird ein
+  umgestelltes CAOS-UP zur Zeichenausgabe nicht wirksam.
+  Ebenfalls bei Byte-Eingabe MBIC
+- TCIF-Test ausgeweitet auf Fenstergroesse = 0, dann CY-Flag gesetzt
+  und TCIF-Test vor der Ausgabe von Steuerzeichen eingebaut
+
+07.03.2020:
+- ASM (Kaltstart) und EDIT (Kaltstart) loescht jetzt Bild 0 und 1 bevor das
+  Schreiben der Farbe abgeschaltet wird - damit saubere Startbedingungen
+
+03.03.2020:
+- M052-Software testet, ob bereits ein gesetztes Bit 6(IX+8) vorhanden ist.
+  Somit wird der Test in einem zweiten M052 unterbunden, falls das erste M052
+  schon eine INITIAL.UUU aktiviert hatte. Bei Fehlender INITIAL.UUU wird 
+  ausserdem das vorbereitete Kommando geloescht, damit ein weiteres M052 nicht
+  nach einer INITIAL.UUU suchen muss (ist ohnehin nicht das nach dem Booten
+  aktive Device)
+
+02.03.2020:
+- Setzen von Bit 6,(IX+8) von CAOS-ROM C zu USB-Initialisierung verlagert.
+
+01.03.2020:
+- festes Ende von ROM-C aufgegeben, da kein Grund
+- leichte Umverteilung in ROM-E und ROM-F damit SYSROM-Erweiterung weiterhin
+  nutzbar bleibt
+
+28.02.2020:
+- Erster Versuch einer automatischen Abarbeitung von INITIAL.UUU beim Kaltstart
+  von CAOS, allerdings (noch) ohne Test auf vorhandenen USB-Stick bzw. die
+  Datei INITIAL.UUU
+
+24.02.2020:
+- %INIT ohne Dateiname funktionierte nicht bei USB, da der Standard-Dateiname
+  im CAOS-ROM-C stand (auch in CAOS 4.7) -> nach CAOS-E verschoben
+
+22.02.2020:
+- Uhrzeitanzeige %TIME optimiert (10 Byte gespart)
+
+16.02.2020:
+- M002 "PIO-3" umbenannt in M004 "WEATHER" wegen Neuentwicklung srn
+
+26.01.2020:
+- IOTAB1 Reihenfolge zur Erstinitialisierung der PIO im ROM-D optimiert
+  (2 Byte gespart). nicht mehr wie beim ersten Versuch am 03.03.2019 sondern
+  dieses Mal erst den Port B initialisiert, dann wird auch das Datenbyte in das
+  Ausgaberegister von Port A eingeschrieben bevor der Port A initialisiert ist.
+  siehe Beitrag 012 in:
+  http://www.robotrontechnik.de/html/forum/thwb/showtopic.php?threadid=16512
+  (im JKCEMU 0.9.8pre20-pre23 funktioniert das nicht, 0.9.8pre24: OK)
+
+21.01.2020:
+- IX+4 und Port2 schalten per UP OUT86 - spart einige Byte im ROM-C, E und F
+- Versuch, mehrere DI/EI-Kombinationen zu entfernen um Port 84H und 86H
+  Wenn Reihenfolge LD (IX+1),A und danach OUT (84H),A dann kann ein Interrupt
+  zwischen den Befehlen keinen Schaden anrichten, denn (IX+1) hat schon den
+  Inhalt, den der Port gerade bekommen soll. Eine ISR darf niemals den Port
+  umgeschaltet lassen. Dazu Unterprogramme OUT84 und OUT86 verwendet bei
+ -> Grafikroutinen (war DI/EI bei CAOS 4.2 bis 4.7)
+ -> ESC-Routinen (war DI/EI bei CAOS 4.3 bis 4.7) 
+ -> Modulschaltung bei STBFF muss bleiben wegen PIO-Zustand (interner Module)
+  
+12.01.2020:
+- UP SAVE brachte noch keinen korrekten Fehlerstatus zurueck. Abgeaendert,
+  sodass mit CY=1 jetzt Fehler oder BRK ermittelt werden kann.
+
+15.06.2019:
+- LOAD: zeigt jetzt bis zu 12 Zeichen aus dem Vorblock als Dateiname an, damit
+  kann jetzt auch ein vollstaendiger Dateiname 8.3 mit Punkt dort stehen.
+- SAVE legt jetzt ebenfalls 12 Zeichen Dateiname im Vorblock ab.
+
+08.06.2019:
+- EDIT: Anzeige von Dateien, welche nur CR oder nur LF als Zeilenende enthalten
+  funktionierte nicht korrekt - korrigiert
+- EDIT: Bei Auftauchen von 03H am Textende und ohne CR/LF davor, wurde T2A
+  nicht gesetzt - korrigiert
+
+14.05.2019:
+- %go setzt (ARGN)=0
+
+29.04.2019:
+- USB: BCD-Versionsnummer von 2.7 auf 2.8 erhoeht
+
+14.04.2019:
+- USB: Bei Aufruf von CD ohne Pfad werden alle SUB-DIR aufgelistet und danach
+  Abfrage des Verzeichnisses (Idee von Volker Pohlers)
+- USB: BRK-Abfrage bei INLIN abhaengig von CAOS-Version gemacht an allen Stellen
+  wo das sinnvoll ist.
+
+10.04.2019:
+- Fehler beim Schalten der RAM4-Ebene korrigiert in CC48.INC (Seit 23.02.2018
+  war XOR E statt XOR H im Quelltext - ???)
+
+05.04.2019:
+- HILFE.KCC cr+lf ergaenzt wegen Ausdruck mit Protokollfunktion (Ralf Daeubner)
+
+30.03.2019:
+- JUMP-Befehl schaltet Modul wieder mit FFH (statt FDH bei CAOS 4.7) ein, sonst
+  ist ein M011 komplett schreibgeschuetzt.
+
+29.03.2019:
+- Menuewort V24DUP initialisierte ohne Argumente nicht wie im Handbuch beschrie-
+  ben mit den letzten Parametern neu sondern mit SIO-Kanal 1 und USER-Kanal 2
+
+25.03.2019:
+- USB: Korrektur bei UMBIN und UMBOUT wegen Fehlfunktion mit USB-Tastatur
+  (File-Mode war nicht korrekt eingestellt)
+- USB: bsave fuer CAOS 3.1 bis 4.5 angepasst, dass USB-Tastatur hinterher wieder
+  funktioniert
+
+21.03.2019:
+- USB: Eintragen der Steckplaetze in ISR funktionierte nur ab CAOS 4.7
+  -> Beim Kopieren der ISR wieder in (jetzt drei) Teilstuecke aufgeteilt
+  -> Innerhalb der ISR im ROM-C wird jetzt mithilfe der ISRTAB auch die korrekte
+     Stelle zur Modifikation der ISR berechnet
+  damit sollte die ISR auch unter CAOS 3.1 bis CAOS 4.6 wieder funktionieren!
+
+15.03.2019:
+- SIXD mi A=FFH initialisiert jetzt DEVICE-Treiber neu und setzt A=1 Standard
+  benoetigt +5 Byte im ROM-C
+
+12.03.2019:
+- USB: Interrupt schaltet IRM nur noch kurz zum Ermitteln des aktuellen
+  Schaltzustandes ein und sofort wieder zurueck, ansonsten nur noch im Terminal
+  Wegen verschiedener Fehlfuntionen mit der USB-Tastatur unter BASIC
+  (festgestellt von Manfred Bagola)
+  - Einfrieren beim Abbruch eines Listings mit der Ende Taste.
+  - Keine Bedienung des Programms TV-TEST moeglich
+  - Bei Ausgabe eines Listings auf dem Bildschirm mehrfach bereits in der ersten
+    oder zweiten Zeile abgebrochen und der Rechner friert ein.
+  - Ab und an mal aufgetreten, dass zwei Zeichen doppelt erschienen, also als ob
+    bei einem Tastendruck das Zeichen zweimal ausgegeben wurde.
+  -> Ursache offensichtlich weil BASIC den Stackpointer in den RAM8 setzt und
+    der USB-Interrupt den IRM zuschaltete
+
+03.03.2019:
+- IOTAB1 Reihenfolge zur Erstinitialisierung der PIO im ROM-D optimiert
+  (2 Byte gespart) aber wieder verworfen, da der KC dann nicht mehr bootet.
+- Bei POWER ON erst Ports initialisieren, dann Speicher loeschen
+  (sporadisch wurde bei PWRON der IRM nicht geloescht, nur im JKCEMU?
+  Der PIO muesste beim Einschalten an seinen Portausgaengen High-Pegel haben
+  (hochohmig) - deshalb sollte der IRM an sein. Der Effekt kann aber auch bei
+  Sprung auf F000H passieren...)
+
+20.02.2019:
+- ISR-Tabelle kopieren bevor das Erste Mal EI ausgefuehrt wird.
+  (sonst konnte es bei Sprung auf F000H zu Tastatur-Interrupts kommen ohne
+  gueltige ISR-Tabelle im System-RAM)
+
+19.02.2019:
+- EDIT: Anzeige des HEX-Codes des aktuellen Zeichens in Statuszeile eingebaut
+
+17.02.2019:
+- BASIC: MBOUT Dateien waren immer einen kompletten Sektor zu lang
+	-> vor CLOSE nicht noch einen Datenblock ausgegeben.
+- USB: Schnittstelle noch einmal geringfuegig veraendert
+
+16.02.2019:
+- ASM: F-Tasten fuer ext. Editor angepasst (nicht fuer EDAS 1.7)
+
+13.02.2019:
+- IMPORT: Bei TPKC nur auf Endezeichen 1AH testen beim Einlesen!
+	  Bei WordPro'89/5 nur auf Endezeichen 03h testen beim Einlesen
+
+12.02.2019:
+- M052: Schnittstelle nochmals korrigiert
+- IMPORT: TPKC-Converter ergaenzt um weitere Druckersteuerzeichen
+
+11.02.2019:
+- M052: Erweiterung der Schnittstelle noch einmal ueberarbeitet
+	Beim Lesen von Bloecken < 128 Byte wird der Rest mit 03h vorbelegt
+	Bei Texten ohne Endezeichen kam "Dateiende" und letzter Block wurde
+	nicht uebernommen
+- EDIT: LOAD nimmt Vorblock nur noch bei ARGN=0 oder 2 an (z.B. EDAS-Quelltext)
+- IMPORT: Bei TEXOR-Texten wurde das erste Zeichen der Zeile verschluckt
+	-> CR zu CR+LF konvertiert, LF dafuer ignoriert
+
+10.02.2019:
+- EDIT: IMPORT von WordPro'86/WordPro9-Dateien auch bei ARGN=3 als CAOS-Vorblock
+	zugelassen, da zum Teil solche Dateien existieren
+- USB:  Lesen von Dateien mit beliebiger Dateigroesse vorbereitet. Dazu vor dem
+	Oeffnen der Datei die Dateigroesse abfragen und abspeichern in
+	NUMVX = Anzahl der vollstaendigen Bloecke und
+	NUMNX = zusaetzliche Anzahl Bytes im letzten unvollstaendigen Block
+- ASM/EDIT/EDAS: Epilogbyte des Menueworts "QUIT" von 1Fh auf 1 geaendert,
+	damit ein normales CAOS-Menu angezeigt wird
+
+09.02.2019:
+- USB: Standard-Datum war verdreht vorgegeben (High-Byte muss zuerst kommen)
+- USB: Sprungtabelle am Anfang erweitert, Versionsnummer auf 2.8 erhoeht
+
+08.02.2018:
+- MBIN/MBOUT: Fehlererkennung ueber CY=1 gemacht und Auswertung erst in BASPV
+
+************************** ab hier CAOS 4.8 ************************************
+
+Speicherbelegung CAOS 4.7 (04.12.2019)
+======================	mit Turbo	mit SYSROM	mit 1MB RAM
+CAOS-C:   49 Byte frei	34 Byte frei	12 Byte frei	 6 Byte frei
+CAOS-D:  267 Byte frei	 8 Byte frei	11 Byte frei	 8 Byte frei
+CAOS-E:   46 Byte frei	 7 Byte frei	 7 Byte frei	 7 Byte frei
+CAOS-F:   33 Byte frei	33 Byte frei	 8 Byte frei	33 Byte frei
+
+10.04.2019:
+- Korrektur UP26H bezueglich RAM4-Ebene aus CAOS 4.8 uebernommen
+
+09.02.2019:
+- MBOUT: initialisiert jetzt den Kassettenpuffer mit 00h
+
+03.02.2019: CAOS 4.7 mit EDIT 0.4 veroeffentlicht
+
+03.02.2019:
+- ASM/EDAS/EDITOR: Dateiname wird jetzt erst nach erfolgreichem LOAD/SAVE
+	abgespeichert. Nach ASM Option S steht nun nicht mehr NAME.KCC in
+	Titelzeile. Modifikationen an INPUT vom Editor zu ASM/EDAS uebernommen
+
+02.02.2019:
+- EDIT: IMPORT erkannte komprimierte TypeStar-Texte nicht korrekt, da CY'
+	falsche stand waehrend der Konvertierung - korrigiert, ausserdem nach
+	dem Import noch ein CR+LF am Ende ergaenzt, damit das Textende sicher
+	erkannt wird.
+- EDIT: HILFE-Funktion ueberarbeitet mit Anzeige der F-Tastenbelegung
+- EDIT: INPUT-Routine fuer 80-Zeichn-Modus abgespeckt:  (161 Byte frei)
+	INS, DEL und CLR abgeschaltet (verschiebt im 40-Zeichen-Modus Dateityp
+	und im80-Zeichen-Modus Einfuegen ein/aus)
+	CLICK abgeschaltet - wird hier nicht benoetigt
+	CAPS abgeschaltet (aktualisiert Statuszeile im 80-Zeichenmodus)
+	HARDCOPY abgeschaltet - setzt im 80-Zeichen-Modus WIN82
+	Punkt nur bei Dateiname zulassen?
+- EDIT: ESC-N zur Eingabe des Codes 0Eh "Zeile binden" definiert (108 Byte frei)
+- EDIT: Drucken der HEX-Sequenz optimiert  (111 Byte frei)
+
+30.01.2019:
+- EDIT: Gloeckchensymbol von 0Eh auf 05H verlegt, 0EH wird "Zeile binden"
+- EDIT: Funktion "Zeile binden" mit Code 0Eh
+- EDIT: Drucken von HEX-Sequenzen nach Code 0Fh		(120 Byte frei)
+
+29.01.2019:
+- EDIT: Belegung der F-Tasten geaendert: F1=ESC, F2=TAB, F3=FIND (186 Byte frei)
+
+28.01.2019:
+- EDIT: Menuewort "HELP" laedt Hilfetexte und zeigt diese auf Bild 2 an.
+	ESC-H Umschaltung zu Bild 2 und Tastaturabfrage abwarten
+	(man k"nnte auch beliebigen anderen Text auf Bild 2 anzeigen/einblenden)
+
+27.01.2019:
+- EDIT: Suche jetzt mit ESC-F im EDIT-Modus, dazu bei INPUT die ESC-Funktionen
+	temporaer gesperrt, Menuewort FIND geloescht. (240 Byte frei)
+- EDIT: ESC-Z programmiert -> gehe zu eingegebener Zeilennummer (263 Byte frei)
+- EDIT: COPY und KILL in Unterprogramme verpackt und fuer ESC-V nacheinander
+	aufgerufen um Block zu verschieben (401 Byte frei)
+
+26.01.2019:
+- EDIT: Fehlerkorrektur, es wurde ein Zeichen zuviel geloescht bei ESC-C wenn
+	der Cursor am Ende der Zeile steht (406 Byte frei)
+- EDIT: Kommandos TOP und BOTTOM entfernt (407 Byte frei)
+- EDIT: ESC-T und ESC-B programmiert, dafuer MPAGE optimiert zur Abspeicherung
+  der alten Textgrenzen (382 Byte frei)
+- Menuewort IMPORT nach vorn geholt, direkt unter EDIT als erstes Menuewort im
+  langen Menue
+- EDIT: Kommandos PCOPY und PDEL entfernt (374 Byte frei)
+- EDIT: ESC-K zum Loeschen von Bloecken fertig gestellt (246 Byte frei)
+	Blockendemarke von ESC-B auf ESC-E umverlegt
+
+18.01.2019:
+- EDIT: ESC-K zum Loeschen von Bloecken begonnen
+
+16.01.2019:
+- EDIT: Ueberwachung ESC-C bei fehlenden Blockmarken und vollem Speicherplatz
+        Fehlerkorrektut bei WRZLE nach Optimierung am 14.01.2019 (392 Byte frei)
+
+14.01.2019:
+- EDIT: Anzeige ueberlanger Textzeilen korrigiert, da wurde bisher am Zeilenende
+        ein Zeichen verschluckt. (bemerkt bei ESC-C, jetzt 426 Byte frei)
+
+13.01.2019:
+- EDIT: Anzeige Lineal mit TAB und Randmarken zusammengelegt (630 Byte frei)
+- EDIT: Block kopieren mit ESC-C implementiert (449 Byte frei), Fehlerauswertung
+        fehlt aber noch
+
+12.01.2019:
+- EDIT: ESC-Funktionen von ESC-0 bis ESC-Z vorbereitet in ESCTAB (626 Byte frei)
+        ESC-L und ESC-R zum setzen der Randmarken eingebaut (620 Byte frei),
+        Code 7 im 80-Zeichensatz geaendert fuer ganz linke Lineal-Position
+        ESC-Funktionen umgelegt in Vorbereitung fuer Copy/Move/Kill
+
+11.01.2019:
+- EDIT: Cursorposition fuer ESC-G gespeichert
+        Fehler bei CLS80 behoben (war nach letzter Aenderung 1 Byte zu lang)
+        Klotz-Cursor 10 statt 8 Byte hoch, sieht bei Grafikzeichen besser aus
+
+07.01.-10.01.2019:
+- EDIT: ESC-G zur Eingabe von Grafikzeichen implementiert
+
+06.01.2019:
+- EDIT: Platz geschafft fuer neue Funktionen durch Auslagern der IMPORT-Funktion
+  in eine nachladbare Datei fuer den Adressbereich BA00-BFE0 -> IMPORT.KCC
+- EDIT/ASM: Ablage Dateiname von 0 auf B7F5h geaendert wegen LOAD bei IMPORT
+- EDIT/ASM: Arbeitszellen im RAM0 um 1 Byte verschoben wegen USB-Tastatur-Mode
+  auf Adresse 0011h
+- USB: Lage der Arbeitszellen noch einmal optimiert fuer VNC1 und VNC2
+	0000-000A = Dateiname
+	000B      = Mode
+	000C-000F = Datum, Uhrzeit
+	0010...   = Arbeitszellen fuer Terminal, EDIT, DEBUG, ASM
+
+04.01.2019:
+- EDIT: Eingabe des Unterstiches wird durch eine aktivierte CAPS-Funktion von
+  CAOS in 7FH gewandelt, deshalb ist der Unterstrich bei aktiviertem CAPS nicht
+  eingebbar -> Code 7Fh in 5Fh wandeln
+
+29.12.2018:
+- EDIT: Zeichensatz korrigiert fuer Code 40H CAOS
+
+27.12.2018:
+- EDIT: Bei kurzen Textdateien (ein Block) wurde nur ein CLOSE und vorher kein
+  OPEN ausgefuehrt, deshalb kam hier ein FI-ERROR -> jetzt immer ein INIT und
+  ein CLOSE, damit ist die Datei zwar 2 Bloecke gross, es kommt aber kein Fehler
+  mehr.
+- EDIT: Eingabe von ESC-A bis ESC-E implementiert, z.B. fuer die Blockmarken
+- EDIT: Blockfunktionen ueberarbeitet mit Fehlerausschrift wenn oder falsche
+  Blockmarken gesetzt sind (es muss als Erstes ein Blockanfang und danach ein
+  Blockende gefunden werden!)
+
+26.12.2018:
+- EDIT: Fehleranzeige nach CD korrigiert, Editor-Version auf 0.3 erhoeht
+- EDIT: Fehler bei Berechnung Pufferende in LOAD-Hautschleife korrigiert
+- EDIT: Fehler beim Abschneiden der cr+lf am Textende korrigiertt (Es wurden
+  bisher auch ein einzelnes cr+lf angehaengt wenn in der Datei gar keines war)
+- EDIT: Bei Speicherueberlauf die bereits gespeicherten Daten verwerfen und
+  wieder zurueck zum Editieren, wo man gerade war (T1E/T2A in ARG8+9 merken)
+
+10.12.2018:
+- CAOS 4.7 als Paket zusammengepackt ohne Turbo-Treiber
+- CAOS 4.7beta7 als Paket zusammengepackt mit Turbo-Treiber
+
+09.12.2018:
+- USB: bei UDEVEX-Erweiterung fehlte die Eingabe des Verzeichnisnamens zum
+  Verzeichniswechsel -> Programmteil aus UBASEX aufgerufen.
+
+07.12.2018:
+- USB: UDIR Tastenabfrage nicht mit CAOS-UP KBD sondern in separater Schleife
+  mit Polling der USB-Tastatur (weil kein Interrupt durch anliegende FIFO-Daten
+  kommt)
+
+05.12.2018:
+- USB-Tastatur: ISR veraendert (IX+4), unter CAOS 3.1 wird diese Speicherzelle
+  als Merkzelle fuer die Anzahl der Argumente bei LOAD benutzt. Das duerfte
+  aber auch nicht stoeren, da das nur innerhalb der ISR veraendert wird und am
+  Ende wieder regeneriert wird.
+
+05.12.2018:
+- USB: SUTAB-Laenge beim Kopieren von 92H auf 94H erhoeht bei UBASEX
+  (bei UDEVEX war es schon 94H)
+
+04.12.2018:
+- USB: Version in 2.6 umbenannt (Zusatz "pre2" weggelassen)
+- USB: Beim Scrolling kommt innerhalb der CAOS-Routine ESC9 seit CAOS 4.3 ein
+  DI/EI. Deshalb kommt der USB-Interrupt zu frueh und das falsche Fenster wird 
+  angewaehlt. Bei CAOS 4.2 kommt DI/EI in der Routine WPIX - gleicher Effekt
+  Abhilfe: Innerhalb der Terminal-ISR wird der PIO-Interrupt jetzt gesperrt
+- DEBUG: Erkennung PV7 in Reassembler eingebaut
+
+01.12.2018:
+- USB: Abbruch mit BRK-Taste bei LOAD/SAVE eingebaut
+
+17.11.2018:
+- USB: Daten abholen vor CAOS-Mode bei EXIT (weil Tastatur nicht bedienbar nach
+  LOAD einer Autostart-Datei aus dem Terminal)
+
+14.11.2018:
+- USB: Zweite Zeitschleife in Tastatur-Interrupt entfernt, damit Timing bei
+  Autorepeat fluessiger wird
+- USB: Kommando %udir fuer Kommandozeile von CAOS 3.1-4.6 eingebaut
+
+30.10.2018:
+- BASIC-Programme lassen sich nicht mehr von USB laden bzw. CF-ERROR kehrt nicht
+  zu BASIC zurueck. siehe Aenderung vom 22.07.2018
+  -> Routine MOFF noch einmal korrigiert
+
+28.10.2018:
+- USB: Bei INIT einen RESET-Impuls ausloesen und Bootmeldung abwarten/anzeigen
+  danach jaesst sich auch der Tastatur-Interrupt des V2DIP initialisieren
+- BASIC-Aufruf funktionierte nicht mehr weil bei BASON der Steckplatz 2 nicht
+  uebergeben wurde durch die Aenderung am 14.10.2018
+
+27.10.2018:
+- CAOS 4.7 Beta-Status beendet, Vollversion erzeugt
+
+16.10.2018:
+- M052USB INIT darf das CAOS-UP INIME nicht benutzen, da hier der Interrupt
+  mit EI freigegeben wird, was noch nicht passieren darf!
+
+15.10.2018:
+- Das Abschalten des USER-ROM in der Routine JROM wieder auskommentiert. Dafuer
+  nun innerhalb von SIXC nicht die DEVTAB neu aufbauen sondern nur noch bei
+  PWRON und RESET!
+
+14.10.2018:
+- Beim Floppy-Autostart den OUT-Befehl zum Einschalten der Kopplung weggelassen,
+  da die Kopplung bereits durch die Treibersuche ein geschaltet ist.
+- TEMO: Arbeitszellen verlagert wegen USB-Tastatur (AE-FFh jetzt frei gelassen)
+  Umbenannt von Version 2.0 in 2.2 (2.1 gab es schon bei Frank Klemm)
+- MODUSW mit LD A,2 eingebaut und damit etliche Byte gespart, da meist die
+  Module geschaltet werden
+- Abschalten des USER-ROM bei JROM wieder eingebaut, sonst funktioniert SIXD
+  nicht, wenn dieses aus dem USER-ROM (Debugger) gestartet wird.
+
+07.10.2018:
+- Reihenfolge bei Initialisierung in Routine SIXC veraendert, DEVICE-Tabelle
+  wird jetzt spaeter aufgebaut, bei Treiber-Init ist Interrupt bereits frei
+- TEMO: SWITCH wie in CAOS umsgestellt mit Anzeige alt/neu, dabei Versions-
+  abfrage auf CAOS 4.6+ entfernt
+
+19.08.2018:
+- USB: CAOS-Mode fuer Interrupt initialisieren, Interruptmode bei ULOAD/USAVE
+  kontrolliert und angepasst, Aufruf Menuewort %tastatur mit Adresse der ISR
+  Adresse der ISR ab CAOS 4.7: 00AEH-00EAH, sonst 0108H-0144H
+
+14.08.2018:
+- USB: restliche Umstellungen zum Interrupt-Mode-Wechsel eingebaut, aber noch
+  nicht getestet
+
+12.08.2018:
+- USB: Quellcode fuer Version mit/ohne Tastatur aufgeraeumt, automatische
+  Erzeugung beider Versionen in makefile integriert, Unterscheidung in Titel-
+  zeile durch "VNC1" bzw. "VNC2" vorgenommen.
+
+09.08.2018:
+- USB: Sichergestellt, dass bei TAST=0 die funktionierende 2.5a entsteht
+
+01.08.2018:
+- USB: MODE-Wechsel auch bei DIR eingebaut, Kontrolle UMBO: usw. begonnen
+
+29.07.2018:
+- USB: Begonnen mit neuer ISR fuer Tastatur und Terminal, Einschalten und
+  Sprung in den M052-ROM zur Abarbeitung. Dabei ueber Speicherzelle MODE
+  entscheiden, was mit den FIFO-Daten passieren soll.
+
+28.07.2018:
+- ASM: Assemblierpuffer in den IRM verlagert, dazu
+  > Quelltextzeile Byte fuer Byte statt mit TLDIR kopieren
+  > Marke 'START' zur Suche in den String-Puffer, nicht in Assemblierpuffer
+  > Zeichenbreite fuer Druckausgabe jetzt immer 80 Zeichen breit (auch EDAS 1.7)
+  > LABEL-Suche ueber Stringpuffer statt Assemblierpuffer
+  > LBLIST funktioniert noch nicht ganz korrekt bei Marken mit 2 Doppelpunkten,
+    deshalb Ablage der Marke angepasst
+- M052/USB: Tastatut-ISR auf Adresse AEh gelegt, nach Arbeitszellen von TEMO
+
+25.07.2018:
+- Speichertausch wie folgt:
+	EDAS Assemblierpuffer auf A880h bis A8FFh (INITIAL.UUU-Speicher)
+	ASM/EDIT-Hilfsprogramme auf 005Bh bis 009Fh
+	M052: USB-Interrupt auf 00A0h bis 00FFh
+  wobei fuer den Assemblierpuffer im IRM noch Anpassungen noetig sein werden...
+
+24.07.2018:
+- USB-Tastaturinterrupt von 100h auf 130h verlegt, weil
+  auf 102h der M066-Interruptvektor (TEST, PLAY21, FADEN17M) liegt und
+  auf 122h der M066-Interruptvektor (AY, PT3, PLAYPT3)
+  Die ISR geht nun aber bis 181h, was definitiv zu weit an den Stack reicht !!!
+
+22.07.2018:
+- Bei PV7 wurde CAOS-ROM-C nach Treiberaufruf nicht korrekt wieder ausgeschaltet
+  -> Programmstelle bei MOFF korrigiert
+  (Deshalb funktionierte z.B. bei JEDIT die SAVE-Funktion nicht bei DISK oder
+  TAPE)
+
+21.07.2018:
+- USB-Tastatur: Code 0 nicht aktivieren, damit ESC-Aufrufe funktionieren
+
+11.07.2018:
+- IRM/RAM-Arbeitszellen verlegt wegen USB-Tastatur
+  UTAST	 -> neu 0100h-014Fh fuer die ISR der USB-Tastatur (M052)
+  INITU  bisher  0100H-017FH  -> neu 0A880H-0A8F0H	; INITIAL.UUU-Daten
+  JOYIRM bisher 0A894H-0A89FH -> neu 0AA94H-0AA9FH	; Joystick-Tabelle
+  JWORK  bisher 0A8A0H-0A8B1H -> neu 0AAA0H-0AAB1H	; JEDIT Arbeitszellen
+  (wegen INITIAL.UUU auch DEP.COM angepasst, Version auf 3.4 erhoeht)
+
+10.07.2018:
+- Bei Treiber-INIT wurde Modul ohne MODST direkt eingeschaltet. Dadurch stuerzte
+  der erste Tastatur-Interrupt ab. INIT-Routine "JROM" im ROM-E optimiert.
+
+22.06.2018:
+- Reassembler: ARG1 wurde bei Aufruf der Menueworte QMR und DISASS nicht korrekt
+  uebergeben
+- BSAVE: Fehlerausschrift geaendert in "BASIC-Programm?"
+
+21.06.2018:
+- USB: Interrupt EIN/AUS in MACRO verpackt, um mit Tastatur einfach ein anderes
+  MACRO aufrufen zu koennen.
+- CAOS: PV7 schreibt jetzt auch den Modulschaltzustand bei Aufruf eines Treibers
+  in die Modulsteuerbytetabelle (wichtig fuer USB-Tastatur-Interrupt)
+- USB: Tastatur-Interrupt in EEPROM eingebaut: Version 2.6pre1
+
+17.06.2018:
+- USB: Steuercodes als Marken definiert
+
+15.06.2018:
+- EDIT: Zeichencode fuer ‘ modifiziert
+
+10.06.2018:
+- USB: Tastaturinterrupt auf serielle Uebertragung umgestellt (DATAxx-Leitungen)
+
+09.06.2018:
+- USB: Tastaturinterrupt fuer CAOS vorbereitet
+
+08.06.2018:
+- USB: Korrektur der Interruptroutine, RETI erst am Ende der Routine, damit
+  sich die ISR nicht von sich selbst unterbricht. Dadurch duerften einige
+  Nebeneffekte beseitigt sein, unter anderem die Funktion des V2DIP1-48.
+  und der Absturz nach DIR-Anzeige im Vincumlum-Menu wenn Modul in Steckplatz 8
+  steckt (Unterverzeichnis) - festgestellt von Thomas Schramm
+  M052-Version auf 2.5a erhoeht.
+
+01.06.2018:
+- EDIT: komprimierte Typestar-Dateien enthalten keine Leerzeichen, stattdessen
+  C0h fuer 1 Leerzeichen, C1h fuer 2x ... bis FFh -> Konverter eingebaut
+
+31.05.2018:
+- EDIT: keine TAB-Konvertierung von einzelnen Leerzeichen mehr.
+- EDIT: WP9-Grafikzeichenkonverter wieder eingebunden sowie die Umschaltung
+        deutsch <-> ASCII
+
+29.05.2018:
+- EDIT: LOAD-Konverter komplett umgeschrieben, sodass auch komprimierte Texte
+  fehlerfrei umgesetzt werden. Dabei zwei Versionen: EA und FF beruecksichtigt
+
+18.05.2018:
+- EDIT: CAOS-Vollzeichen geaendert, 8x4 Pixel statt 10x4 Pixel (wie Cursor)
+- EDIT: LOAD Erkennung Textende geaendert, sodass bei WP6-Texten nicht mehr bei
+  Zeichencode 0FFh abgebrochen wird (wichtig fuer komprimierte Texte)
+
+05.05.2018:
+- SWITCH: vorherigen Modulschaltzustand in Register A statt E zurueck melden.
+  (UNIPIC 2.0 findet RAM-Module nicht mehr wenn Register E veraendert wird)
+
+03.04.2018:
+- EDIT: Statuszeile etwas umgeraeumt, CAPS-Anzeige jetzt vor EINF/Ueberschr.
+  und Symbolik auf Pfeil nach oben/unten geaendert.
+
+02.04.2018:
+- EDIT-Prompt in "-" umgewandelt
+- ASM/EDAS: uebersetzt jetzt auch die Kurzform des IN-Befehls fehlerfrei
+- ASM: Fehler bei RAM-Suche korrigiert
+- ASM/EDAS/EDIT: Dateiname in Titelzeile anzeigen, falls vorhanden
+- ASM/EDAS: Fehler 9 bei LD M,M (ergibt HALT)
+- EDIT: CAPS-Funktion nur einschalten wenn nicht aus ASM gestartet wurde
+  (Erkennung durch Prologbyte des Menuewortes 'QUIT' im IRM)
+- EDIT: CAPS-Zustand in Statuszeile des Editors anzeigen
+- EDIT: Test auf CAOS 4.7 entfernt
+
+01.04.2018:
+- EDAS 1.7: MLINE und MPAGE aus Editor uebernommen
+
+31.03.2018:
+- CAOS-Zeichensatz Dollarzeichen veraendert (rechts/unten frei wie alle anderen)
+- ASM: RAM-Nutzung wie Editor (RAM auf C einschalten, USER-ROM aus bei Zugriff)
+  -> BEFEHLE2.ASM laesst sich fehlerfrei in ASM 2.0 und EDAS 1.7 uebersetzen
+  -> EDAS 1.7 Editor funktioniert nicht mehr
+
+26.03.2018:
+- TEMO: Kommando REAS auch hier in DISASS umbenannt
+
+25.03.2018:
+- TEMO: Prompt-Zeichen von '>' zu '+' geaendert (wie urspruenglich im M027)
+
+23.03.2018:
+- JEDIT: CAOS-Versionsabfrage entfernt
+- QMR/DISASS: Bei Ruecksprung USER-ROM abschalten (Sprung zu CEXIT)
+
+22.03.2018:
+- %DISAS konnte nicht aufgerufen werden wegen 3x7FH hintereinander (JR-Befehl)
+  -> Code umgestellt/optimiert
+
+17.03.2018:
+- DEV und DEV1 Abfrage optimiert, gibt Z=1 bei Kassette zurueck und DEV rotiert
+  die Bits jetzt gleich passend fuer Treiberberechnungen
+- DEVICE-Kommando in CAOS, EDIT und ASM optimiert
+- UP 49H kann jetzt mit A=8 melden, ob ein Kassettentreiber vorliegt. Damit kann
+  EDIT und ASM bei LOAD und SAVE entsprechend reagieren (oder Anwenderprogramm)
+- EDIT/ASM laedt bei Kassette jetzt ohne Namensabfrage und -vergleich. Die Datei
+  wird eingelesen und der Name aus dem ersten (Vor-)Block entnommen.
+
+16.03.2018:
+- EDIT: neue Konvertierungstabellen fuer WordPro9-Texte eingebaut, Drucker-
+  steuerzeichen, die nicht konvertiert werden ausblenden.
+
+13.03.2018:
+- EDIT: Typestar-Konverter wechselt jetzt deutsch/amerikanisch bei Auffinden
+  der Steuerzeichen 94h bzw. 95h
+
+12.03.2018:
+- EDIT: Konverter: Leerzeichen am Zeilenende von Typestar-Dateien entfernen,
+  Leerzeichen im Text in Tabulatoren umwandeln. Zeichensatz wie WordPro5 ???
+
+11.03.2018:
+- EDIT: WRZLE so angepasst, dass auch Zeilen, die bis zum rechten Bildschirm
+  gefuellt sind, korrekt angezeigt werden.
+- EDIT: Einlesen und konvertieren von Typestar-Texten weiter optimiert.
+
+10.03.2018:
+- EDIT: Einlesen von Typestar- bzw. WordPro'86-Dateien begonnen.
+  Konvertieren von Typestar-Dateien gelingt noch nicht, PCON veraendert Register
+  B, welches die Zeichen zaehlt. Evtl. auch noch Spaces am Zeilenende weglassen?
+
+09.03.2018:
+- EDIT: von 2 auf 3 Zeichensaetze erweitert (IBM, deutsch, CAOS), deswegen die
+  Belegung von STAT etwas veraendert und EDAS/ASM mit angepasst
+
+23.02.2018 ralle im Forum
+- DIR im Kassetten Modus geht nicht richtig, hab's mit einem Kassetten-Lister 
+  gegengeprueft. Laderoutine hat in der Bildausgabe leichtes Problem..???
+- Bei Abbruch des Ladevorgang bei Basic-Programm, Cursor springt eine Zeile
+  zurueck -> Das sehe ich mir noch einmal genauer an.
+
+Zu tun am Editor:
+- Editor: Reaktion "No Memory" testen
+- Editor: FIND weitersuchen geht immer eine Zeile weiter. Das hat zur Folge,
+  dass am Textende immer weiter nach unten gegangen wird. Solange irgend ein
+  Text im Speicher ist, wird das aber nach BRK korrigiert...
+
+04.03.2018:
+- EDAS/ASM Unterscheidung in Start-Bildschirm eingebaut
+
+25.02.2018:
+- DISAS umbenannt in DISASS wie frueher beim M027, dazu etwas Codeoptimierung im
+  Reassembler vorgenommen, damit der Platz reicht.
+- mit UP 26H auch den vorhergehenden Schaltzustand beim Schalten zurueckgeben
+  in Register E, Anpassung dazu auch beim Kommando SWITCH
+- Optimierung SWITCH/Modul, generell im DI und Ende mit EI
+- 1 Byte eingespart durch POP2 bei CBYTES (Hardopy-Routinen)
+- BASIC: Im Tape-Modus nach CSAVE"NAME" kommt Verify ?(Y):
+  wird hier N gedrueckt, wurde bisher das OK direkt dahinter geschrieben, es
+  fehlte ein CR+LF -> Jetzt wird zunaechst das eingegebene Zeichen, danach ein
+  CR+LF angezeigt und falls "Y" dann VERIFY aufgerufen.
+
+24.02.2018:
+- USB: fehlende Synchronisation bei ERA und REN eingebaut
+
+23.02.2018:
+- JIOERR von ROM-E in ROM-F verschoben, dadurch ein JP eingespart
+- JBRKT entfernt und umgestellt auf BRKT mit Einzelauswertung
+
+18.02.2018:
+- Reihenfolge der Menuworte DIR, CD, ERA und REN nach hinten verlagert (ROM-E),
+  damit %DISPLAY wieder mit %D aufgerufen werden kann und %COLOR wieder mit %C
+- Zusaetzliches Menuewort %D_ im CAOS-ROM-C, damit DISPLAY immer mit %D
+  aufgerufen werden kann.
+- CAOS/ASM/EDITOR: %DEVICE mit ungueltiger Nummer bringt jetzt ERROR
+
+17.02.2018:
+Maik Trompter hat erfolgreich das Turbo-Format auf echter Hardwere getestet.
+Hardware: KC85/5 mit CAOS 4.7 und GC-6020 Monokabel (Digger ausgelesen und
+wieder fehlerfrei geladen.)
+
+16.02.2018:
+- DI/EI fuer PIO-DI in Turboladeroutine, da es sonst zu undefinierten Zustaenden
+  kommen kann und die PIO nicht auf den Interruptvektor reagiert (Hinweis von
+  Frank Ludwig, siehe auch Kieser-Meder Seite 91 oder
+  http://z80.info/zip/ZilogProductSpecsDatabook129-143.pdf)
+
+11.02.2018:
+- Editor: Versionsnummer auf 0.2 erhoeht
+- Editor: Fehler bei Suche des letzten CR+LF am Textende korrigiert (TLDDR statt
+  LDDR)
+- Editor: ESC-Tabelle wird jetzt im IRM erzeugt statt im ROM vorzuhalten
+- Editor: Pixelfehler bei DSCRL korrigert
+- Editor: ESC-Tabelle live im IRM erzeugen fuer die 10 Adressen ESC0 bis ESC9
+- Editor: Laenge Stringspeicher (FIND) von 33 auf 27 (26 Zeichen + 0) reduziert
+  -> EDIT/ASM-Arbeitszellen jetzt nur noch bis 00FFh
+- Editor: MPAGE sucht jetzt nicht mehr nach letztem CR+LF da dies beim Verlassen
+  des Editors gemacht wird. Ist dabei Text2 komplett leer, steht T2A uaf T2E
+- Editor: Click-Anzeige korrigiert, Standard = aus.
+- ASM/REASM regeneriert auch den USER-ROM-Schaltzustand
+
+10.02.2018:
+- Editor: Umstellung der ESC-Funktionen im 80-Zeichen-Modus
+- Editor: CLICK aus loeschte Gloeckschensymbol nicht wieder
+- Editor: Druckersteuerzeichen eingeben per ESC-0 bis ESC-9 eingebaut
+- Editor: Bei Wechsel ASCII <-> deutsch wird jetzt Bildschirm aktualisiert
+- Editor: Bei Ende 80-Zeichenmodus wird der gesamte VRAM von Bild 0+1 geloscht
+- Editor: ARGC direkt als Merker des urspruenglichen Schaltzustandes des USER-
+  ROM genutzt. ARGC wird im gesamten Editor nicht genutzt/veraendert
+- Editor: WRZLE beendet Anzeige wenn wir am Ende von Teiltext 2 angekommen sind.
+  Dadurch auch korrekte Funktion von Enter am Textende in unterer BS-Zeile
+- Editor: CR+LF am Textende von Teiltext 2 wird entfernt bei BRK
+
+06.02.2018:
+- CAOS: Kommentare bei KBDS/KBDZ ergaenzt
+- Editor: ESC-Auswertung aus Routine PCHR80 entfernt
+
+05.02.2018:
+- einige Zeichencodes angepasst
+- 5. Beta-Version im KC-Labor veroeffentlicht zum Test, mi EDIT 0.1
+
+04.02.2018:
+- Der mit QMR nach EDAS reassemblierte Quelltext wurde beim Assemblieren nicht
+  fertig wenn vorher nicht der Editor aufgerufen worden ist...? Hier stimmten
+  zum Einen noch nicht alle Arbeitszellen und am Ende fehlte ein CR+LF!
+- EDIT: Statuszeile mit Rahmen versehen
+- EDIT: Druckersteuerzeichen nach ESC/P-Tabelle drucken wie in WordPro6
+- EDIT: dot-Kommandos nicht mit drucken
+
+03.02.2018:
+- ASM: statt Menuewort "ASM" im EDIT-Menu wird jetzt ein verstecktes "QUIT "
+  von BFE0h bis BFFFh, welches von EDIT zurueck zu ASM fuehrt. Bei Rueckkehr zu
+  ASM wird das temporaere QUIT wieder geloescht!
+- ASM/EDIT: Arbeitszellen nochmals verlegt, jetzt von 000h bis 00FFh
+- ASM: F-Tasten werden immer komplett neu belegt
+- ASM: Eingabe der 4 Adressen bei Programmstart mit 1x best"tigen
+- Menueworte: ASM, REASM, EDIT, REEDIT, DISAS
+- Reassembler auf neue EDAS-Arbeitszellen abgestimmt
+- EDAS 'CD' korrigiert (Fehler wird bereits von CAOS-UP angezeigt)
+
+02.02.2018:
+- Editor: PRINT-Kommando ueberarbeitet
+  1. Fehlermeldung wenn kein Drucker im CAOS initialisiert ist.
+  2. PRINT druckt Text hintereinander, PRINT n macht nach n Zeilen Blattwechsel
+     (Drucken auf Bildschirm nicht mehr enthalten)
+- EDAS 1.7 und EDAS 2.0 wird jetzt automatisch erzeugt und zwe verschiedene
+  USER-ROM erstellt (1x EDAS 1.7 und FORTH und 1x EDAS 2.0 und Editor)
+- Titelzeilen von ASM und Editor angeglichen
+- ASM/EDIT: Arbeitszellen so verlegt dass RAMC-Hilfsprogramme kuenftig auch fuer
+  ASM zur Verfuegung stehen koennen
+
+31.01.2018:
+- Editor/EDAS: Menuewortloeschen im RAM0 optimiert fuer 7FH und DDh
+  (Wechsel von EDIT nach ASM nur noch moeglich wenn wir von ASM gekommen sind.)
+
+30.01.2018:
+- Menuewort EDAS umbenannt in ASM wenn ext. Editor eingestellt ist
+- EDAS 1.7 wenn interner Editor und EDAS 2.0 wenn externer Editor
+- Stack bei Wechsel EDAS <-> Editor konstant gehalten
+- Editor loeascht Menuewort im RAM0 (z.B. ASM oder FLOAD)
+
+29.01.2018:
+- EDAS-Arbeitszellen fuer Umschaltroutine nochmals verlegt. EDIT fuehrt jetzt
+  in das Menue des ext. Editors und ergaenzt dort ein Menuewort "ASM" fuer
+  Rueckkehr zu EDAS
+
+28.01.2018:
+- Editor: Code-Optimierung bei Abfrage Einfuegemodus
+- Editor: Einfuegen von Einzeleichen und TAB bricht ab wenn keine freien Zeichen
+  mehr auf Bildschirm sind
+- Editor REPLACE funktioniert jetzt: neue Arbeitszellen definiert und TXA wegen
+  Stackfehler separiert
+
+27.01.2018:
+- Editor: Enter und Shift-Enter auf Code 0Eh gelegt
+- Editor: Enter im Ueberschreib-Modus geht auf neue Zeile, linke Randposition
+- Editor: Enter im Einfuegemodus geht mit Resttext auf linken Rand (8) oder auf
+  Spalte 0 falls Cursor links vom linken Rand stand.
+- Editor: Loeschen nach links fuellt jetzt Leerzeichen auf falls dort nichts
+  steht (TAB)
+
+26.01.2018:
+- Editor: TAB-Schritt im Ueberschreib- und Einfuege-Modus eingebaut
+
+24.01.2018:
+- Editor: Fehler beim UPSCRL beseitigt
+
+23.01.2018:
+- Editor: Zeile loeschen eingebaut und Scrolling nach oben neu programmiert.
+  Srolling runter in gleicher Art neu programmiert, aber noch fehlerhaft...
+
+21.01.2018:
+- Editor: FIND aus EDAS jetzt ohne Absturz (es fehlten noch die Hilfsprogramme
+  im RAM0)
+- gemeinsame Datei der Arbeitszellen fuer EDAS und Editor: EDAS.INC
+- Editor: Tabulatorleiste in Statuszeile ergaenzt, INS-Taste macht jetzt den
+  Einfuegemodus ein/aus. Einfuegemodus eingebaut in Editor (CRT_I)
+- Editor: LOAD Dateiname eingeben -> Punkt geht zu Dateityp
+- Editor: Zeile einfuegen per Entertaste begonnen...
+
+19.01.2018:
+- Editor: Find-Next repariert, damit diese nicht mehr abstuerzt
+
+18.01.2018:
+- Editor: Find-Funktion so optimiert, dass der Cursor auch in der ersten Zeile
+  steht, wenn dort der gefundene Text steht.
+
+13.01.2018:
+- SWITCH 2 mit SYSROM auf 4 Ebenen erhoeht. Bisher C1, D1, E1, F1, neu C1-F9
+  Modulkontrollanzeige schreibt das als Ebene 0 bis 7 aus
+- Menuewortsuche auf alle 7 USER-ROM-Ebenen ausgedehnt
+
+12.01.2018:
+- Unterstuetzung von 4 Ebenen System-ROM, schaltbar ueber Bit 2+3 von PORT2=86h
+- JUMP 0-3 schaltet die System-Bank um, dazu muss nach JUMP und RESET das Bit2+3
+  unveraendert bleiben, bei POWER muss es aber gezielt auf 0 gesetzt werden um
+  definierte Zustaende beim Einschalten zu schaffen.
+
+10.01.2018:
+- Aufruf 80-Zeichen-Editor aus EDAS heraus eingebaut, vorerst optional
+
+08.01.2018:
+- optionale Verwaltung fuer 1MB RAM8 eingebaut in CC47.INC nach RAM8UP26.MAC
+
+06.01.2018:
+- Ports 84h und 86h durch Marken PORT1 und PORT2 ersetzt und Bedeutung der Bits
+  in der EQU-Liste beschrieben
+
+05.01.2018:
+- USB: Doppelte Anzeige von ERROR bei TimeOut (Read) beseitigt
+  Versionsdatum und DOS-Datum mit Macro berechnet, auch fuer Eingabe beim Start
+  von %VINCULUM. Jahr kann auch 4stellig eingegeben werden (wird aber nur
+  2stellig ausgewertet wie bisher)
+- EDAS: Code-Optimierung bei MBO/CSRO BC-Register fuer Vortonlaenge
+- Editor: Code-Optimierung bei MBO/CSRO BC-Register fuer Vortonlaenge
+
+02.01.2018:
+- SAVE/TAPE: Bei BRK ist Vortonlaenge BC=0 gewesen
+
+25.12.2017:
+- BASIC: PTEST noch einmal leicht veraendert fuer Kompatibilitaet zu frueher.
+  -> PTEST (X) meldet 0 oder 1 also Punkt gesetzt oder nicht
+  -> PTEST (X,Y) meldet den Farbcode zurueck
+
+17.12.2017:
+- LED ein/aus im Turbolader eingebaut: ein wenn Synchronisation erfolgt ist
+- EX AF,AF' durch PUSH/POP ersetzt in den Turbo-Interruptroutinen
+- Kommentare zu den CAOS-UP's angepasst / einheitliche Kopfzeile
+
+14.12.2017:
+- Freigabe PIO-Logik in Turbo-Leseroutine eingebaut.
+- JUMP 0 = Sprung zu RESET eingebaut (aehnlich CAOS 3.4)
+
+13.12.2017:
+- Vortonlaenge fuer BASIC im Turboformat verdoppelt, bei Ausgabe unter BASIC das
+  > hinter der Blocknummer weggelassen
+
+12.12.2017:
+- MPM-Turbolader als Treiber 1 eingebunden, Interruptadressen von CTC1 und PIO-A
+  werden bei DEVICE-Umschaltung modifiziert.
+
+08.12.2017:
+- Optimierung der TAPE-Ausgabe: BYTOT gibt die Vollschwingungen jetzt direkt aus
+  und nicht mehr um einen Takt verzoegert ueber Register D/E. Nach dem Pruef-
+  byte wird noch eine echte Halbschwingung ausgegeben damit der Endimpuls immer
+  vollstaendig kommt und die Phasenlage wechselt. Zusaetzlich 2 Byte gespart.
+
+06.12.2017:
+- Optimierung TAPE-Eingabe BYTIN ohne Veraenderung des E-Registers und BLKIN
+  mus DE damit nicht mehr auf dem Stack retten fuer Pruefsummenberechnung.
+  4 Byte gespart, Code schneller, vermeidet Lesefehler (Idee von Frank Ludwig)
+- Abfrage von (IX) bei STOP21 einen Befehl verzoegert um ein mehr sicheres
+  Ergebnis zu erhalten (Hinweis von Frank Ludwig)
+- VERIFY zeigte keine Dateinamen von BASIC-Programmen mehr an wegen der
+  Aenderung vom 20.10.2017. Deshalb Zeichencodes D3..D5 wieder freigegeben
+- MBO: Korrektur bei Ausgabe Endimpuls nach Pruefsumme wieder Halbschwingung
+  ohne vorher zusaetzliche Vollschwingung (wegen Lesefehler bei Block FF)
+
+26.11.2017:
+- USB: Modulsuche so veraendert, dass auch zwei M052 benutzt werden koennen.
+  Es wird erst ein M052 gesucht, das bereits den PIO oder EEPROM zugeschaltet
+  hat. Wird kein solches Modul gefunden, koennte die Software auch in einem RAM-
+  Modul abgearbeitet werden: dann wird das zuerst gesteckte M052 eingeschaltet.
+- Fehler bei neuem PTEST gefixt (Danke Frank Ludwig f_r den Hinweis)
+
+22.11.2017:
+- USB: Erweiterung der CAOS-Versionsabfrage fuer OS/PI88 und OS/PI90, Meldung
+  als CAOS 3.2 - Prompt ist hier in (IX+11) gespeichert.
+- USB: CAOS 5.0 kennt keine erweiterten Menueworte, keinen anderen Systemprompt
+  deshalb Behandlung wie CAOS 4.2 eingebaut
+
+20.11.2017:
+- BASIC: Nach PTEST funktionierte PRINT nicht mehr, da auf dem Stack die Daten
+  in der falschen Reihenfolge lagen fuer die Weiterbearbeitung
+- BASIC: CIRCLE brachte FC-Error weil UP 3FH mit CY=1 beendet wurde
+
+19.11.2017:
+- PUDE testet im HIRES-Modus nur noch die Punktfarbe, der Bildpunkt wird nicht
+  mehr veraendert (Punkt kann mit PUSE in jeder Farbe gesetzt werden)
+- BASIC: PTEST gibt jetzt bei gesetztem Punkt immer den Farbwert zurueck, bei
+  Farbe schwarz statt 0 aber 8 (0 bedeutet Punkt nicht gesetzt)
+- PRINT im ROM-D entfernt, da es bereits in den USER-ROM ausgelagert wurde
+- Zeigertabelle fuer Unterprogramme aufgeloest und zwischen die Sprungtabelle
+  im ROM-F verteilt (wie bei CAOS 3.4)
+
+18.11.2017:
+- BASIC: PTEST erweitert, jetzt kann optional auch die Y-Koordinate angegeben
+  werden. Im Hires-Modus setzt PRESET jetzt den Punkt in der angegebenen
+  (Hintergrund-)Farbe
+- UP PUDE setzt im HIRES-Modus den Punkt in der eingestellten Hitergrundfarbe
+
+12.11.2017:
+- MULC beendet nicht mit JP COFF, dadurch in CIRCLE nutzbar.
+  (3 Byte mehr in ROM E, 2 Byte gespart in ROM D)
+- CIRCLE optimiert mit MULC -> 7 Byte gespart im ROM C
+- Beim Punkt setzen Bit 2 von FARB auswerten um keine Farbe zu veraendern,
+  Optimierung HIRES-Modus (1 Byte gespart im ROM C)
+
+11.11.2017:
+- MULT und SQR optimiert in Anlehnung an CAOS 3.4 (4 Byte gespart)
+
+31.10.2017:
+- Zeichencodes fuer Pfeile und STOP/CONT geaendert aehnlich CAOS 3.3
+  jetzt alle Zeichen links/oben ausgerichtet!
+- Optimierung UP TON-Ausgabe: 7 Byte gespart
+- BJUMP umbenannt in NCAOS wie in den Original-Quelltexten
+
+30.10.2017:
+- JUMP schaltet das Modul jetzt R/O ein also mit FDh statt FFh (wie CAOS 3.3)
+
+29.10.2017:
+- PUSEC und PUDEC verschoben im ROM-C, dadurch ein JP in JR wandeln koennen
+
+27.10.2017:
+- L3TB umbenannt in ESCTAB
+
+20.10.2017:
+- Bei LOAD wird der Dateiname nur noch angezeigt wenn ausschliesslich gueltige
+  Zeichen im Dateinamen enthalten sind (00h oder zwischen 20h und 7eh)
+
+19.10.2017:
+- USB: Fehler in Routine KCTEST behoben (CAOS 2.2 wurde als 3.3 erkannt)
+- USB: CAOS-Versionspruefung jetzt bei allen CAOS-Kommandos eingebaut ueber
+       Routine MINIT
+
+11.10.2017:
+- UEVEX: DIR-Maske auf "alles" gesetzt, sonst wurden keine Dateien angezeigt
+
+08.10.2017:
+- USB: verbesserte Erkennung der CAOS-Version fuer KC85/2 und KC85/3
+- UDEVEX: bei Fehler wird Druecken der BRK-Taste simuliert um Ladevorgang
+  abzubrechen (war sonst Endlosschleife)
+- UDEVEX: EDAS-Suche verbessert, es wird kein Betriebssystem-Modul mehr
+  geschaltet (fuer CAOS 3.3 im 16k ROM erforderlich)
+- USB: DIR-Puffer im Terminal von 200h auf 300h verlegt wegen CAOS 3.3
+
+06.10.2017:
+- USB: weitere Anpassung der MENU-Routine, Fehlerkorrektur fuer CAOS 4.1
+
+05.10.2017:
+- USB: eigene MENU-Routine fuer CAOS -> listet auch die kleinen Menueworte mit
+  auf wenn CAOS 3.1 bis 4.5 erkannt worden ist.
+
+04.10.2017:
+- USB: BASEX-SERVICE Adressbereich verschoben von D8..110h nach BE..00FFh
+- USB: Terminal-Versionsanzeige mit Menuewort "ver" statt "?"
+
+02.10.2017:
+- USB-Terminal: BRK-Abfrage bei CAOS 4.3+ funktionierte nicht mehr durch die
+  erweiterte Versionspruefung -> CY-Flag wieder gedreht.
+
+29.07.2017:
+- USB: LOAD haengt nicht mehr seit bei LOA8 PUTi fuer ECS benutzt wird (Sprung
+  zu disp10 von DIR-Kommando)
+
+25.09.2017:
+- UBASEX: VERIFY wieder automatisch uebergehen (Simulation gedrueckte Taste)
+
+24.09.2017:
+- USB: Farben im Terminal geaendert (Interrupt-Anzeigen gelb)
+- USB: Fehlerbeseitigung und Optimierung DIR-Kommando
+- USB: Zeitschleife fuer Sync verlaengert, da Kommandos zu frueh ausgeloest
+  wurden (im Debug-Mode am echten KC festgestellt / JKCEMU ist schneller)
+- UDEVEX: Namensaufbereitung korrigiert (00h werden durch 20h ersetzt)
+
+23.09.2017:
+- USB: IBM-Zeichensatz nicht mehr verwendet: Backslash Zeichencode intern
+- USB: 80-Zeichen-Routine fuer HEX-Anzeigen im DEBUG-Modus eingebaut
+- USB: Erweiterte CAOS-Versionspruefung aus M030-Ssoftware uebernommen
+  Prompt-Umschaltung auch bei CAOS 3.4, Fehlermeldung bei CAOS 2.2
+- umbenannt in Version 2.5
+
+22.09.2017:
+- USB: DEBUG-Anzeigen beim Terminal-Start, beim Interrupt, bei >USB, >hex und
+  >DIR (nicht bei >LOAD und >SAVE im Terminal-Fenster und nicht im Treiber-Teil)
+
+21.09.2017:
+- USB: PUTi und PUT begonnen zu trennen (PUTi mit Debug-Anzeige im Terminal)
+
+19.09.2017:
+- USB: Durch die lange Zeit im DI kommt aber manchmal der Tastaturinterrupt
+  durcheinander, zum Beispiel beim Kommando USB DIR
+-> Deshalb ISR umgestellt sodass global die Interrupts freigegeben werden aber
+  neue Interrupts vom USB-PIO gesperrt werden bis alle Daten abgeholt sind.
+
+17.09.2017:
+- USB: DEBUG-Modus begonnen, teilweise noch Fenster-Fehler zu beheben
+
+16.09.2017:
+- USB: Fehler gefunden, warum sporadisch die Fenstereinstellungen durcheinander
+  gekommen sind: Innerhalb der ISR darf kein PV1 verwendet werden, da im PV1
+  ein DI und EI abgearbeitet wird
+-> Deshalb WINAK, CRTI und CRTX von PV1 auf PV3 umgestellt.
+
+28.08.2017:
+- UDEVEX: fertiggestellt, Routinen arbeiten jetzt alle
+
+27.08.2017:
+- USB: Terminal-Version auf 2.4b erhoeht mit wieder integriertem BASEX und DEVEX
+- UDEVEX: begonnen an neue Software anzupassen.
+- UDEVEX: neue Modulsuche funktioniert, erkennt automatisch welches Modul zu
+  schalten ist (immer das mit dem kleineren Steckplatz=hoehere Prioritaet)
+
+26.08.2017:
+- UBASEX: Dateimaske bei CALL*DE ergaenzt, damit DIR alle Dateien anzeigt
+- UBASEX: Verzeichniseingabe ergaenzt, damit CALL*F0 wieder funktioniert
+- UBASEX: %bsave wieder eingebaut
+-> Damit ist UBASEX wieder vollstaendig eingebaut fuer die alten CAOS-Versionen
+
+25.08.2017:
+- USB: Versteckte Menueworte nur noch in Kleinbuchstaben (sind sonst beim 
+  Bildschirmaufbau bei MENU kurz zu sehen - eventuell leicht stoerend)
+
+20.08.2017:
+- UBASEX fuer die alten CAOS-Versionen wieder eingebaut - noch nicht getestet
+- USB-Version 2.4a - Treiber bleibt jetzt im Short-Command-Mode
+  damit ist der Effekt weg, dass nach dem Ab- und Anstecken des USB-Sticks
+  ein CF-Error kommt (offensichtlich h"ngt die Vinculum-Firmware wenn noch nicht
+  alle Daten abgeholt sind <hier der Prompt> beim Stick-Wechsel)
+
+26.07.2017:
+- CAOS-UP 10H meldet Fehler mit CY=1 (wenn kein Autostart)
+
+25.07.2017:
+- Moduldefinition M066/SOUND von DFh auf DCh geaendert
+
+15.07.2017:
+- STACK = 01C4H als Marke definiert in EQU47.INC
+
+12.07.2017:
+TEMO: Systemstack = 01C4H setzen (war vorher 01D4h)
+EDAS: Einarbeiten einiger Kommentare aus ASM1.MAC von Frank Klemm,
+      Ueberlesen auch von mehreren Doppelpunkten nach Marken.
+
+14.06.2017:
+MBI bricht jetzt mit Fehler ab bei DEVICE>0 also wenn nicht TAPE, dadurch keine
+Endlosschleife bei Ladeversuch leeres Stringfeld, siehe 10.06.2017
+
+10.06.2017: Fehler von Thomas Schramm in BASIC entdeckt
+	DIM AD$(2)
+	CSAVE*"A";A$  -> OK
+	CLOAD*"A";A$  -> bleibt in Endlosschleife mit Fehlermeldung haengen
+Grund: BASIC-Interpreter kann Dateien nicht laden, wenn alle Strings leer sind.
+(Fehler in BASIC-ROM)
+Bis CAOS 4.6 wurde mit Fehlermeldung + ?IO Error abgebrochen, zumindest bei D004
+CAOS 4.7 haengt in Endlosschleife fest wie bisher bei TAPE
+
+07.06.2017:
+- OSTR wieder mit ZKOUT programmiert wie bei CAOS 3.1/3.3/3.4 - spart 5 Byte
+
+04.06.2017:
+- BASIC PSET und PRESET optimiert - 8 Byte gespart
+- UP WAIT an BEEP angehaengt, spart 1x JP und damit 3 Byte
+
+03.06.2017:
+- Bei INLINE DABR wieder direkt (ohne PV1) eingetragen, da Menue-Eingabe im
+  80-Zeichen-Mode wieder verworfen - 1 Byte gespart
+- Bei BLOAD UP 10H=LOAD direkt (ohne PV1) aufrufen - 1 Byte gespart
+- Pruefsummenberechnung statt in IX+11 jetzt in Register E wie bei CAOS 3.4
+  das spart 6 Byte
+
+28.05.2017:
+- BASIC: UP MC8D4 an weiteren Stellen eingesetzt - 35 Byte gespart
+- BASIC: Aufruf PV5 fuer KEYLIST, KEY optimiert - 2 Byte gespart
+- CAPS-Umschaltung bei TST3 aus CAOS 3.4 uebernommen - 3 Byte gespart
+
+27.05.2017:
+- BASIC: Optimierung VPEEK/VPOKE (11 Byte eingespart)
+
+25.05.2017:
+- BASIC:WINDOW von CAOS 3.4 uebernommen - 67 Byte gespart
+- 1 Byte gespart bei RUP12 - von CAOS 3.4 uebernommen
+- 2 Byte gesparrt bei PAUSE durch direkten Aufruf von WAIT statt ueber PV5
+
+24.05.2017:
+- UP LOCOL zum Lesen des Farbwertes von CAOS 3.4 uebernommen (6 Byte gespart)
+
+22.05.2017:
+- PV3 mit ED A0 als NOP-Befehl (1 Byte gespart) - Trick aus CAOS 3.4
+
+18.05.2017:
+- BASAVE: BASIC-ROM war nicht im Modulsteuerbytespeicher angemeldet, deshalb
+  Absturz bei Aufruf PV7 (MBIN/MBOUT) -> Code wie "BASON" aus CAOS benutzt
+
+14.05.2017:
+- Editor: Hardcopy-Funktion Taschenrechner fuer 80-Zeichen-Modus fit gemacht
+- Editor: F-Tasten initialsieren beim Start
+- Editor: FIND-Funktion korrigiert, Anzeige in Zeile 2
+          Zeilennummer nach Suche und Weitersuche neu ermitteln in EDIT
+
+13.05.2017:
+- Editor: DEL und CLR programmiert (wie unter CAOS)
+	  Hilfsprogramm ab 88h (im EDAS-Assemblierpuffer)
+	  Umschaltung DABR40/DABR80 entfernt (DABR80 wird direkt aufgerufen)
+	  Umschaltung CSTB40/CSTB80 entfernt (CSTB80 wird direkt aufgerufen)
+
+12.05.2017:
+- JEDIT: Abbruch bei SAVE wenn ISRO mit CY=1 zurueck kommt
+- BSAVE: CR+LF eingefuegt vor SAVE
+
+09.05.2017:
+- Editor: Endekennung mit PUT einschreiben, ist erst am echten KC aufgefallen
+  weil dort der RAM zufaellig belegt ist.
+
+08.05.2017:
+- BASIC: BLOAD"Dateiname" eingebaut falls DEVICE nicht TAPE
+- D004-Treiber: Dateiname ausgeben optimiert (max. 12 Zeichen, Ende bei 0)
+  oder Leerzeichen fuer RENAME
+
+07.05.2017:
+- UP DEV zur DEVICE-Ermittlung um Speicherplatz zu sparen
+
+06.05.2017:
+- Editor: ohne Konvertierung Verschieben mit LDDR statt byteweise
+- Editor: Fehler bei Steuerzeichenanzeige behoben
+
+05.05.2017:
+- Editor: erst Laden und beim Umkopieiren konvertieren (geht aber langsam:
+  MLDOS11.TXT 11 Sekunden bei EXRAM=0 bzw. 19 Sekunden bei EXRAM=1)
+  Vorblockerkennung 00 bis 02 wegen Edas und TEXOR
+
+04.05.2017:
+- Editor: Endezeichen 0FFh (TEXOR) wird zusaetzlich erkannt, Textkonverter fuer
+  TPKC eingebaut
+- Editor: WRZLE geaendert, damit auch bei TAB nicht ueber 80 Zeichen geschrieben
+  wird. Ueberlange Zeilen werden auf der naechsten Zeile weiter angezeigt.
+
+17.04.2017:
+- Editor: Textspeicher mit M022 oder M011 erweitert, Hilfsprogramme ab 200h
+  (WordPro6: Frei=49.152, Editor: Frei=56.761)
+- Editor: Fehlerkorrektur (IRM war ON bei Suche leerer Zeilen am Textende)
+- Editor: Anpassungen zu Statuszeile, Umschaltung Zeichensatz deutsch/US-ASCII
+          und Anzeige Tastenclick durch Gloeckchensymbol
+
+16.04.2017:
+- Editor: Frei-Anzeige loescht vorher die alte Zahl
+- Editor: 80-Zeichenroutine optimiert, Zeichensatz Druckersteuerzeichen wie in
+          WordPro ergaenzt. Anzeige aller Steuerzeichen ausser CR,LF,TAB,03h,1Ah
+
+15.04.2017:
+- Editor: Seite vorwaerts/rueckwart programmiert (Shift+CUU/CUD),
+          MPAGE schneidet beim Speichern ueberfluessige Leerzeilen ab.
+- Editor: CUR scrollt jetzt auch in unterer Zeile am rechten Rand 1 Zeile vor
+- Editor: Wort rechts/links bleibt an Textende/Textanfang stehen
+- Editor: Bei Scrolling CUU/CUD jetzt auch an Ende der neuen Textzeile gehen
+- Editor: CLEAR setzt Zeilennummer auf 1 zurueck.
+
+14.04.2017:
+- Editor: CUL scrollt jetzt auch in oberer Zeile am linken Rand 1 Zeile zurueck
+- Editor: Anzeige Zeilennummer und Spaltennummer in Statuszeile eingebaut
+- Editor: Scrolling f_r Cursor hoch programmiert (genau so schnell wie runter,
+  da immer nur eine Zeile neu angezeigt werden muss)
+- Editor: MLINE neu programmiert, es werden jetzt auch Leerzeilen ohne ein
+  Leerzeichen abgespeichert.
+
+13.04.2017:
+- Editor: EDIT Cursor rechts neu programmiert (Tab-Schritte wenn kein Text)
+- Editor: EDIT Shift+CUR/CUL springt wortweise nach rechts/links
+- Editor: Scrolling f_r Cursor runter programmiert
+
+12.04.2017:
+- Editor: EDIT Cursor links neu programmiert (Tab-Schritte wenn kein Text)
+- Editor: LOAD erkennt 03h und 1Ah als Endezeichen,
+          SAVE speichert ohne Vorblock (nur noch bei Kassette wegen Dateiname)
+- EDAS: LOAD erkennt jetzt auch das CP/M-Endezeichen 1Ah, Codeoptimierung SAVE
+
+11.04.2017:
+- Bei Kassettenausgabe den Endimpuls (Knacks) als Vollschwingung+Halbschwingung
+  eingebaut, das sollte den Abschluss der Bandeingabe verbessern.
+- Editor wieder auf 40-Zeichen umgestellt fuer MENU
+
+10.04.2017:
+- USB-Treiber umgestellt, dass Register AF' nicht mehr veraendert wird
+- USB-Treiber umgestellt, dass ISRI nicht mehr Register DE veraendert
+- USB-Treiber umgestellt, dass CSRI nicht mehr Register BC veraendert
+
+07.04.2017:
+- MBIN und MBOUT wieder in ROM F eingebaut mit Aufruf MBIC/MBOC
+- TMBIN, TMBOUT, FMBIN, FMBOUT entfernt aus Quelltext
+- ISRO geaendert mit Dateiname in HL statt in Kassettenpuffer (wegen BASIC)
+- Bei MBOC nach Blockausgabe ein CALL CLC eingefuegt, damit der letzte Block
+  am Ende mit definiertem Inhalt 00h erzeugt wird
+
+01.04.2017:
+- BASIC: TMBIN und TMBOUT setzen CY-Flag bei BRK/Fehler und springen
+  nicht mehr direkt zu JIOERR. Dadurch wird BASIC-ROM wieder zugeschalten.
+  Bei falschem BASIC-Dateiname jetzt wieder IO-ERROR und kein Absturz
+
+26.03.2017: SETRO, SETWR, TIME und PRINT ausgelagert in den USER-ROM
+  (Edas-Ebene)
+
+23.03.2017:
+- Soundmodul in Modul-Liste aufgenommen (Entwicklung Rene Nitzsche - reserviert)
+
+22.03.2017:
+ - makefile ergaenzt, damit USER-ROM 1. mit FORTH und zum 2. mit dem TextEditor
+   erzeugt wird
+
+21.03.2017:
+- Save-Routine von QMR angepasst, Dateiname in Kassettenpuffer
+
+20.03.2017:
+- DEBUG.ROM BSAVE integriert, RECIN: modifiziert sodass Dateiname mit Leerzei-
+  chen vorbelegt ist und so wird der Dateityp mit dem Namen zusammengezogen.
+  Funktioniert bei BSAVE, JEDIT
+
+15.03.2017:
+- UP SAVE loescht den Kassettenpuffer vor der Initialisierung
+
+13.03.2017:
+- USER-ROM mit Texteditor statt FORTH bestueckt.
+
+12.03.2017:
+- CUCP wird innerhalb von CAOS mit PV1 aufgerufen, damit man per SUTAB die
+  Funktion aendern kann.
+- DABR wird innerhalb von INLIN mit PV1 aufgerufen damit man per SUTAB die
+  Funktion aendern kann.
+
+21.02.2017:
+- Fehlerkorrektur: USB-Modul ohne Treiber wurde nicht richtig abgeschaltet
+
+18.02.2017:
+- DIR gibt jetzt die Anzahl der angezeigten Dateien in HL zurueck
+
+28.01.2017:
+- Modul mit Strukturbyte 00h als 'VARIABEL' definiert (Tim Henning, M042)
+
+19.01.2017:
+- Autostart-Modul mit Kennbyte 01 wird jetzt R/O eingeschalten, also mit
+  Steuerbyte 41h statt 43h
+
+07.01.2017:
+- Korrektur eines Fehlers, der seit CAOS 4.5 drin ist: mit SWITCH 1 0
+  funktionierte MODIFY und DISPLAY nicht mehr, da LDMAE den IRM nicht wieder
+  angeschaltet hatte.
+
+02.01.2017:
+- Fehlerkorrektur bei Aufbau der Treibertabelle DEVTAB
+
+01.01.2017:
+- Treibersuche auf M052 und M064 erweitert,
+  so viele Module bis Treibertabelle voll ist...
+
+28.11.2016:
+- Modulbezeichnungen aktualisiert in ROM-C
+
+30.05.2016:
+- Maus-Arbeitszellen reserviert in EQU47.INC
+
+24.05.2016:
+- QMR-Reassembler weiter kommentiert, Umstellung auf DEVICE-Schnittstelle
+
+15.05.2016:
+- DIR, CD, ERA, REN von ROM-E in ROM-F verschoben.
+- BASIC-TOKEN fuer Kommando CHDIR definiert und CHDIR programmiert.
+
+14.05.2016:
+- FILES brachte nach Verzeichnisanzeige noch einen ?SN-ERROR weil HL nicht mehr
+  auf der Kommandozeile stand. PUSH / POP ergaenzt
+- FILES mit Dateimaske umgesetzt, dabei M021-Initialisierungstabellen von E nach
+  F verschoben weil Platz in E nicht reichte
+- CAOS UP 4Ah wieder entfernt, da auf die Treiber-Funktionen besser mit PV7
+  zugegriffen werden kann.
+
+13.05.2016:
+- DIR-Kommando von BASIC in FILES umbenannt
+
+08.05.2016:
+- BASIC-Erweiterungen weiter kommentiert
+
+07.05.2016:
+- BASIC-Befehl DIR als neuen Token F6 definiert. bei USB kommt nach DIR-Anzeige
+  ?SN ERROR
+
+05.05.2016:
+- EDAS: DEVICE-Anzeige korrigiert (DISK muss nicht Treiber 1 sein!)
+- EDAS: REN und ERA waren vertauscht
+- USB: Dateinamen-Aufbereitung fuer EDAS ergaenzt
+
+04.05.2016:
+- AUS-Schaltzustand Treibermodule erst bei PV7 merken und nicht schon bei Suche
+- Optimierung der byteweisen Kassettenroutinen fuer BASIC
+- VERIFY Endeblock Abfrage wieder eingebaut und Y-Anzeige bei BASIC ergaenzt
+
+03.05.2016:
+- BASIC-Wort "DRIVE" ersetzt durch "DEVICE"
+
+29.04.2016:
+- LOAD: Abbruch bei Fehler wenn DEVICE > 0 (Lesefehler, z.B. Datei zu klein)
+
+28.04.2016:
+- USB: Interrupt ein aus SAV8 wieder entfernt und dort rein geschrieben wo es
+  fuer das Terminal gebraucht wird: beim Start, nach DIR, nach LOAD, nach SAVE
+- UDIR und FDIR mit Pause zwischen den Bildschirmseiten
+
+27.04.2016:
+- Bit 0,(IX+7) wieder aktiviert, damit M052-Terminal wieder funktioniert
+  eventuell Interrupts auf andere Art ein/ausschalten - siehe SAV8!
+- IOERR wird erst nach Abschluss von PV7 angesprungen. MBIN/MBOUT muessen jetzt
+  Fehler mit CY=1 melden!
+- ESC-D wieder in Funktion versetzt, kam immer mit CY=1 zurueck
+- TYPE und DUMP im ROM D umgestellt von PV1 auf PV7
+- Byteweise Routinen im ROM C umgestellt von PV1 auf PV7
+- REN getestet mit D004 und USB: OK
+- SAVE getestet mit D004 und USB: OK
+
+26.04.2016:
+- Menueworte DIR, CD, REN und ERA in den ROM E verlegt. Damit funktioniert jetzt
+  DIR bei USB auch weil der CAOS-ROM-C nicht erst eingeschaltet wird fuer das
+  entsprechende Menuewort.
+- EDAS 2.0 umgestellt von CAOS UP 4AH auf PV7
+- M052 nach Initialisierung wieder ausschalten
+- Scrolling bei DIR mit DEVICE1=DISK stuerzt ab, da CAOSROM-C aus geht. Deshalb
+  im PV7 den aktuellen Zustand des CAOS-ROM-C in Bit 7 von B805h abgelegt und
+  daraus wieder regeneriert nach Rueckkehr der Routine.
+
+25.04.2016:
+- SUTAB nicht mehr modifizieren, stattdessen die Adressen live aus DEVTAB und
+  IX+8 berechnen und Module dabei schalten, PV7 eingebaut analog PV1
+- LOAD laesst sich schon einmal aufrufein in den CAOS-ROM-C
+- DIR bei USB haengt sich auf beim Scrollen...
+
+17.04.2016: Umbenennung in CAOS 4.7, Versionsnummer erhoeht
+- USB-Treiber im M052-ROM integriert
+- M052-USB-Treiber suchen und aktivieren bei SYSI eingebaut
+- Modulsuche, SLOT0 und SLOT1 auch fuer M052-Suche verwendet
+- V.24 und Druckertabellen von ROM-C in ROM-D verlagert
+
+Aenderungen in CAOS 4.6:
+========================
+
+- Automatische Erzeugung des USER-ROM aus 4 Einzel-ROM-Dateien
+- Erzeugung des FORTH-ROM aus dem Quelltext von Volker Pohlers
+- Erzeugung des EDAS-ROM aus dem Quelltext von EDAS 1.6
+- Erzeugung des BASIC-ROM aus dem Quelltext von HC-BASIC
+- Erzeugung des DEBUG-ROM aus dem Quelltext von REAS und TEMO
+- JEDIT (von Frank Ludwig) im DEBUG-ROM integriert, in Handbuch aufgenommen
+- CALC (von Frank Ludwig) im DEBUG-ROM integriert
+- BITTAB auf Adresse FDF8H festgeschrieben, Nutzung in TEMO (Handbuch)
+- Parameterbeschreibung bei MODIC korrigiert und Handbuch angepasst
+- FORTH setzt bei Rueckkehr zu CAOS SP neu aus SYSP / in FORTH 3.2 umbenannt
+
+Speicherbelegung:
+ROM-C:   14 Byte frei
+ROM-D:  320 Byte frei
+ROM-E:   35 Byte frei
+ROM-F:    0 Byte frei
+USER-C:   7 Byte frei (BASIC)
+USER-D: 129 Byte frei (Reassembler, Debugger)
+USER-E: 487 Byte frei (EDAS)
+USER-F:  15 Byte frei (FORTH)
+
+27.03.2016: CAOS 4.6 beta zum Download veroeffentlicht
+
+17.03.2016:
+- Scancode als Kommentar in KTAB ergaenzt.
+- Soft-RESET aus CAOS 5.0/6.0 vorbereitet
+
+05.03.2016:
+- Fehlertext "falsches Kommando" geaendert in "Kommando?"
+- WAIT weggelassen in V24PR
+- letzten illegalen CPCODE ED 71 "OUTC0" bei M021PR ersetzt durch OUT (C),A
+
+04.03.2016:
+- illegalen CPCODE ED 71 "OUTC0" bei PWRC ersetzt durch OUT (C),L
+- illegalen CPCODE ED 71 "OUTC0" bei SLOT1 ersetzt durch OUT (C),D
+
+03.03.2016:
+- REN auf DEVICE-Schnittstelle umgestellt: funktioniert.
+- Fehler bei SAVE behoben (Absturz/Stackfehler bei MBO-Fehler CY=1)
+  Dazu 1 Byte eingespart im ROM-F bei INPUT
+
+02.03.2016:
+- ERA auf DEVICE-Schnittstelle umgestellt
+
+28.02.2016:
+- INIT Abarbeitung auf Adresse 100h gelegt (DEP 3.2 ebenfalls wenn CAOS 4.6+)
+
+27.02.2016:
+- INIT auf DEVICE-Schnittstelle umgestellt
+  (Abarbeitung im Kassettenpuffer ist aber unguenstig, da LOAD diese Befehle
+  dann ueberschreibt - aber welchen Speicher nimmt man dann?)
+  Das gleiche betrifft auch DEP Version 3.2, dort ebenfalls in B700h...
+- TYPE auf DEVICE-Schnittstelle umgestellt
+- Programmteile von TYPE und DUMP zusammengelegt / optimiert.
+- DUMP korrigiert, damit CAOS-ROM-C nach Ende von DUMP unveraendert ist
+
+26.02.2016:
+- DUMP auf DEVICE-Schnittstelle umgestellt
+
+30.11.2015:
+- SIXD initialisiert auch die DEVICE-Treiber neu, das ist erforderlich fuer
+  die Kommandoabarbeitung mit LOAD direkt nach DEP 3.2
+
+06.09.2015:
+- Bugfix bei Modulcheck M052 (setzt Steuerbyte des M052 immer auf 04)
+
+23.07.2015:
+- M030 umbenannt von EPROMER in EPROMMER
+
+04.02.2015:
+- Bei Kassettenausgabe Endimpuls wieder als Halbschwingung und nicht mehr als
+  Vollschwingung wie bei CAOS 4.5 - siehe 30.07.2010
+
+17.03.2014:
+- Nach TAPELIST ging Motor von Kassettenrekorder nicht aus - korrigiert.
+
+16.03.2014:
+- (IX+2) wird jetzt in FMBI hochgezaehlt und nicht mehr aus (IX+3) geladen
+- DEVICE.KCC: DIR-Kommando mit Maske und CD-Kommando fuer USB/M052 eingebaut
+
+11.03.2014:
+- ESC-D zur DEVICE-Anzeige und Umschaltung eingebaut (Idee von Frank Ludwig)
+- CALC zeigt jetzt Hilfe bei Aufruf ohne Parameter
+
+09.03.2014:
+- Aenderungen an CALC von Frank Ludwig uebernommen
+
+07.03.2014:
+- FKT_1: "CD" in CAOS und EDAS umgestellt
+
+05.03.2014:
+- neue CAOS-Funktion 4AH - DEVICE-Funktion aufrufen
+  FKT_0: "DIR" in CAOS und EDAS umgestellt
+
+02.03.2014:
+- (IX+3) wird jetzt bei ISRI auf 1 gesetzt, damit kann das in allen Anwender-
+  programmen entfallen. Getestet mit EDAS, BASIC
+
+19.01.2014:
+- LOAD ausschliesslich ueber Adressvergleich beendet. Damit sind jetzt auch
+  Dateien groesser als 32K einlesbar
+- Ungenutzte Treiberroutinen mit ERRM belegt statt NOOP
+- DIR fuer Disk und Tape (TAPELIST) eingebaut
+- Berechnung der Pruefsumme bei MBI von IX+13 auf IX+11 verlegt, damit ist
+  jetzt wieder die BRK-Taste wirksam beim Einlesen!
+
+18.01.2014:
+- Kassettenroutinen ueberprueft, dass alle mit CY=0 beendet werden.
+- CY=1 bricht dann LOAD oder SAVE ab (Fehlerbehandlung Floppy oder USB)
+- LOAD und SAVE mit USB-Schnittstelle (DEVICE.KCC) funktioniert
+- BASIC-CLOAD funktioniert auch
+
+15.01.2014:
+- Geraetetreiber lassen sich nur aktivieren, wenn das erste Byte der Treiber-
+  tabelle die Treibernummer enthaelt, Beruecksichtigung bei DEVICE-List
+
+12.01.2014:
+- ESC5 und ESC6 so umgeschrieben, dass CURSO stimmt.
+- %SWITCH ohne Argumente ruft jetzt ESC6 und ESC5 auf
+- Menuewort %SYSTEM entfernt
+- SWITCH-Kommando in TEMO jetzt ebenfalls mit ESC6 und ESC5 programmiert
+
+05.01.2014:
+- DEVICE-Tabelle und Device-Umschaltung eingebaut, Anzeige in Titelzeile
+- BASEX entfernt
+- FLOAD und FSAVE entfernt
+- Disk-Sprungverteiler entfernt
+- Disk-Treiber fuer Device-Umschaltung eingebaut
+- Portinitialisierungstabellen von ROM-C in ROM-D verlagert
+- Interrupttabelle von ROM-F in ROM-D verlagert
+
+04.01.2014:
+- BASIC-Schnittstelle VERIFY-Abfrage nur noch bei DEVICE=0
+- BASIC-Schnittstelle in DEVICE.KCC (Tape+Disk) eingebaut
+
+02.01.2014:
+- USER-ROM Abschaltung mit CAOS-Versionsabfrage versehen
+- TEMO: Korrektur RST38-Routine
+
+01.01.2014:
+- LOAD mit Adressvergleich statt Abfrage Endeblock-Nr. FF, Einlesen von Diskette
+  funktioniert jetzt!
+
+31.12.2013:
+- Register A wird jetzt ebenfalls an "go"-Kommando mit uebergeben
+
+30.12.2013:
+- Autostart von Programmen aus CSRI nach LOAD verschoben, CSRI schliesst nun
+  nur noch die Bandeingabe ab - so wie im Handbuch beschrieben
+
+29.12.2013:
+- DEVICE.KCC SAVE funktioniert jetzt
+- CLC und CRLF von CSROI nach SAVE und LOAD verschoben
+- Vorbereitungen fuer LOAD mit Namenseingabe (bei DEVICE > 0)
+
+28.12.2013:
+- DEVICE.KCC Diskettenroutinen begonnen
+
+27.12.2013:
+- DEVICE.KCC weiterentwickelt, DEVTAB ab A900H, SUTAB jetzt ab AA00H
+
+26.12.2013:
+- SAVE und LOAD umgestellt mit PV1-Aufrufen (SUTAB-Nutzung/DEVICE-Umschaltung)
+- MBIN und MBOUT umgestellt mit PV1-Aufrufen (SUTAB-Nutzung/DEVICE-Umschaltung)
+- SUTAB vom ROM-F in den ROM-D verlagert
+- L3TB vom ROM-E in den ROM-F verlagert
+
+20.12.2013:
+- Korrektur: ARGC wurde nicht aktualisiert bei Menuewortsuche in USER-C-Ebene,
+  die bereits aktiv ist
+- Parameter HL, DE und BC in Kommando "go" uebergeben
+
+15.12.2013:
+- SUTAB per Default im IRM (fuer DEVICE-Umschaltung erforderlich)
+- USER-ROM-C Schaltzustand merken in ARGC bei Menuewort-Suche in diesen Ebenen
+- Modulkontrollanzeige erweitert fuer M052/M062-Varianten:
+  M052-Unterscheidung mit/ohne Netzwerk durch PIO-Test
+  M062-Unterscheidung mit Strukturbyte F3h (64K ROM oder 32K RAM) durch RAM-Test
+- Menueworte "view" und "PRINT" von ROM-C in ROM-D verschoben
+
+Aenderungen in CAOS 4.5:
+========================
+
+- Umstellung der Quelltexte auf CP/M-Format mit 80 Spalten und reinem ASCII
+- Kontrolle aller Interruptroutinen auf Stacknutzung bei eingeschaltetem IRM
+  und Korrektur der gefundenen Fehler
+- vollstaendige Ueberarbeitung der Interrupt-gesteuerten V.24-Empfangsroutine:
+  keine Stacknutzung mehr bei eingeschaltetem IRM, ESC-T und ESC-U werten
+  IRM-Schaltzustand aus, Parameter fuer Pollingbetrieb unabhaengig von V24DUP
+- V24OUT und CEN durch neues gemeinsames Menuewort LSTDEV ersetzt
+- CAOS-UP 47H (V24OUT) um Unterstuetzung fuer Centronics erweitert
+- V24DUP ueberarbeitet: Senden und Empfangen mit 7 Bit jetzt moeglich
+- Joystick-Treiber fuer M008/M021 eingebaut: mit anpassbarer Wiederholrate,
+  Verzoegerung bis Auto-Repeat wie bei Tastatur, und optionaler Unterstuetzung
+  fuer diagonale Bewegungen
+- BASIC-Funktion JOYST implementiert: Aufrufkonvention und Tastenzuordnung
+  kompatibel mit KC 87 (siehe Beschreibung im Programmierhandbuch)
+- fehlerhafter BASIC-Befehl BORDER wieder stillgelegt
+- Anpassung der Zeichensaetze auf den Stand des KC 85/5-Systemhandbuchs
+- Anzeige von M008/M021, M030 (32k), M032 (64k) und M052 in Modulliste
+- Unterscheidung M012/M026/M027 in angezeigter Modulliste
+- keine Anzeige von Menueworten mit Sonderzeichen (ausser Doppelpunkt)
+- neues Menuewort "time" zur Anzeige der Systemzeit (nur mit DEP 3.0 im D004)
+- Fehlerauswertung BASIC-Befehle PSET, PRESET, PTEST, INK, PAPER und COLOR
+  angepasst. Bisher:
+      > PSET X,Y , PRESET X,Y :
+        Die Fehlermeldungen sind irrefuehrend. Ist Y<0 oder >255 wird FC-Error
+	angezeigt. Ist aber X<0 oder >319 zeigt BASIC SN-Error an. Dabei ist es
+	egal ob man eine Konstante oder Variable verwendet.
+      > PAPER, INK und COLOR :
+        Ist der Farbcode negativ wird FC-Error angezeigt. Bei einem positiven
+	Farbcode (PAPER >7, INK >31) zeigt BASIC aber SN-Error an.
+      > PTEST(x) :
+        hier wird gar nicht ueberwacht ob der X-Wert ausserhalb 0-319 liegt.
+- BASIC-Kommando "DRIVE" kompatibel zu HCBASIC.COM, erweitert um USER-Bereiche
+- Fehler im Unterprogramm 0FH (COLORUP) korrigiert - war seit CAOS 4.3 drin
+- Erweiterung des Kommandos MENU zur Anzeige versteckter Menueworte und Adressen
+- Neues Menuewort NEW zur Grundinitialisierung ohne Speicherloeschen.
+
+
+Uebersicht der CAOS-Menueworte in CAOS 4.5:
+==========================================
+A
+B = BASIC
+C = COLOR
+D = DISPLAY, DIR, DRIVE, DUMP
+E = ERA, EDAS
+F = FLOAD, FSAVE, FORTH
+G = go
+H = help
+I = INIT
+J = JUMP, JEDIT
+K = KEY
+L = LOAD, LSTDEV
+M = MENU, MODIFY
+N = NEW
+O
+P = PRINT
+Q = QMR
+R = REBASIC, REN, REEDAS, REAS, RETEMO, REFORTH
+S = SWITCH, SAVE, SYSTEM, SETRO, SETWR
+T = TYPE, TEMO, time
+U
+V = VERIVY, V24DUP, view
+W = WINDOW
+X
+Y
+Z
+
+
+Aktuelle Speicherbelegung (am 06.09.2010):
+=========================
+ROM-C: 24 Byte frei
+ROM-D: 642 Byte frei
+ROM-E: 0 Byte frei
+ROM-F: 10 Byte frei
+
+
+Entwicklungsschritte: (ML=Mario Leubner, DE=Daniel Elstner)
+=====================
+
+02.01.2011: Kommentare ergaenzt in EQU45.INC (Bit-Bedeutung HCPZ/HCPZ2)
+ML          und Kommentare hinzugefuegt in CC45.INC (Drucker-/Duplexroutinen)
+
+06.09.2010: MULC + SQRC von ROM-C in ROM-D verschoben um Platz in C zu schaffen
+ML          Menuewort "WINDOW" ohne Argument initialisiert jetzt Grundfenster 0
+
+28.08.2010: Kommando "NEW" zur Grundinitialisierung an Stelle von "JINIT"
+ML          eingebaut: wie PWRON ohne Speicher loeschen (ausser B700h-B8FFh)
+
+26.08.2010: JINIT auf die reine Neu-Initialisierung reduziert. Das Editieren
+ML          der Joysticktasten sollte in ein ext. Programm ausgelagert werden.
+            Bei Suche von Menueworten Leerzeichen wieder zugelassen (dies
+            funktionierte nicht mehr in CAOS 4.3 und 4.4)
+
+24.08.2010: Kommando JINIT zur "Re"-Initialisierung des Joysticktreibers aufge-
+ML          nommen (Idee von Frank Ludwig) - noch nicht sicher, ob Funktion so
+            drin bleibt im ROM-D.
+
+23.08.2010: erweiterte MENU-Anzeige nur noch bei ARGN=1 anzeigen
+ML          (Tipps und Code-Vorschlag von Frank Ludwig)
+
+21.08.2010: Anzeige versteckter Menueworte auf Zeichencodes von 20h bis 'z'
+ML          erweitert, damit z.B. Menueworte mit Leerzeichen aufgelistet werden
+            (z.B. in LAYOUT.KCC verwendet)
+            einige Bytes eingespart im ROM-F durch Optimierung JP -> JR
+
+18.08.2010: Beschreibung der IX-Arbeitszellen in EQU45.INC aufgenommen
+ML          -> LOAD (ISRI) setzt Geraetekennung 0
+            -> FLOAD setzt Geraetekennung 1
+            Routinen MULC und SQRC per JP statt CALL in ROM-C geaendert
+
+17.08.2010: Adressanzeige und Anzeige der versteckten Menueworte als Parameter
+ML          zu 'MENU' erweitert:
+            %MENU 1  ->  Anzeige mit versteckten Menueworten
+            %MENU 2  ->  Anzeige mit Startadresse
+            %MENU 3  ->  Anzeige versteckte Menueworte und Adressen
+
+16.08.2010: Bei "adr" 1x inc hl eingefuegt, damit nicht die Adresse des Epilog-
+ML          Bytes sondern die Startadresse angezeigt wird.
+
+15.08.2010: Fehlerbeseitigung in BASIC-Befehl DRIVE, jetzt kein Absturz mehr,
+ML          wenn DEP einen Fehler meldet (z.B. USER > 15)
+            Neues CAOS-Kommando "adr" zur Adressanzeige der CAOS-Menueworte
+
+11.08.2010: Fehler in Funktion COLORUP (UP 0FH) seit CAOS 4.3 - korrigiert
+ML          Danke fuer den Hinweis von Frank Ludwig
+
+08.08.2010: erste Impementierung DRIVE-Kommando in BASIC
+ML          DRIVE 0    wechselt zu Laufwerk A: (kompatibel zu HCBASIC.COM)
+            DRIVE 3,5  wechselt zu Laufwerk C5: (optionaler 2. Wert fuer USER)
+            ESCPRG von ROM-E in ROM-F verschoben (zu den ESC-Programmen)
+
+07.08.2010: Aufnahme der zweiten Variante M030 (EPROM-Brenner) in Modulliste
+ML          Unterscheidung der Varianten mit Anzeigezusatz: 32k/64k
+            Definition verwendeter Routinen des BASIC-ROM in EQU45.INC nach
+            vorhandenen Quellen HCBAS.MAC (ROM) bzw. HCBASIC2.Z80 (CP/M)
+            Optimierung von Sprungbefehlen und Kommentaren im BASIC-Teil ROM-E
+
+06.08.2010: BASIC-Funktion PTEST erzeugt FC-ERROR bei X-Koordinate ausserhalb
+ML          des Bereiches 0-319 
+
+05.08.2010: BASIC-Funktionen PSET, PRESET, PAPER und INK erzeugen jetzt bei
+ML          unzulaessigen Werten FC-ERROR statt bisher teilweise SN-ERROR
+
+30.07.2010: sinnlosen Befehl LD A,D in der Routine MBO (Ausgabe Kassettenblock)
+ML          auskommentiert, Endimpuls mit voller Schwingung BITOUT statt HBITOT
+
+29.07.2010: Beseitigung Programmierfehler bei der Anzeige der Module
+ML          USER-Module jetzt von C0 bis D7 angezeigt
+
+27.07.2010: Definition weiterer Module in Erkennungsliste
+ML          Cxh = USER  und  77h = 64K RAM (segmented RAM 4000/8000)
+            Korrektur, unbekannte Module werden wieder als ??? angezeigt
+            Versionsdatum als Macro und Beta-Status als Variable definiert.
+
+26.07.2010: SAVE kann jetzt auch Dateien ueber Speichergrenze abspeichern,
+ML          also z.B. SAVE C000 0000 (um CAOS-EPROMs selbst abzuspeichern)
+
+22.07.2010: Unterscheidung der Softwaremodule (M012, M026, M027) durch Analyse
+ML          des Speicherinhaltes = Suche & Anzeige des ersten Menuewortes
+
+20.07.2010: FSAVE kann jetzt auch Dateien ueber Speichergrenze abspeichern,
+ML          also z.B. FSAVE C000 0000 (um CAOS-EPROMs selbst abzuspeichern)
+
+19.07.2010: Menuewort TIME in Kleinbuchstaben geaendert
+ML
+
+18.07.2010: Mnemonic "ADD m" in kanonische Form "ADD A,m" umgewandelt
+DE          Langen Markennamen STEUER2 in STEUB2 umgeaendert
+            Marke DATA (SLR-Schluesselwort) in FDATA umbenannt
+
+17.07.2010: Macros von CAOS45.Z80 in EQU45.INC verlagert
+ML          Beschreibungen von EQU45.INC in CAOS45.Z80 verlagert
+            BASIC-Teil: Umwandlung von CALL/JP 0F015H in PV5 (Takte gespart)
+            gleichermasssen 0F018H -> IRMON, 0F01BH -> IRMOF
+
+15.07.2010: Ueberarbeitung der Kommentare im ROM-D, Aufloesung der CAOS-Rufe
+ML          im BASEX-Programmteil. FSAVE erzeugt sauberen CAOS-Vorblock mit
+            Dateiname ab 0 und nur so vielen Argumenten wie angegeben wurden.
+            Neues Menuewort "TIME" zur Anzeige der RTC-Zeit des D004 mit DEP3
+            Portadressen des Koppel-RAM in EQU45.INC definiert.
+            Codeoptimierung im ROM-D (Diskettenroutinen)
+
+19.06.2010: M021-Erkennung: Initialisiere PIO bei jedem RESET auf Mode 3
+DE          Initialisierung von Joystick und Centronics vereint
+            Keine Initialisierung der M021-PIO mehr in LSTDEV
+            Erfassung des Druckertyp-Arguments in LSTDEV korrigiert
+            Fehlerhafte Auswertung des SIO-Kanal-Arguments korrigiert
+            Nutzung der symbolischen Konstante PIOAD fuer Port 88h
+            Kleinere Optimierungen in den Druckroutinen M001PR und M021PR
+
+13.06.2010: Neuimplementierung von LSTDEV, V24DUP und V24OUT
+DE          Aufruf ohne Argumente sucht wie bisher M003, nicht M021
+            Aufruf mit ein oder zwei Argumenten jetzt erlaubt
+            Keine Argumentverschiebung mehr fuer M001/M021, der
+            SIO-Kanal muss als Dummy-Parameter mit angegeben werden
+            Bessere Fehlerbehandlung, kein Senden von CRLF mehr bei Fehler
+            CAOS-UP V24OUT auf Funktionalitaet von LSTDEV verallgemeinert
+            V24DUP aendert nicht mehr den Druckerfilter (OFILT)
+            Viel Platz durch Auslagern von Subroutinen gewonnen
+            V24INI: M003 nur noch einmal durch LSTCA selbst gesucht
+
+            Erkennung von M008/M021 und Anzeige in Modulliste
+            Neues Makro OUTC0 fuer undokumentierten Opcode OUT (C),0
+            Speicher durch Eliminieren von Spruengen eingespart
+            Sprungdistanzen durch Verschiebungen verkleinert
+            Auswertung des Sign-Flags statt BIT 7,r nach Arithmetik
+            DI/EI um Aufruf von INIEA in ISRJ eingefuegt
+            Implementierung von IMEXDI ueber INIME statt INIMEX
+            Keine SLR-Schluesselwoerter mehr als Markennamen
+
+09.06.2010: BASPV: Verschiebe PUSH DE fuer Stackausgleich mit BASBYE
+DE          Ausschalten der LED "SYSTEM" beim Erreichen von LOOP
+            Einige Spruenge in MODUC durch Bitmanipulation eingespart
+            Weitere DI/EI um kritische I/O-Sequenzen eingefuegt
+            Modulname M001 auf "DIGITAL I/O" geaendert
+
+08.06.2010: LSTC: Verwende bereits vorbelegte Register fuer Argumente
+DE          Verallgemeinerung von SET7IX4 und RES7IX4 zu SETIXA und RESIXA
+            Vermehrte Nutzung von SETIXA bzw. RESIXA fuer kompakteren Code
+            Sperren von Interrupts waehrend kritischer I/O-Sequenzen
+            Einige Spruenge durch Bitmanipulationen eliminiert
+            Routine STOP1 durch Selbstaufruf halbiert
+            Einige BASIC-Routinen fuer relative Spruenge verschoben
+            Kommentare in Segment F in 80-Spalten-Format konvertiert
+            Sprung durch Schieben von AHEX vor OCHR eliminiert
+            LOAD: Eliminiere Zwischenspeichern durch Doppel-XOR-Trick
+            BUPTAB ans ROM-Ende verschoben, damit High-Byte konstant bleibt
+            ZKOUT fuer Strings laenger als zwei Zeichen optimiert
+            TON: Vermeide Schalten von RAM8 bei fehlerhaften Argumenten
+            Name des Moduls M001 auf "IN/OUT" gekuerzt
+
+06.06.2010: Neues Menuewort LSTDEV an Stelle von V24OUT und CEN eingebaut
+DE          Autostart-Abbruch: Abfrage der Tastatur erst nach Erkennung der
+            Betriebsart, 256 Schleifendurchgaenge auf BRK-Taste warten
+            Interrupts sperren waehrend SIO-Registerauswahl in V24IN
+
+05.06.2010: V.24-Interrupt-Empfangsroutine: CAOS-C vor MC-Laden ausschalten
+DE          und danach einschalten fuer SIO-Reinitialisierung
+            Aenderungen des CAOS-C-Schaltzustands in (IX+4) eintragen
+            MC-Laden abbrechen bei BRK waehrend Warten auf Empfang
+            Zusammenlegung der Init-Tabellen DTROFF und POLLING in V24POL
+            Interrupts sperren zwischen SIO-Reinit. und Schalten des Moduls
+            Register D statt E fuer High-Byte der MC-Startadresse
+            Doppelter Aufruf von IRET entfernt
+
+            V.24-Routinen ueberarbeitet: Umgang mit SIO-Offset vereinfacht
+            V24PR und V24OT fast vollstaendig zusammengelegt
+            V24DC ueberarbeitet und teilweise mit V24OC zusammengelegt
+            Merken der Duplex-Uebertragungseinstellungen (Bits pro Zeichen,
+            Sender ein/aus) in HCPZ2,
+            Erhalten der Einstellungen beim Schalten von DTR in V24IN
+            Maskieren von Bit 7 bei Empfang mit 7 Bit pro Zeichen
+            Einige Tabellen verschoben, um Platz im Segment C zu gewinnen
+
+            CAOS-Menue: Doppelpunkt in Menuewort wieder zugelassen
+            Promptausgabe durch MENU und LOOP in Routine OPRCHR ausgelagert
+            Speicherzaehler auch bei laufender Menuewortausgabe pruefen
+            Sprung zum Zeilenanfang vor Promptausgabe
+
+30.05.2010: Adressfixierungen fuer die Kompatibilitaet mit fehlerhaften
+DE          Programmen wieder entfernt
+            Kein DI/EI mehr in INIMEX, so dass SYSI und SIXC durchgaengig mit
+            DI laufen koennen (alle Aufrufer entsprechend angepasst)
+            Code von UMINIT direkt in einzigen Aufrufer V24INI eingefuegt
+            Ungenutzte Routine INIDUP entfernt
+
+29.05.2010: Weiterer Hack zur Kompatibilitaet mit HOUSE.KCC: ZEI0 und SUTB auf
+DE          die gleichen Adresse wie in CAOS 4.2 verschoben (FBA0 bzw. FBA8)
+            Neues Makro ABSFILL fuer das Auffuellen mit FFh definiert
+            DTROFF und POLLING von Segment F nach E verschoben
+            Leere Zeichenkette wieder erlaubt als Menuewort (Platzhalter)
+
+29.05.2010: Hack zur Kompatibilitaet mit HOUSE-4.KCC: Reaktionsprogramme HOMEPG
+DE          und SCRLPG erreichbar auf den gleichen Adressen (E245h und E260h)
+            wie bei CAOS 4.2 (noetigenfalls durch Einfuegen von Dummy-Bytes)
+            Setze B auf 0 vor Kopieren von JOYTBD in den IRM zur Reduzierung
+            der Kontextabhaengigkeit
+            Initialisiere IX in SYSI vor Aufruf von INIMEX, welches mit EI
+            zurueckkehrt; danach wieder DI (wahrscheinlich nicht ausreichend)
+            Kommentiere Stellen in PWRC, an denen EI als Seiteneffekt erfolgt
+
+28.05.2010: Korrektur IBM-Zeichensatz 80H, 84H, 85H, 86H, 96H, 97H
+ML
+
+27.05.2010: Anpassung einiger Kommentare in EQU45.INC
+ML          JOYSTICK-Tabelle in EQU45.INC definiert, Adresse A894H eingestellt
+            Initialisierung Joystick-Tabelle nur bei POWER-ON
+
+26.05.2010: Anpassung der restlichen Kommentare in CC45.INC
+ML          DATFLG definiert fuer BASIC-Work-RAM
+
+26.05.2010: Beta-Release von CAOS 4.5!
+DE          Text "beta" an Versionsausgabe von MENU und help angefuegt
+            Joystick-Tastencodetabelle auf Adresse A860h verlegt
+            Optimierung der Logik in WPHRG (-2 Bytes)
+
+25.05.2010: Kommentare von IRMRD und IRMWR waren vertauscht
+ML          weitere Kommentare im BASIC-Teil und ROM-C angepasst
+            BORDER auf D421H gelegt - Abholen des zugehoerigen Parameters
+            Definition der CTC- und PIO-Portadressen in EQU45.INC und Verwendung
+            der Namen in den einzelnen Quelldateien
+
+24.05.2010: Weitere Kommentare angepasst im ROM-E
+ML          BASIC-Kommando BORDER entfernt (erst einmal auskommentiert)
+            BASIC-Arbeitszellen definiert (analog zu HCBASIC2.COM/ *.MAC)
+
+24.05.2010: IN A,(9) in ISRSB erst nach dem Schalten der Speicherebenen
+DE          Unterdruecke Menueworte mit nicht-alphanumerischen Zeichen
+            Ein Byte eingespart in OSTR durch relativen Sprung nach EXRT
+
+23.05.2010: Joystick-Routine nochmals ueberarbeitet:
+DE          CTC-Zeitkonstante der Tastatur wird nicht mehr veraendert
+            zusaetzliche Wartezeit vor erster Wiederholung (4*COUNT)
+            Stackausgleich in JOYST: PUSH HL statt EX (SP),HL
+            Weitere Optimierungen: SYSTC (-9 Bytes), CLLHR (-18 Bytes),
+            WPIX (-1 Byte), ESC8 (-2 Bytes), ISRT (-3 Bytes), DABR (-3 Takte)
+
+21.05.2010: Makro "TOKEN" eingebaut fuer BASIC-Worte, BASIC-Funktion "DRIVE"
+ML          "DRIVE" vorbereitet in Tabelle (wie in HCBASIC2.COM)
+            IRMON/OF: SET/RES ersetzt durch AND/OR (1 Takt weniger Rechenzeit)
+            Menuezeile von CAOS 4.4 in 4.5 geaendert, Versionsbyte = 45H
+            Weitere Kommentare angepasst
+
+20.05.2010: Fehlendes LD (HL),A fuer RAM4-Zustand in SYSI eingesetzt
+DE          Standardtabelle fuer Joystick in den IRM verlegt (A8F4H..A8FFH)
+            JCOUNT nicht mehr separat, sondern erstes Byte der Tabelle
+            BASIC-Erweiterung JOYST implementiert (kompatibel zu KC 87)
+            Tabelle ZIBM von Segment C nach D verschoben
+            Routinen IRMGET und ISRT von Segment F nach E verschoben
+            Redundantes AND 0FH vor Aufruf von AHEX0 auskommentiert
+            Umwandlung aller Kommentare in reines ASCII ohne Umlaute
+
+18.05.2010: SIO-Interrupt um 1 Byte verkuerzt (Tipp von Daniel).
+ML
+
+16.05.2010: V.24-ISR fuer ESC-T und ESC-U neu geschrieben mit Auswertung des
+ML          IRM-Schaltzustands
+            Abfrage BRK-Taste vor Autostart Floppy (zunaechst ohne Wartezeit)
+            Einige Bytes eingespart durch JP POP3 bzw. JP POP4
+            Einige Kommentare an neues Quelltextformat angepasst
+
+16.05.2010: Ueberarbeiteter Joystick-Treiber fuer M008/M021 eingebaut
+DE          Neue IRM-Arbeitszellen JOYTAB und JCOUNT definiert
+            Joystick-Routine ISRJ in ISRTAB aktiviert (01E0H)
+            Weitere kleine Optimierungen (ADD A statt SLA A)
+            Ersetzung von RRA durch RRCA fuer Tetradentausch in AHEX
+            Einige Kommentare an neues Quelltextformat angepasst
+
+15.05.2010: Routinen MOVELN, CLLINE, SCRLPG, CLLN und Teile von WPIX
+DE          nach CAOS-D verschoben, um Platz in CAOS-E zu schaffen
+            Kleinere Optimierungen: SYSTC -8 Byte, IRMON -2 Byte
+            Aufruf von IRMGET in ISRPB statt direktem Schalten des IRM
+
+14.05.2010: Joystickroutine in ISRTAB vorbereitet
+ML
+
+13.05.2010: Kontrolle und Anpassung der gesamten Zeichensaetze
+ML          entsprechend KC85/5-Systemhandbuch,
+            Neugestaltung Dateikoepfe aller Quelltexte
+            Modifikation SIO-B Interrupttabelle ueber (IX-?) statt direkt
+
+12.05.2010: CAOS45.Z80 Includes *45.INC an Stelle von *44.INC
+ML          Kontrolle IBM-Zeichensatz 80h bis 8Fh
+
+11.05.2010: DI/EI in Routine IRMGET mit eingebaut
+ML
+
+15.04.2010: in SYSI Laden der IRM-Defaultdaten einfacher programmiert (RAM4)
+ML          Bei RESET Port 86H direkt beschrieben, nicht ueber CALL CON,
+            dadurch sollte RESET bei Systemabstuerzen sicherer funktionieren
+            V.24-Modul immer ab Steckpl. 7 suchen (bisher bei V24OC ab Platz 8!)
+
+11.04.2010: nach ZS3: noch ein DEC BC eingefuegt, damit Speicherzaehler stimmt
+ML          (Hinweis von Ralf Kaestner)
+            Modul M052 (USB+Netzwerk) in Erkennungsliste definiert
+
+* Ueberpruefung der ISR-Routinen auf unerlaubte Stack-Nutzung:
+ISRC1:	OK
+ISRC2:	(Tonlaenge) schaltet IRM ein und ruft danach CALL TOFF auf
+	-> IRM erst innerhalb TOFF bzw. CSRO2 einschalten.
+ISRC3:	OK
+ISRPA:	OK
+ISRPB:	OK
+ISRSB:  schaltet IRM ein und danach jede Menge CALLs...
+ISRT:  	schaltet IRM ein und danach PUSH und CALL
+        -> umgestellt auf NUR-Registernutzung und ohne CALL
+
+
+Neu in CAOS 4.4 (gegenueber 4.3):
+---------------------------------
+- fehlenden Befehl LD (IX+7),0 in Routine CSRI wieder eingesetzt.
+- Fehler PWRON initialisiert Kassettenpuffer nicht wurde behoben.
+- Scannermodul M051 in Modul-Liste definiert.
+- BASIC: CLOSE ohne geoeffneten Kanal korrigiert.
+- V.24-Software verbessert:
+  A800 enthaelt jetzt Modulsteckplatz des ersten V.24-Moduls,
+ 	(Empfangsinterrupt schaltet das Modul bei Bedarf zu und ab)
+ 	korrigierte Interruptroutinen bezueglich ESC-T und ESC-U:
+	definierter Speicherzustand IRM ist EIN, CAOS-C ist AUS
