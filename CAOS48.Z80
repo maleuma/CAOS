@@ -40,6 +40,7 @@ BETA	equ	0		; 0 fuer Vollversion, 1 fuer beta-Version
 ; genutzt werden. Die einzelnen Optionen nutzen folgende Bits:
 ;
 ; Option  234	Beschreibung
+; ------- ---	--------------------------------------------------------
 ; RAM2MB  xxx	Erweiterung des internen RAM auf 2MByte (Frank Dachselt)
 ; CAOS2   --x	Zeichensatz-Umschaltung durch zweite CAOS-ROM-Ebene
 ; SYSROM  xx-	Ansteuerung eines 512K Flash-ROM mit 8 CAOS-Baenken
