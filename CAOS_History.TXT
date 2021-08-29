@@ -30,25 +30,22 @@ Z =
 
 
 Speicherbelegung CAOS 4.8 (20.06.2021):
-======================	mit CAOS2	mit SYSROM	mit CAOS2+SYSROM
+======================
 CAOS 4.8
-CAOS-C:   54 Byte frei	46 Byte frei	25 Byte frei	17 Byte frei
-CAOS-E:    4 Byte frei	 4 Byte frei	 4 Byte frei	 4 Byte frei
-CAOS-F:    5 Byte frei	 5 Byte frei	 0 Byte frei	 0 Byte frei
-
-USER-C:    0 Byte frei	(BASIC)
-USER-D:   31 Byte frei	(Reassembler, Debugger, Jedit, Calc, Bsave)
-USER-E:   64 Byte frei	(EDAS 1.7)    1706 Byte frei	(ASM 2.0, ext. Editor)
-USER-F:  131 Byte frei	(Editor 0.5 mit IMPORT.KCC/HILFE.KCC extern)
-M052-C:  318 Byte frei	(mit Tastatur)	1012 Byte frei (ohne Tastatur)
+CAOS-C:   17 Byte frei
+CAOS-E:    4 Byte frei
+CAOS-F:    0 Byte frei
 
 
 History:
 ========
 
+29.08.2021:
+- Lizenzdatei erstellt
+
 22.08.2021:
 - CAOS48.Z80 kommentiert und ROM-Adressen eingetragen fuer Veroeffentlichung
-  der Quelltexte im KC85-Labor
+  der Quelltexte im KC85-Labor und bei GitHub
 
 20.06.2021:
 - Zaehler ruecksetzen in der JUMP-Erweiterung beboetigt zusaetzlich noch einen
