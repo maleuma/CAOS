@@ -1,0 +1,2 @@
+DUENN	EQU	1	; 0 = Zeichensatz klassisch, 1 = Zeichensatz duenn
+INCLUDE	CAOS48.Z80
