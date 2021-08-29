@@ -1,0 +1,48 @@
+Lizenz zu CAOS und dessen Quelltexte		28.08.2021
+------------------------------------
+
+Urheberschaft:
+
+CAOS (Cassette Aided Operating System) ist das Betriebssystem der Kleincomputer
+KC85/2-4 vom VEB Mikroelektronik Wilhelm Pieck in Muehlausen.
+Dessen Quellcodes wurden dem KC-Club kostenfrei zur Verfuegung gestellt.
+
+Die Weiterentwicklungen ab CAOS 4.3 erfolgten im KC-Club und wurden
+groesstenteils neu programmiert. Sie basieren jedoch immer noch auf der vom
+Urheber vorgegebenen Programmstruktur von CAOS 4.1/4.2
+
+Die Weiterentwicklung von CAOS und dessen Quelltexten erfolgt als
+"Freie Software". Es gelten folgende Bedingungen bzw. Einschraenkungen:
+
+1. CAOS darf fuer jeden nichtkommerziellen Zweck auf beliebigen Rechnern
+   (z.B. KC85/5 oder Emulationen) ausgefuehrt werden.
+2. CAOS darf auf beliebigem Weg verbreitet werden.
+3. CAOS darf auf seine Funktionsweise hin untersucht, den eigenen
+   Beduerfnissen angepasst und veraendert werden.
+4. Bei rein privaten (internen) Anpassungen von CAOS ohne Veroeffentlichung
+   muss der Quelltext nicht offengelegt werden.
+5. Anpassungen und Weiterentwicklungen, welche die Funktionsweise von CAOS
+   veraendern und veroeffentlicht werden sollen, muessen vorher mit dem
+   Systemkoordinator des KC-Clubs abgestimmt werden. Damit soll sichergestellt
+   werden, dass CAOS-Versionen untereinander weitgehend kompatibel bleiben und
+   sinnvolle Weiterentwicklungen in die offiziellen Versionen des KC-Clubs
+   einfliessen.
+6. CAOS sowie dessen Weiterentwicklungen duerfen ausschliesslich kostenfrei
+   weitergegeben werden.
+7. Diese Lizenzbedingungen sind bei der Weitergabe, auch bei veraenderten
+   Versionen mitzugeben und gelten fuer diese Versionen weiter (Copyleft).
+
+Haftungsausschluss:
+
+CAOS wird von Privat fuer Privat hobbymaessig entwickelt. Ein umfassender Test
+mit allen Hardware-Erweiterungen und jeglicher existierender Software ist nicht
+moeglich.
+Es wird ausdruecklich darauf hingewiesen, dass keine Fehlerfreiheit garantiert
+wird. Die Verwendung erfolgt auf eigenes Risiko. Es wird nicht garantiert, dass
+vorhandene Software unter allen CAOS-Versionen funktioniert. Schaeden, welche
+durch CASOS entstehen, speziell Datenverlust, verantwortet der Nutzer.
+Dennoch ist bei erkannten und reproduzierbaren Fehlern der Software ein Hinweis
+an den Systemkoordinator des KC-Clubs erwuenscht.
+
+Systemkoordinator des KC-Clubs
+maleuma@web.de
