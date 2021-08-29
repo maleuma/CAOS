@@ -2,6 +2,7 @@
  Betriebssystem für den KC85/2-5 von Muehlhausen
 
  CAOS 4.1: Originalbetriebssystem, erste Version des KC85/4
+
  CAOS 4.2: Originalbetriebssystem, korrigierte Version des KC85/4
  CAOS 4.3: KC-Club - erste Version fuer den KC85/5 mit 256K RAM und 32K USER ROM
  CAOS 4.4: Fehlerkorrekturen zu CAOS 4.3
