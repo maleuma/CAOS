@@ -29,16 +29,33 @@ Y =
 Z =
 
 
-Speicherbelegung CAOS 4.8 (20.06.2021):
-======================
-CAOS 4.8
+Speicherbelegung CAOS 4.8 (12.09.2021):
+=========================
+
 CAOS-C:   17 Byte frei
 CAOS-E:    4 Byte frei
-CAOS-F:    0 Byte frei
+CAOS-F:    8 Byte frei
 
 
 History:
 ========
+
+12.09.2021: (CAOS 4.8 Patch 1)
+- LOAD weiter optimiert, jetzt kann auch Endadresse+1 = 0000 geladen werden
+
+11.09.2021:
+- Beim Einlesen einer 32KByte grossen Datei kommt Fehlermeldung am Ende.
+  Ursache: Beim zweiten Auftreten der Blocknummer 01 wird nochmals versucht,
+  einen Vorblock anzuzeigen. Dabei wird auch das Register HL veraendert, weshalb
+  der Adressvergleich nicht mehr funktioniert und versucht wird, weiterzulesen.
+  -> HL in LUP6 gesichert und regeneriert (+2 Byte im ROM-F)
+  -> Auswertung Vorblock bei LOAD optimiert: ARGN wird nun um 2 verringert in
+  den Bits 2-4 von (IX+7) abgelegt. Das spart das doppelte Laden von (CASS+10H)
+  und vereinfacht den Test auf Autostart nach dem Einlesen der Datei.
+  (4 Byte gespart im ROM-F)
+  -> Sprung von BASBYE zu LOOP optimiert (2 Byte gespart im ROM-F)
+- Anzahl der angezeigten Bytes nun so programmiert, wie es im Kommentar des
+  Quelltextes bereits stand: 12 bei LOAD und 11 bei TAPELIST
 
 29.08.2021:
 - Lizenzdatei erstellt
@@ -47,7 +64,7 @@ History:
 - CAOS48.Z80 kommentiert und ROM-Adressen eingetragen fuer Veroeffentlichung
   der Quelltexte im KC85-Labor und bei GitHub
 
-20.06.2021:
+20.06.2021: (CAOS 4.8 final)
 - Zaehler ruecksetzen in der JUMP-Erweiterung beboetigt zusaetzlich noch einen
   Taktimpuls um zu wirken: Deshalb JUMPC noch einmal ergaenzt.
 

@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  F000h bis FDFFh	**
 ;**					**
-;**	letzte Aenderung: 14.06.2021	**
+;**	letzte Aenderung: 12.09.2021	**
 ;*****************************************
 
 ;	ORG	0F000H
@@ -421,6 +421,21 @@ MEN8:	;LD	A,(CURSO)	; aktuelle Position
 	call	hlhx		; Startadresse anzeigen
 	dec	hl
 	JR	MEN2
+;
+; 12.12.2020: Der Schutz von BASIC-Programmen wird ab CAOS 4.8 nicht mehr
+; unterstuetzt. Das heisst, das Programm wird bei BYE nicht mehr geloescht.
+;
+BASBYE:
+;	LD	A,(DATFLG)	; geschuetzt?
+;	AND	A
+;	JR	Z,BASB1
+;	CALL	IRMOF
+;	CALL	NEW1		; NEW
+;	CALL	IRMON
+;BASB1:
+	LD	D,0
+	CALL	MODUL2		; BASIC-ROM abschalten
+;	JP	LOOP
 ;_____________________________________________________________
 ;							**12**
 ; Eingabeschleife:
@@ -1178,15 +1193,17 @@ BRKT:	CALL	KBDS		; Tastaturabfrage
 	CP	3		; war das die BRK-Taste?
 	SCF			; CY=1
 	RET	Z		; ja, BRK erkannt
-LUP10:	AND	A		; CY=0
+	AND	A		; CY=0
 	RET
 
 ; Dateiname aus Vorblock anzeigen (fuer TAPELIST und LOAD)
 ; 15.06.2019: Anzahl von 11 auf 12 geaendert wegen 8.3 im Vorblock
 ; 02.04.2021: wieder 11 (wegen TAPELIST/BASIC)
-; 15.05.2021: 11 bei LOAD und 12 bei TAPELIST als Kompromiss
-LUP6:	LD	B,11		; Kontrolle/Anzeige 11 gueltige Zeichen
+; 15.05.2021: 12 bei LOAD und 11 bei TAPELIST als Kompromiss
+; 11.09.2021: Register HL wird nicht mehr veraendert
+LUP6:	LD	B,12		; Kontrolle/Anzeige 11 gueltige Zeichen
 TLNAME:	LD	C,B
+	PUSH	HL
 	LD	HL,CASS		; Dateiname in Kassettenpuffer
 LUP7:	LD	A,(HL)		; auf gueltige Zeichen testen
 	OR	A
@@ -1213,6 +1230,7 @@ LUP9:	LD	A,(HL)		; aus Kassettenpuffer anzeigen
 LUP11:	CALL	OCHR		; Dateiname anzeigen
 	DJNZ	LUP9
 	CALL	SPACE		; Leerzeichen zwischen Dateiname + Adressen
+LUP10:	POP	HL
 	AND	A		; kein Fehler
 	RET			; (CRT und damit OCHR/SPACE veraendern AF nicht)
 
@@ -1258,18 +1276,26 @@ LOAD0:	CALL	LUP2		; Blockinhalt auswerten (Name anzeigen usw.)
 LOAD2:	JR	C,CLJP		; BRK -> CSRI -> Fehler
 	BIT	0,(IX+7)
 	JR	Z,LOAD5		; Verify
-	LD	L,10H
-	LD	A,(HL)		; Anzahl der Argumente beim Abspeichern
-	RLCA
-	RLCA			; nach Bits 2..4
-	XOR	(IX+7)
-	AND	00011100b	; Bits 0..1 und 5..7 zuruecksetzen
-	XOR	(IX+7)		; a = (a XOR b) XOR b fuer Bits 2..4
-	LD	(IX+7),A	; in IX+7 merken fuer spaetere Auswertung
-	LD	A,(HL)		; Anzahl der Argumente
-	SUB	2
+	LD	A,(CASS+10H)	; Anzahl der Argumente beim Abspeichern
+	SUB	2		; 0 oder 1 Argument ist falsch
 	CP	9		; MC?
 	JR	NC,NOMC		; Fehler: kein gueltiger CAOS-Vorblock
+;
+; 11.09.2021: ARGN aus Vorblock wird nun um 2 verringert in den Bits 2-4 von
+; (IX+7) abgelegt. Das spart das doppelte Laden von (CASS+10H) und vereinfacht
+; den Test auf Autostart nach dem Einlesen der Datei
+;
+	RLCA			; Anzahl ARG-2
+	RLCA			; nach Bits 2..4 rotieren
+;
+; 12.09.2021: Da (IX+7) bei LOAD mit 1 und bei VERIFY mit 0 initialisiert wird,
+; muessen die Bits nicht maskiert werden und die Bits 2..4 koennen direkt
+; gesetzt werden mittels OR
+;
+	OR	(IX+7)
+;	AND	00011100b	; Bits 0..1 und 5..7 zuruecksetzen
+;	XOR	(IX+7)		; a = (a XOR b) XOR b fuer Bits 2..4
+	LD	(IX+7),A	; in IX+7 merken fuer spaetere Auswertung
 	LD	HL,(CASS+15H)	; SADR
 	PUSH	HL
 	LD	DE,(CASS+13H)	; EADR+1
@@ -1306,6 +1332,7 @@ LOAD6:	CALL	RDBLK		; 128-Byte-Block einlesen
 	PUSH	HL		; Endadresse
 	SBC	HL,DE		; noch zu lesende Bytes
 	LD	BC,128		; Blockgroesse 128 Byte
+	OR	A		; CY=0, damit auch EADR<AADR funktioniert!
 	SBC	HL,BC		; voller Block?
 	ADD	HL,BC
 	JR	NC,LOAD7	; ja
@@ -1349,15 +1376,13 @@ LOAD12:	CALL	CLC		; CAOS 4.6: Puffer loeschen nicht mehr in CSRI
 	DB	5		; CSRI
 	RET	C		; Fehler
 	LD	A,(IX+7)
-	AND	3
+	AND	3		; Bits 0+1 testen
 	DEC	A
 	RET	NZ		; kein Start oder Verify
 	LD	A,(IX+7)
-	AND	1CH
-	CP	0CH
+	AND	00011100b	; Bits 2..4 testen (ARGN-2 in Vorblock)
 	LD	(IX+7),0	; Befehl fehlte in CAOS 4.3!
-	CCF			; kein Fehler
-	RET	NC		; keine Startadresse
+	RET	Z		; kein Fehler, kein Autostart bei ARGN=2
 	LD	HL,(ARG3)	; Startadresse
 	JP	(HL)		; anspringen
 
@@ -1584,7 +1609,7 @@ BASPV:	PUSH	HL
 	PUSH	BC
 	CALL	IRMON
 	BIT	5,E
-	JR	NZ,BASBYE	; BYE
+	JP	NZ,BASBYE	; BYE
 	PUSH	DE		; E = Steuerbyte
 	INC	HL
 	INC	HL
@@ -1642,21 +1667,6 @@ BSA2:	CALL	KBDS		; Tastaturabfrage
 	RES	7,E		; Rueckmeldung, dass Taste gedrueckt wurde
 	JR	BSA1
 
-;
-; 12.12.2020: Der Schutz von BASIC-Programmen wird ab CAOS 4.8 nicht mehr
-; unterstuetzt. Das heisst, das Programm wird bei BYE nicht mehr geloescht.
-;
-BASBYE:
-;	LD	A,(DATFLG)	; geschuetzt?
-;	AND	A
-;	JR	Z,BASB1
-;	CALL	IRMOF
-;	CALL	NEW1		; NEW
-;	CALL	IRMON
-;BASB1:
-	LD	D,0
-	CALL	MODUL2		; BASIC-ROM abschalten
-	JP	LOOP
 
 ZKOUT0:	CALL	OCHR
 ;_____________________________________________________________

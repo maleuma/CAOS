@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  D000h bis DAB7h	**
 ;**					**
-;**	letzte Aenderung: 14.06.2021	**
+;**	letzte Aenderung: 11.09.2021	**
 ;*****************************************
 
 ;	ORG	0D000H
@@ -1249,6 +1249,7 @@ BL0:	CALL	BLNOT		; falsche Blocknummer mit * anzeigen
 	JR	TLBRK
 	;
 TL01:	LD	B,11		; maximal 11 Zeichen
+				; (da bei BASIC ab dem 12. Zeichen Daten stehen)
 	CALL	TLNAME		; Name aus Vorblock anzeigen
 	ld	hl,(NUMVX)
 	inc	hl		; angezeigte Dateien mitzaehlen
