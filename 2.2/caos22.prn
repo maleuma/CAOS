@@ -1,0 +1,2697 @@
+	ASM 1520 (SCPX)	V 1.0		1
+
+
+                                ;*********************************
+                                ;**				**
+                                ;**	CAOS 2.2 und HC900	**
+                                ;**	reassembliert ML-Soft	**
+                                ;**				**
+                                ;**  21.01.1996 bis 10.12.2017	**
+                                ;**				**
+                                ;*********************************
+                                
+  0000                          HC900	EQU	0	; 1 erzeugt HC900 CAOS
+                                			; 0 erzeugt CAOS 2.2
+                                ;
+                                ;	Speicheruebersicht	**
+                                ;	__________________
+                                 
+                                
+                                ;E000	RESET
+                                ;E015	Bildschirm-Steuercodes CRTTAB
+                                ;E025	Farbadresse berechnen FADR
+                                ;E03C	VRAM-Adresse berechnen DABR
+                                ;E06D	Zeichenausgabe WPIX, Scroll-UP
+                                ;E0FC	Cursor komplementieren CUCP
+                                ;E11A	Tonausgabe BEEP
+                                ;E12F	Pixeladresse berechnen PADR
+                                ;E1AA	Punktroutinen PUDE, PUSE
+                                ;E1FA	Tastaturtreiber
+                                ;E29A	Tastaturtabelle KTAB
+                                ;E31A	Interrupt-Tabelle ISRTAB
+                                ;E326	KBDZ, KBDS
+                                ;E33A	INIEA, INIME
+                                ;E34A	RAM4 loeschen ERAM4
+                                ;E356	SWITCH und MODUL
+                                ;E3C1	JUMP
+                                ;E3E4	Tape-Treiber
+                                ;E59C	TON-Ausgabe
+                                ;E600	Zeichenbildtabelle
+                                 
+                                ;------------------------------------
+                                 
+                                ;F000	PWRON und Programmverteiler
+                                ;F0A1	Kommandointerpreter (MENU)
+                                ;F157	Ein-/Ausgabe, OSTR, INTB, OCHR
+                                ;F19A	WAIT
+                                ;F1A8	KBD
+                                ;F1E6	IRM-Defaultbelegung
+                                ;F216	INLIN
+                                ;F232	Hexzahlenverarbeitung
+                                ;F2CD	Systeminit, SIXD, Portinittab.
+                                ;F339	SAVE
+                                ;F3A2	BRKT, LARG
+                                ;F3B8	VERIFY, LOAD
+                                ;F518	COLOR
+                                ;F53B	Unterprogrammtabelle SUTAB
+                                ;F5A9	LDMA, LDAM
+                                ;F5AD	MODIFY
+                                ;F62A	Sprungtabelle fuer CRT-Routinen
+	ASM 1520 (SCPX)	V 1.0		1-1
+
+
+                                ;F64A	CCTL-Belegungstabelle CCTAB
+                                ;F65C	TCIF, CRT-Treiber
+                                 
+                                ;------------------------------------
+                                
+                                MESSAGE	MACRO	MSG1,N,MSG2
+                                	 .PRINTX MSG1 N MSG2
+                                	ENDM
+                                
+                                ; Mit FF auffuellen, bis die absolute Adresse LOC erreicht ist:
+                                ABSFILL	MACRO	LOC,WHAT
+                                	 IF $ GT LOC
+                                	  IF1
+                                	   MESSAGE <*Fehler! LOC:>,% $ - LOC,<Byte zu viel vor WHAT*>
+                                	  ENDIF
+                                	 ELSE
+                                	  IF2
+                                	   MESSAGE <*LOC:>,% LOC - $,<Byte frei vor WHAT*>
+                                	  ENDIF
+                                	  DS	LOC - $,0FFh
+                                	 ENDIF
+                                	ENDM
+                                
+                                ;------------------------------------
+                                
+                                 
+                                ;**	EQU-Liste		**
+                                
+                                ; Steuerzeichen:
+                                
+  000A                          LF	EQU	0AH
+  000D                          CR	EQU	0DH
+                                
+                                ; Portadressen im Grundgeraet:
+                                
+  0088                          PIOAD	EQU	88H	; PIO-A, Datenbyte
+  0089                          PIOBD	EQU	89H	; PIO-B, Datenbyte
+  008A                          PIOAS	EQU	8AH	; PIO-A, Steuerbyte
+  008B                          PIOBS	EQU	8BH	; PIO-B, Steuerbyte
+  008C                          CTC0	EQU	8CH	; CTC Kanal 0
+  008D                          CTC1	EQU	8DH	; CTC Kanal 1
+  008E                          CTC2	EQU	8EH	; CTC Kanal 2
+  008F                          CTC3	EQU	8FH	; CTC Kanal 3
+                                
+  01D4                          STACK	EQU	01D4H	; System-Stackpointer KC85/2
+                                 
+  B200                          VRAM	EQU	0B200H	;VIDEO-RAM
+                                 
+                                 
+  B700                          CASS	EQU	0B700H	;Kass.-Puffer
+  B780                          ARGC	EQU	0B780H	;UP-Nr. (PV2)
+  B781                          ARGN	EQU	0B781H	;Anz. Argumente
+  B782                          ARG1	EQU	0B782H	;1. Argument
+  B784                          ARG2	EQU	0B784H	;2. Argument
+  B786                          ARG3	EQU	0B786H	;3. Argument
+                                 
+	ASM 1520 (SCPX)	V 1.0		1-2
+
+
+  B796                          NUMNX	EQU	0B796H	;Zeichenanzahl
+  B797                          NUMVX	EQU	0B797H	;Wert der Zahl
+  B799                          HCADR	EQU	0B799H	;Hardcopy-Adr.
+                                 
+  B79C                          WINON	EQU	0B79CH	;Fensteranfang
+  B79E                          WINLG	EQU	0B79EH	;Fensterlaenge
+  B7A0                          CURSO	EQU	0B7A0H	;Cursorposition
+  B7A2                          STBT	EQU	0B7A2H	;BS-Steuerbyte
+  B7A3                          COLOR	EQU	0B7A3H	;Zeichenfarbe
+  B7A4                          WEND	EQU	0B7A4H	;PAGE/SCROLL
+  B7A6                          CCTL0	EQU	0B7A6H	;Zeichentab. 0
+  B7A8                          CCTL1	EQU	0B7A8H	;Zeichentab. 1
+  B7AA                          CCTL2	EQU	0B7AAH	;Zeichentab. 2
+  B7AC                          CCTL3	EQU	0B7ACH	;Zeichentab. 3
+  B7AE                          SYSP	EQU	0B7AEH	;System-Stack
+  B7B0                          SUTAB	EQU	0B7B0H	;UP-Tabelle
+  B7B2                          CTAB	EQU	0B7B2H	;Adresse CRTTAB
+  B7B4                          BJUMP	EQU	0B7B4H	;JUMP-Adresse
+  B7B9                          OUTAB	EQU	0B7B9H	;Ausgabe-UP
+  B7BB                          INTAB	EQU	0B7BBH	;Eingabe-UP
+  B7BD                          UOUT1	EQU	0B7BDH	;USER-out #1
+  B7C0                          UIN1	EQU	0B7C0H	;USER-in #1
+  B7C3                          UOUT2	EQU	0B7C3H	;USER-out #2
+  B7C6                          UIN2	EQU	0B7C6H	;USER-in #2
+  B7C9                          ZEITB	EQU	0B7C9H	;Zeichentabelle
+                                 
+  B7CD                          ZWOUT	EQU	0B7CDH	;OUTAB-Merker
+  B7CF                          ZWEND	EQU	0B7CFH	;WEND-Merker
+  B7D1                          FTAST	EQU	0B7D1H	;F-Tastenzeiger
+  B7D3                          HOR	EQU	0B7D3H	;hor. Koordin.
+  B7D5                          VERT	EQU	0B7D5H	;vert. Koordin.
+  B7D6                          FARB	EQU	0B7D6H	;Grafikfarbe
+  B7D7                          MIXIT	EQU	0B7D7H	;IX-Bereich
+                                
+                                ;-------------------------------------------------------
+                                ; CAOS-Vorblock:
+                                
+  0000'   48 43 39 30           	DB	'HC900   KCC'
+  0004'   30 20 20 20           
+  0008'   4B 43 43              
+  000B'                         	DS	5,0
+  0010'   02                    	DB	2		; 2 Adressen
+  0011'   E000                  	DW	0E000H		; AADR
+  0013'   F800                  	DW	0F800H		; EADR+1
+  0015'                         	DS	107,0
+                                
+                                ;-------------------------------------------------------
+                                ;**	HC900 CAOS ROM E	**
+                                
+                                	.PHASE	0E000H
+                                ;
+  E000    C3 E003               BYE:	JP	RESET		; Tasten-RESET
+                                
+                                ;Tasten-RESET
+  E003    DD CB 07 7E           RESET:	BIT	7,(IX+7)	; RESET-Schutz?
+  E007    28 06                 	JR	Z,BYE1
+	ASM 1520 (SCPX)	V 1.0		1-3
+
+
+  E009    CD E34A               	CALL	ERAM4		; RAM4 loeschen
+  E00C    C3 F000               	JP	POWER
+                                
+  E00F    31 01D4               BYE1:	LD	SP,STACK	; System-Stack 01D4H
+  E012    C3 F08B               	JP	PWR2
+                                
+                                ;Bildschirmsteuercodes
+  E015    11                    CRTTAB:	DB	11H	;PAGE
+  E016    12                    	DB	12H	;SCROL
+  E017    10                    	DB	10H	;HOME
+  E018    09                    	DB	09H	;CUR
+  E019    0B                    	DB	0BH	;CUU
+  E01A    02                    	DB	02H	;CLLN
+  E01B    19                    	DB	19H	;CBL
+  E01C    1A                    	DB	1AH	;INS
+  E01D    0A                    	DB	0AH	;CUD
+  E01E    1F                    	DB	1FH	;DEL
+  E01F    08                    	DB	08H	;CUL
+  E020    0C                    	DB	0CH	;CLS
+  E021    0D                    	DB	0DH	;ENTER
+  E022    0F                    	DB	0FH	;HCOPY
+  E023    07                    	DB	07H	;SHLOK
+  E024    01                    	DB	01H	;CLR
+                                
+                                ;Berechnung der Farbadresse
+                                ;PE:	HL=VRAM-Adresse
+                                ;PA:	HL=Farbadresse
+  E025    01 4E00               FADR:	LD	BC,-VRAM
+  E028    09                    	ADD	HL,BC
+  E029    06 00                 	LD	B,0
+  E02B    11 0028               	LD	DE,40		; Zeilenbreite
+  E02D                          ZEI0	EQU	$-1	; Zeiger auf 0 (Bildschirm)
+  E02E                          ZEI4	EQU	$	; Zeiger auf 4 (Tastatur)
+  E02E    04                    FADR1:	INC	B
+  E02F    AF                    	XOR	A
+  E030    ED 52                 	SBC	HL,DE		; HL/40 (Zeilenlaenge)
+  E032    30 FA                 	JR	NC,FADR1
+  E034    19                    	ADD	HL,DE
+  E035    80                    	ADD	A,B
+  E036    3D                    	DEC	A
+  E037    17                    	RLA
+  E038    17                    	RLA
+  E039    17                    	RLA
+  E03A    67                    	LD	H,A
+  E03B    C9                    	RET
+                                
+                                ;Berechnung der abs. Adresse im VRAM
+  E03C    D5                    DABR:	PUSH	DE		;**32**
+  E03D    F5                    	PUSH	AF
+  E03E    CD F65C               	CALL	TCIF		; Test Cursor im Fenster
+  E041    38 23                 	JR	C,IAD2
+  E043    3A B79D               	LD	A,(WINON+1)
+  E046    82                    	ADD	A,D		; Cursor-Zeile
+  E047    26 00                 	LD	H,0
+  E049    6F                    	LD	L,A
+  E04A    29                    	ADD	HL,HL
+	ASM 1520 (SCPX)	V 1.0		1-4
+
+
+  E04B    29                    	ADD	HL,HL
+  E04C    29                    	ADD	HL,HL		; *8
+  E04D    C5                    	PUSH	BC
+  E04E    E5                    	PUSH	HL
+  E04F    C1                    	POP	BC
+  E050    29                    	ADD	HL,HL
+  E051    29                    	ADD	HL,HL
+  E052    09                    	ADD	HL,BC		; *40
+  E053    3A B79C               	LD	A,(WINON)
+  E056    83                    	ADD	A,E		; Cursor-Spalte
+  E057    85                    	ADD	A,L
+  E058    6F                    	LD	L,A
+  E059    3E 00                 	LD	A,0
+  E05B    8C                    	ADC	A,H
+  E05C    67                    	LD	H,A
+  E05D    01 B200               	LD	BC,VRAM
+  E060    09                    	ADD	HL,BC
+  E061    C1                    	POP	BC
+  E062    F1                    	POP	AF
+  E063    A7                    	AND	A	;CY=0
+  E064    D1                    	POP	DE
+  E065    C9                    	RET
+                                	;
+  E066    F1                    IAD2:	POP	AF
+  E067    37                    	SCF		;CY=1
+  E068    D1                    	POP	DE
+  E069    21 B200               	LD	HL,VRAM
+  E06C    C9                    	RET
+                                 
+  E06D                          WPIX:	;Zeichen auf Grafikbildschirm
+                                	;sichtbar machen, PE: DE,A
+  E06D    F5                    	PUSH	AF
+  E06E    E5                    	PUSH	HL
+  E06F    D5                    	PUSH	DE
+  E070    C5                    	PUSH	BC
+  E071    F5                    	PUSH	AF
+  E072    CD E025               	CALL	FADR	;Farbadresse
+  E075    F1                    	POP	AF
+  E076    E5                    	PUSH	HL
+  E077    CD E12F               	CALL	PADR
+  E07A    38 48                 	JR	C,POP4	;au~erhalb!
+  E07C    E5                    	PUSH	HL	;Pixeladresse
+  E07D    21 F64A               	LD	HL,CCTAB
+  E080    0E B7                 	LD	C,0B7H	;High(CCTLx)
+  E082    BE                    WPIX1:	CP	(HL)
+  E083    23                    	INC	HL
+  E084    30 04                 	JR	NC,WPIX2
+  E086    23                    	INC	HL
+  E087    23                    	INC	HL
+  E088    18 F8                 	JR	WPIX1
+  E08A    96                    WPIX2:	SUB	(HL)	;Offset
+  E08B    23                    	INC	HL
+  E08C    6E                    	LD	L,(HL)
+  E08D    61                    	LD	H,C	;HL=CCTLx
+  E08E    4E                    	LD	C,(HL)
+  E08F    23                    	INC	HL
+	ASM 1520 (SCPX)	V 1.0		1-5
+
+
+  E090    66                    	LD	H,(HL)
+  E091    69                    	LD	L,C	;Zeichentabelle
+  E092    22 B7C9               	LD	(ZEITB),HL
+  E095    4F                    	LD	C,A
+  E096    3A B7A2               	LD	A,(STBT)
+  E099    47                    	LD	B,A
+  E09A    CB 48                 	BIT	1,B
+  E09C    20 07                 	JR	NZ,WPIX3;Farbe aus
+  E09E    3A B7A3               	LD	A,(COLOR)
+  E0A1    12                    	LD	(DE),A	;oberes Byte
+  E0A2    CB EB                 	SET	5,E
+  E0A4    12                    	LD	(DE),A	;unteres Byte
+  E0A5    D1                    WPIX3:	POP	DE	;Pixeladr.
+  E0A6    E1                    	POP	HL	;Farbadr.
+  E0A7    CB 40                 	BIT	0,B
+  E0A9    20 19                 	JR	NZ,POP4	;Pixel aus
+  E0AB    06 00                 	LD	B,0
+  E0AD    3E 03                 	LD	A,3
+  E0AF    CB 21                 WPIX4:	SLA	C
+  E0B1    CB 10                 	RL	B	;*8
+  E0B3    3D                    	DEC	A
+  E0B4    20 F9                 	JR	NZ,WPIX4
+  E0B6    2A B7C9               	LD	HL,(ZEITB)
+  E0B9    09                    	ADD	HL,BC	;Zeichanadr.
+  E0BA    D5                    	PUSH	DE
+  E0BB    CD E0ED               	CALL	WPIX5	;4 Byte schreib.
+  E0BE    D1                    	POP	DE
+  E0BF    CB EB                 	SET	5,E
+  E0C1    CD E0ED               	CALL	WPIX5	;4 Byte schreib.
+  E0C4    C1                    POP4:	POP	BC
+  E0C5    D1                    	POP	DE
+  E0C6    E1                    	POP	HL
+  E0C7    F1                    	POP	AF
+  E0C8    C9                    	RET
+                                 
+  E0C9    E5                    SCRLUP:	PUSH	HL	;Scroll-IP
+  E0CA    D5                    	PUSH	DE
+  E0CB    C5                    	PUSH	BC
+  E0CC    E5                    	PUSH	HL
+  E0CD    CD E12F               	CALL	PADR
+  E0D0    C1                    	POP	BC
+  E0D1    E5                    	PUSH	HL	;Pixel-neu
+  E0D2    D5                    	PUSH	DE	;Farbe-neu
+  E0D3    6F                    	LD	L,A
+  E0D4    3E 08                 	LD	A,8
+  E0D6    80                    	ADD	A,B
+  E0D7    67                    	LD	H,A
+  E0D8    7D                    	LD	A,L
+  E0D9    69                    	LD	L,C
+  E0DA    CD E12F               	CALL	PADR
+  E0DD    E3                    	EX	(SP),HL	;Pixel-alt
+  E0DE    EB                    	EX	DE,HL	;Farbe-alt
+  E0DF    4F                    	LD	C,A
+  E0E0    06 00                 	LD	B,0
+  E0E2    C5                    	PUSH	BC	;Breite
+  E0E3    ED B0                 	LDIR		;Farbscrolling
+	ASM 1520 (SCPX)	V 1.0		1-6
+
+
+  E0E5    C1                    	POP	BC
+  E0E6    E1                    	POP	HL
+  E0E7    D1                    	POP	DE
+  E0E8    ED B0                 	LDIR		;Pixelscrolling
+  E0EA    C3 F196               	JP	POP3
+                                 
+  E0ED    01 0080               WPIX5:	LD	BC,80H	;Offset fuer
+  E0F0    3E 04                 	LD	A,4	;naechstes Byte
+  E0F2    ED A0                 WPIX6:	LDI
+  E0F4    EB                    	EX	DE,HL
+  E0F5    09                    	ADD	HL,BC
+  E0F6    EB                    	EX	DE,HL
+  E0F7    03                    	INC	BC	;BC korrigieren
+  E0F8    3D                    	DEC	A
+  E0F9    20 F7                 	JR	NZ,WPIX6
+  E0FB    C9                    	RET
+                                 
+  E0FC    F5                    CUCP:	PUSH	AF		;**25**
+  E0FD    C5                    	PUSH	BC
+  E0FE    E5                    	PUSH	HL
+  E0FF    D5                    	PUSH	DE
+  E100    ED 5B B7A0            	LD	DE,(CURSO)
+  E104    CD E03C               	CALL	DABR
+  E107    38 0C                 	JR	C,CUCP1	;au~erhalb!
+  E109    CD E025               	CALL	FADR
+  E10C    CD E12F               	CALL	PADR
+  E10F    1A                    	LD	A,(DE)
+  E110    2F                    	CPL		;1. Farbbyte
+  E111    12                    	LD	(DE),A
+  E112    CB EB                 	SET	5,E	;2. Farbbyte
+  E114    12                    	LD	(DE),A
+  E115    D1                    CUCP1:	POP	DE
+  E116    E1                    	POP	HL
+  E117    C1                    	POP	BC
+  E118    F1                    	POP	AF
+  E119    C9                    	RET
+                                 
+  E11A    21 0030               BEEP:	LD	HL,30H	;CHR(7)
+  E11D    01 0A0F               	LD	BC,0A0FH
+  E120    D5                    	PUSH	DE
+  E121    1E 00                 	LD	E,0
+  E123    CD E59F               	CALL	TON1	;Ton ein
+  E126    2E 00                 	LD	L,0
+  E128    06 05                 	LD	B,5
+  E12A    CD E59F               	CALL	TON1	;Ton aus
+  E12D    D1                    	POP	DE
+  E12E    C9                    	RET
+                                 
+  E12F                          PADR:	;Pixel- und Farbadr. berechnen
+  E12F    F5                    	PUSH	AF		;**34**
+  E130    7D                    	LD	A,L	;Spalte
+  E131    FE 28                 	CP	40
+  E133    30 39                 	JR	NC,PADR5;zu gro~
+  E135    C5                    	PUSH	BC
+  E136    FE 20                 	CP	32
+  E138    30 37                 	JR	NC,PADR6;rechte Seite
+	ASM 1520 (SCPX)	V 1.0		1-7
+
+
+  E13A    7C                    	LD	A,H
+  E13B    07                    	RLCA
+  E13C    07                    	RLCA
+  E13D    07                    	RLCA
+  E13E    E6 60                 	AND	60H
+  E140    B5                    	OR	L
+  E141    CB 44                 	BIT	0,H
+  E143    28 02                 	JR	Z,PADR1
+  E145    CB FF                 	SET	7,A
+  E147    4F                    PADR1:	LD	C,A
+  E148    7C                    	LD	A,H
+  E149    1F                    	RRA
+  E14A    1F                    	RRA
+  E14B    1F                    	RRA
+  E14C    E6 1E                 	AND	1EH
+  E14E    CB 4C                 	BIT	1,H
+  E150    28 02                 	JR	Z,PADR2
+  E152    CB C7                 	SET	0,A
+  E154    F6 80                 PADR2:	OR	80H	;Pixel-RAM I
+  E156    47                    	LD	B,A
+  E157    1F                    	RRA
+  E158    1F                    	RRA
+  E159    E6 07                 	AND	7
+  E15B    F6 A8                 	OR	0A8H	;Color-RAM I
+  E15D    57                    	LD	D,A
+  E15E    79                    	LD	A,C
+  E15F    E6 7F                 	AND	7FH
+  E161    CB 64                 	BIT	4,H
+  E163    28 02                 	JR	Z,PADR3
+  E165    CB FF                 	SET	7,A
+  E167    5F                    PADR3:	LD	E,A
+  E168    69                    PADR4:	LD	L,C
+  E169    60                    	LD	H,B
+  E16A    C1                    	POP	BC
+  E16B    F1                    	POP	AF
+  E16C    B7                    	OR	A	;CY=0
+  E16D    C9                    	RET
+                                	;
+  E16E    F1                    PADR5:	POP	AF
+  E16F    37                    	SCF		;au~erhalb
+  E170    C9                    	RET
+                                	;
+  E171    E6 07                 PADR6:	AND	7
+  E173    6F                    	LD	L,A
+  E174    7C                    	LD	A,H
+  E175    07                    	RLCA
+  E176    07                    	RLCA
+  E177    07                    	RLCA
+  E178    E6 60                 	AND	60H
+  E17A    B5                    	OR	L
+  E17B    6F                    	LD	L,A
+  E17C    7C                    	LD	A,H
+  E17D    1F                    	RRA
+  E17E    E6 18                 	AND	18H
+  E180    CB 44                 	BIT	0,H
+  E182    28 02                 	JR	Z,PADR7
+	ASM 1520 (SCPX)	V 1.0		1-8
+
+
+  E184    CB FF                 	SET	7,A
+  E186    B5                    PADR7:	OR	L
+  E187    4F                    	LD	C,A
+  E188    7C                    	LD	A,H
+  E189    07                    	RLCA
+  E18A    07                    	RLCA
+  E18B    07                    	RLCA
+  E18C    E6 06                 	AND	6
+  E18E    F6 A0                 	OR	0A0H	;Pixel-RAM II
+  E190    CB 4C                 	BIT	1,H
+  E192    28 02                 	JR	Z,PADR8
+  E194    CB C7                 	SET	0,A
+  E196    47                    PADR8:	LD	B,A
+  E197    16 B0                 	LD	D,0B0H	;Coler-RAM II
+  E199    CB 57                 	BIT	2,A
+  E19B    28 01                 	JR	Z,PADR9
+  E19D    14                    	INC	D
+  E19E    79                    PADR9:	LD	A,C
+  E19F    E6 7F                 	AND	7FH
+  E1A1    CB 48                 	BIT	1,B
+  E1A3    28 02                 	JR	Z,PADR10
+  E1A5    CB FF                 	SET	7,A
+  E1A7    5F                    PADR10:	LD	E,A
+  E1A8    18 BE                 	JR	PADR4
+                                 
+  E1AA                          PUDE:	;Punkt loeschen		;**2F**
+  E1AA    37                    	SCF
+  E1AB    18 01                 	JR	PU1
+                                
+  E1AD                          PUSE:	;Punkt setzen		;**30**
+  E1AD    A7                    	AND	A
+  E1AE    E5                    PU1:	PUSH	HL
+  E1AF    D5                    	PUSH	DE
+  E1B0    C5                    	PUSH	BC
+  E1B1    2A B7D3               	LD	HL,(HOR)
+  E1B4    ED 4B B7D5            	LD	BC,(VERT)
+  E1B8    F5                    	PUSH	AF
+  E1B9    AF                    	XOR	A
+  E1BA    06 03                 	LD	B,3
+  E1BC    CB 3C                 PU2:	SRL	H
+  E1BE    CB 1D                 	RR	L
+  E1C0    1F                    	RRA
+  E1C1    10 F9                 	DJNZ	PU2
+  E1C3    5F                    	LD	E,A
+  E1C4    79                    	LD	A,C
+  E1C5    2F                    	CPL
+  E1C6    67                    	LD	H,A
+  E1C7    4B                    	LD	C,E
+  E1C8    CD E12F               	CALL	PADR
+  E1CB    38 1F                 	JR	C,PU5
+  E1CD    37                    	SCF
+  E1CE    79                    	LD	A,C
+  E1CF    0E 00                 	LD	C,0
+  E1D1    CB 19                 PU3:	RR	C
+  E1D3    D6 20                 	SUB	20H
+  E1D5    30 FA                 	JR	NC,PU3
+	ASM 1520 (SCPX)	V 1.0		1-9
+
+
+  E1D7    F1                    	POP	AF
+  E1D8    79                    	LD	A,C
+  E1D9    38 15                 	JR	C,PU6
+  E1DB    B6                    	OR	(HL)	;Punkt setzen
+  E1DC    77                    	LD	(HL),A
+  E1DD    3A B7D6               	LD	A,(FARB)
+  E1E0    E6 F8                 	AND	0F8H
+  E1E2    47                    	LD	B,A
+  E1E3    1A                    	LD	A,(DE)
+  E1E4    E6 07                 	AND	7
+  E1E6    B0                    	OR	B
+  E1E7    12                    	LD	(DE),A
+  E1E8    C1                    PU4:	POP	BC
+  E1E9    D1                    	POP	DE
+  E1EA    E1                    	POP	HL
+  E1EB    C9                    	RET
+                                	;
+  E1EC    F1                    PU5:	POP	AF
+  E1ED    37                    	SCF
+  E1EE    18 F8                 	JR	PU4
+                                	;
+  E1F0    F5                    PU6:	PUSH	AF
+  E1F1    46                    	LD	B,(HL)
+  E1F2    2F                    	CPL
+  E1F3    A6                    	AND	(HL)	;Punkt loeschen
+  E1F4    77                    	LD	(HL),A
+  E1F5    F1                    	POP	AF
+  E1F6    A0                    	AND	B
+  E1F7    1A                    	LD	A,(DE)	;Farbe holen
+  E1F8    18 EE                 	JR	PU4
+                                 
+                                ;Tastatur-Treiber
+                                 
+  E1FA                          ISRC3:	;ISR CTC Kanal 3 (Tastatur)
+  E1FA    FB                    	EI
+  E1FB    F5                    	PUSH	AF
+  E1FC    3E 23                 	LD	A,23H		;DI,ZG256,Res
+  E1FE    D3 8F                 	OUT	(CTC3),A
+  E200    DD CB 08 DE           	SET	3,(IX+8)	;Timeout
+  E204    DD 36 0D 00           	LD	(IX+13),0	;Zeichen tot
+  E208    18 50                 	JR	TST1
+                                 
+  E20A                          ISRPB:	;ISR PIO Kanal B (Tastatur)
+  E20A    FB                    	EI
+  E20B    F5                    	PUSH	AF
+  E20C    DB 8F                 	IN	A,(CTC3)	;gemessene
+  E20E    F5                    	PUSH	AF		;Zeit retten
+  E20F    3E A7                 	LD	A,0A7H		;EI,ZG256,Res
+  E211    D3 8F                 	OUT	(CTC3),A
+  E213    3E 8F                 	LD	A,8FH		;ZK
+  E215    D3 8F                 	OUT	(CTC3),A
+  E217    F1                    	POP	AF
+  E218    DD CB 08 5E           	BIT	3,(IX+8)	;Timeout?
+  E21C    DD CB 08 9E           	RES	3,(IX+8)	;ruecksetzen
+  E220    20 38                 	JR	NZ,TST1
+  E222    FE 65                 	CP	101
+	ASM 1520 (SCPX)	V 1.0		1-10
+
+
+  E224    30 6A                 	JR	NC,TST6		;0-Bit
+  E226    FE 44                 	CP	68
+  E228    30 69                 	JR	NC,TST7		;1-Bit
+  E22A    E5                    	PUSH	HL
+  E22B    D5                    	PUSH	DE
+  E22C    DD CB 0C 3E           	SRL	(IX+12)
+  E230    DD 7E 08              	LD	A,(IX+8)
+  E233    E6 80                 	AND	80H	;CAPS?
+  E235    07                    	RLCA
+  E236    DD AE 0C              	XOR	(IX+12)	;7bit-Scancode
+  E239    26 00                 	LD	H,0
+  E23B    DD 5E 0E              	LD	E,(IX+14)
+  E23E    DD 56 0F              	LD	D,(IX+15)
+  E241    6F                    	LD	L,A
+  E242    19                    	ADD	HL,DE	;Pos. in KTAB
+  E243    7E                    	LD	A,(HL)	;ASCII holen
+  E244    D1                    	POP	DE
+  E245    E1                    	POP	HL
+  E246    FE 16                 	CP	16H	;CAPS?
+  E248    20 13                 	JR	NZ,TST2
+  E24A    DD BE 0D              	CP	(IX+13)	;erstes CAPS?
+  E24D    28 0B                 	JR	Z,TST1
+  E24F    DD 77 0D              	LD	(IX+13),A;eintragen
+  E252    DD 7E 08              	LD	A,(IX+8)
+  E255    EE 80                 	XOR	80H	;CAPS on/off
+  E257    DD 77 08              	LD	(IX+8),A
+  E25A    F1                    TST1:	POP	AF
+  E25B    ED 4D                 	RETI
+                                	;
+  E25D    DD BE 0D              TST2:	CP	(IX+13)	;=letzter Code?
+  E260    28 11                 	JR	Z,TST4
+  E262    DD 77 0D              	LD	(IX+13),A;eintragen
+  E265    DD CB 08 A6           	RES	4,(IX+8);Repeat ruecks.
+  E269    DD CB 08 C6           TST3:	SET	0,(IX+8);gueltig machen
+  E26D    DD 36 0A 00           	LD	(IX+10),0;neuer Code
+  E271    18 E7                 	JR	TST1
+                                	;
+  E273    DD 34 0A              TST4:	INC	(IX+10)	;Zeit abwarten
+  E276    DD CB 08 66           	BIT	4,(IX+8);Fast Repeat?
+  E27A    20 0C                 	JR	NZ,TST5
+  E27C    DD CB 0A 66           	BIT	4,(IX+10);16 erreicht?
+  E280    28 D8                 	JR	Z,TST1
+  E282    DD CB 08 E6           	SET	4,(IX+8);Repeat aktiv
+  E286    18 E1                 	JR	TST3
+                                	;
+  E288    DD CB 0A 4E           TST5:	BIT	1,(IX+10);nur jeder 2.
+  E28C    20 DB                 	JR	NZ,TST3	 ;Interrupt!
+  E28E    18 CA                 	JR	TST1
+                                	;
+  E290    B7                    TST6:	OR	A	;0-Bit
+  E291    18 01                 	JR	TST8
+                                	;
+  E293    37                    TST7:	SCF		;1-Bit
+  E294    DD CB 0C 1E           TST8:	RR	(IX+12)	;einschieben
+  E298    18 C0                 	JR	TST1
+                                
+	ASM 1520 (SCPX)	V 1.0		1-11
+
+
+  E29A    57 77                 KTAB:	DB	'Ww'
+  E29C    41 61                 	DB	'Aa'
+  E29E    32 22                 	DB	'2"'
+  E2A0    08 19                 	DB	8,19H		;CUL
+  E2A2    10 0C                 	DB	10H,0CH		;HOME
+  E2A4    2D 3D                 	DB	'-='
+  E2A6    F2 F8                 	DB	0F2H,0F8H	;F2
+  E2A8    59 79                 	DB	'Yy'
+  E2AA    45 65                 	DB	'Ee'
+  E2AC    53 73                 	DB	'Ss'
+  E2AE    33 23                 	DB	'3#'
+  E2B0    5E 5D                 	DB	'^]'
+  E2B2    01 0F                 	DB	1,0FH		;CLR
+  E2B4    3A 2A                 	DB	':*'
+  E2B6    F3 F9                 	DB	0F3H,0F9H	;F3
+  E2B8    58 78                 	DB	'Xx'
+  E2BA    54 74                 	DB	'Tt'
+  E2BC    46 66                 	DB	'Ff'
+  E2BE    35 25                 	DB	'5%'
+  E2C0    50 70                 	DB	'Pp'
+  E2C2    1F 02                 	DB	1FH,2		;DEL
+  E2C4    30 40                 	DB	'0',40H
+  E2C6    F5 FB                 	DB	0F5H,0FBH	;F5
+  E2C8    56 76                 	DB	'Vv'
+  E2CA    55 75                 	DB	'Uu'
+  E2CC    48 68                 	DB	'Hh'
+  E2CE    37 27                 	DB	'7',27H
+  E2D0    4F 6F                 	DB	'Oo'
+  E2D2    1A 1A                 	DB	1AH,1AH		;INS
+  E2D4    39 29                 	DB	'9)'
+  E2D6    03 03                 	DB	3,3		;BRK
+  E2D8    4E 6E                 	DB	'Nn'
+  E2DA    49 69                 	DB	'Ii'
+  E2DC    4A 6A                 	DB	'Jj'
+  E2DE    38 28                 	DB	'8('
+  E2E0    20 5B                 	DB	' ['		;SPC
+  E2E2    4B 6B                 	DB	'Kk'
+  E2E4    2C 3C                 	DB	',<'
+  E2E6    13 13                 	DB	13H,13H		;STOP
+  E2E8    4D 6D                 	DB	'Mm'
+  E2EA    5A 7A                 	DB	'Zz'
+  E2EC    47 67                 	DB	'Gg'
+  E2EE    36 26                 	DB	'6&'
+  E2F0    20 20                 	DB	'  '	;freie Taste
+  E2F2    4C 6C                 	DB	'Ll'
+  E2F4    2E 3E                 	DB	'.>'
+  E2F6    F6 FC                 	DB	0F6H,0FCH	;F6
+  E2F8    42 62                 	DB	'Bb'
+  E2FA    52 72                 	DB	'Rr'
+  E2FC    44 64                 	DB	'Dd'
+  E2FE    34 24                 	DB	'4$'
+  E300    5F 5C                 	DB	'_\'
+  E302    2B 3B                 	DB	'+;'
+  E304    2F 3F                 	DB	'/?'
+  E306    F4 FA                 	DB	0F4H,0FAH	;F4
+  E308    43 63                 	DB	'Cc'
+	ASM 1520 (SCPX)	V 1.0		1-12
+
+
+  E30A    51 71                 	DB	'Qq'
+  E30C    16 16                 	DB	16H,16H		;CAPS
+  E30E    31 21                 	DB	'1!'
+  E310    0A 12                 	DB	LF,12H		;CUD
+  E312    0B 11                 	DB	0BH,11H		;CUU
+  E314    09 09                 	DB	09H,09H		;CUR
+  E316    F1 F7                 	DB	0F1H,0F7H	;F1
+  E318    0D 0D                 	DB	CR,CR		;ENTER
+                                 
+  E31A    E55B                  ISRTAB:	DW	ISRPA	;PIO A: Kassette
+  E31C    E20A                  	DW	ISRPB	;PIO B: Tastatur
+  E31E    0000                  	DW	0	;CTC 0: frei
+  E320    E472                  	DW	ISRC1	;CTC 1: Kassette
+  E322    E5E6                  	DW	ISRC2	;CTC 2: Tondauer
+  E324    E1FA                  	DW	ISRC3	;CTC 3: Tastatur
+                                 
+  E326    CD E32F               KBDZ:	CALL	KBDS		;**0E**
+  E329    D0                    	RET	NC
+  E32A    DD CB 08 86           	RES	0,(IX+8)
+  E32E    C9                    	RET
+                                 
+  E32F    B7                    KBDS:	OR	A		;**0C**
+  E330    DD CB 08 46           	BIT	0,(IX+8);Code gueltig?
+  E334    C8                    	RET	Z
+  E335    DD 7E 0D              	LD	A,(IX+13)
+  E338    37                    	SCF		;wenn ja
+  E339    C9                    	RET
+                                 
+  E33A    C5                    INIEA:	PUSH	BC
+  E33B    4E                    	LD	C,(HL)	;1.Byte=Adr.
+  E33C    23                    	INC	HL
+  E33D    46                    	LD	B,(HL)	;2.Byte=Anz.
+  E33E    23                    	INC	HL
+  E33F    ED B3                 	OTIR
+  E341    C1                    	POP	BC
+  E342    C9                    	RET
+                                 
+  E343    CD E33A               INIME:	CALL	INIEA	;Kanal init
+  E346    15                    	DEC	D	;D Kanaele
+  E347    20 FA                 	JR	NZ,INIME
+  E349    C9                    	RET
+                                
+                                ; RAM4 loeschen
+  E34A    21 4000               ERAM4:	LD	HL,4000H	; RAM4
+  E34D    44                    	LD	B,H
+  E34E    4D                    	LD	C,L
+  E34F    7D                    	LD	A,L
+  E350    77                    ERA4:	LD	(HL),A		; loeschen
+  E351    ED A1                 	CPI			; INC HL, DEC BC
+  E353    E0                    	RET	PO		; fertig
+  E354    18 FA                 	JR	ERA4
+                                
+  E356    7F7F                  	DW	7F7FH
+  E358    53 57 49 54           	DB	'SWITCH',1
+  E35C    43 48 01              
+  E35F    3A B781               	LD	A,(ARGN)
+	ASM 1520 (SCPX)	V 1.0		1-13
+
+
+  E362    53                    	LD	D,E
+  E363    CD E37B               	CALL	MODU
+  E366    7D                    	LD	A,L	;Platz
+  E367    CD F257               	CALL	AHEX
+  E36A    CD F23A               	CALL	SPACE
+  E36D    7C                    	LD	A,H	;Kennbyte
+  E36E    CD F257               	CALL	AHEX
+  E371    CD F23A               	CALL	SPACE
+  E374    7B                    	LD	A,E	;Steuerbyte
+  E375    CD F257               	CALL	AHEX
+  E378    C3 F249               	JP	CRLF
+                                 
+  E37B                          MODU:	;Lesen und Schalten
+  E37B    FE 02                 	CP	2
+  E37D    38 2E                 	JR	C,MODU5	;nur lesen
+  E37F    7D                    	LD	A,L
+  E380    FE 02                 	CP	2
+  E382    30 23                 	JR	NC,MODU4
+  E384    0E 88                 	LD	C,PIOAD	;interne Module
+  E386    ED 60                 	IN	H,(C)
+  E388    A7                    	AND	A
+  E389    20 12                 	JR	NZ,MODU2
+  E38B    CB 42                 	BIT	0,D	;fuer RAM0
+  E38D    CB 8C                 	RES	1,H
+  E38F    28 02                 	JR	Z,MODU1
+  E391    CB CC                 	SET	1,H
+  E393    CB 4A                 MODU1:	BIT	1,D
+  E395    CB 9C                 	RES	3,H
+  E397    28 0C                 	JR	Z,MODU3
+  E399    CB DC                 	SET	3,H
+  E39B    18 08                 	JR	MODU3
+                                 
+  E39D    CB 42                 MODU2:	BIT	0,D	;fuer IRM
+  E39F    CB 94                 	RES	2,H
+  E3A1    28 02                 	JR	Z,MODU3
+  E3A3    CB D4                 	SET	2,H
+  E3A5    ED 61                 MODU3:	OUT	(C),H	;int. schalten
+  E3A7    7A                    MODU4:	LD	A,D
+  E3A8    0E 80                 	LD	C,80H
+  E3AA    45                    	LD	B,L
+  E3AB    ED 79                 	OUT	(C),A	;Senden Steuerb.
+  E3AD    26 00                 MODU5:	LD	H,0
+  E3AF    E5                    	PUSH	HL
+  E3B0    F5                    	PUSH	AF
+  E3B1    01 B800               	LD	BC,0B800H
+  E3B4    09                    	ADD	HL,BC
+  E3B5    F1                    	POP	AF
+  E3B6    38 01                 	JR	C,MODU6	;nur lesen
+  E3B8    77                    	LD	(HL),A	;eintragen
+  E3B9    5E                    MODU6:	LD	E,(HL)	;Rueckgabe STB
+  E3BA    E1                    	POP	HL	;(fuer Kommando)
+  E3BB    0E 80                 	LD	C,80H
+  E3BD    45                    	LD	B,L
+  E3BE    ED 60                 	IN	H,(C)	;Modultyp lesen
+  E3C0    C9                    	RET
+                                 
+	ASM 1520 (SCPX)	V 1.0		1-14
+
+
+  E3C1    7F7F                  	DW	7F7FH
+  E3C3    4A 55 4D 50           	DB	'JUMP',1
+  E3C7    01                    
+                                IF HC900
+                                	LD	A,(ARG1)
+                                ELSE
+  E3C8    7D                    	LD	A,L
+                                ENDIF
+  E3C9    47                    JUMP:	LD	B,A		;**27**
+  E3CA    0E 80                 	LD	C,80H
+  E3CC    ED 78                 	IN	A,(C)
+  E3CE    3C                    	INC	A	;Kennbyte FF?
+  E3CF    CA F10D               	JP	Z,LOOP2	;ja-Fehler
+  E3D2    3E FF                 	LD	A,0FFH
+  E3D4    ED 79                 	OUT	(C),A	;Ausgabe FF
+                                IFF HC900
+  E3D6    26 00                 	LD	H,0
+  E3D8    11 B800               	LD	DE,0B800H
+  E3DB    19                    	ADD	HL,DE
+  E3DC    77                    	LD	(HL),A	;Eintrag
+                                ENDIF
+  E3DD    DB 88                 	IN	A,(PIOAD)
+  E3DF    E6 7E                 	AND	7EH
+  E3E1    C3 B7B4               	JP	BJUMP	;in IRM
+                                 
+                                ;TAPE-Treiber
+                                 
+  E3E4                          ISRO:	;Init Bandausgabe	;**08**
+  E3E4    F3                    	DI
+  E3E5    DB 88                 	IN	A,(PIOAD)
+  E3E7    F6 60                 	OR	60H	;Motor, LED ein
+  E3E9    D3 88                 	OUT	(PIOAD),A
+  E3EB    FB                    	EI
+  E3EC    CD F167               	CALL	NOUT
+  E3EF    22 B7CD               	LD	(ZWOUT),HL
+  E3F2    2A B7A4               	LD	HL,(WEND)
+  E3F5    22 B7CF               	LD	(ZWEND),HL
+  E3F8    CD F78D               	CALL	PAGE
+  E3FB    DD 36 02 00           	LD	(IX+2),0 ;1. Block
+  E3FF    01 2000               	LD	BC,2000H ;Vortonlaenge
+                                	;
+  E402                          MBO:	;Ausgabe 1 Block	;**01**
+  E402    DD 34 02              	INC	(IX+2)
+  E405    F3                    	DI
+  E406    AF                    	XOR	A
+  E407    DD 77 01              	LD	(IX+1),A;Pruefsumme
+  E40A    3E 87                 	LD	A,87H	;EI,ZG16,Res
+  E40C    D3 8D                 	OUT	(CTC1),A
+  E40E    3E 2F                 	LD	A,2FH	;Vorton
+  E410    D3 8D                 	OUT	(CTC1),A
+  E412    FB                    	EI
+  E413    57                    	LD	D,A	;D=2Fh
+  E414    CD E460               MBO1:	CALL	HBITOT
+  E417    ED A1                 	CPI
+  E419    EA E414               	JP	PE,MBO1	;BC mal
+  E41C    CD E458               	CALL	ZTON	;Trennzeichen
+	ASM 1520 (SCPX)	V 1.0		1-15
+
+
+  E41F    DD 7E 02              	LD	A,(IX+2)
+  E422    CD E447               	CALL	BYTOT	;Blocknummer
+  E425    DD 6E 05              	LD	L,(IX+5)
+  E428    DD 66 06              	LD	H,(IX+6)
+  E42B    06 80                 	LD	B,80H
+  E42D    7E                    BLKOT:	LD	A,(HL)
+  E42E    CD E447               	CALL	BYTOT	;Datenbyte
+  E431    DD 7E 01              	LD	A,(IX+1)
+  E434    86                    	ADD	A,(HL)	;Pruefsumme
+  E435    DD 77 01              	LD	(IX+1),A;berechnen
+  E438    23                    	INC	HL
+  E439    10 F2                 	DJNZ	BLKOT
+  E43B    CD E447               	CALL	BYTOT	;und ausgeben
+  E43E    7A                    	LD	A,D
+  E43F    CD E467               	CALL	BITO1	;noch ein Knacks
+  E442    3E 03                 	LD	A,3
+  E444    D3 8D                 	OUT	(CTC1),A	;CTC stoppen
+  E446    C9                    	RET
+                                 
+  E447                          BYTOT:	;Ausgabe eines Bytes
+  E447    C5                    	PUSH	BC
+  E448    4F                    	LD	C,A
+  E449    06 08                 	LD	B,8
+  E44B    CB 09                 BYTOUT:	RRC	C	;mit Bit0
+  E44D    F5                    	PUSH	AF	;beginnend
+  E44E    DC E460               	CALL	C,HBITOT
+  E451    F1                    	POP	AF
+  E452    D4 E45C               	CALL	NC,LBITOT
+  E455    10 F4                 	DJNZ	BYTOUT	;8*
+  E457    C1                    	POP	BC
+  E458    1E 5D                 ZTON:	LD	E,5DH	;ZK Trennz.
+  E45A    18 06                 	JR	BITOUT
+                                 
+  E45C    1E 17                 LBITOT:	LD	E,17H	;ZK Low-Bit
+  E45E    18 02                 	JR	BITOUT
+                                 
+  E460    1E 2F                 HBITOT:	LD	E,2FH	;ZK High-Bit
+  E462    7A                    BITOUT:	LD	A,D
+  E463    CD E467               	CALL	BITO1	;aufrufen und
+  E466    7A                    	LD	A,D	;reinlaufen
+  E467    DD 77 00              BITO1:	LD	(IX),A
+  E46A    DD 7E 00              BITO2:	LD	A,(IX)	;warten auf
+  E46D    B7                    	OR	A	;Interrupt
+  E46E    20 FA                 	JR	NZ,BITO2
+  E470    53                    	LD	D,E
+  E471    C9                    	RET
+                                 
+  E472                          ISRC1:	;ISR CTC Kanal 1 (Kassette-Out)
+  E472    F5                    	PUSH	AF
+  E473    3E 03                 	LD	A,3	;DI,ZG16,Res
+  E475    D3 8D                 	OUT	(CTC1),A
+  E477    3E 87                 	LD	A,87H	;EI,ZG26,Res
+  E479    D3 8D                 	OUT	(CTC1),A
+  E47B    DD 7E 00              	LD	A,(IX)	;Uebergabezelle
+  E47E    D3 8D                 	OUT	(CTC1),A	;ZK
+  E480    AF                    	XOR	A
+	ASM 1520 (SCPX)	V 1.0		1-16
+
+
+  E481    DD 77 00              	LD	(IX),A	;Quittierung
+  E484    C3 E569               	JP	ISR2E
+                                 
+  E487                          CSRO:	;Abschlu~ Bandausgabe	;**09**
+  E487    DD 36 02 FE           	LD	(IX+2),0FEH
+  E48B    CD E402               	CALL	MBO	;Endeblock
+  E48E    2A B7CD               	LD	HL,(ZWOUT)
+  E491    22 B7B9               	LD	(OUTAB),HL
+  E494    2A B7CF               	LD	HL,(ZWEND)
+  E497    22 B7A4               	LD	(WEND),HL
+  E49A    DB 88                 	IN	A,(PIOAD)
+  E49C    E6 9F                 	AND	9FH	;Motor, LED aus
+  E49E    D3 88                 	OUT	(PIOAD),A
+  E4A0    C3 F316               	JP	KPUFF
+                                 
+  E4A3                          ISRI:	;Init Bandausgabe	;**0A**
+  E4A3    F3                    	DI
+  E4A4    DB 88                 	IN	A,(PIOAD)
+  E4A6    F6 40                 	OR	40H	;Motor ein
+  E4A8    E6 DF                 	AND	0DFH	;LED aus
+  E4AA    D3 88                 	OUT	(PIOAD),A
+  E4AC    CD F167               	CALL	NOUT	;Normalausgabe
+  E4AF    22 B7CD               	LD	(ZWOUT),HL
+  E4B2    2A B7A4               	LD	HL,(WEND)
+  E4B5    22 B7CF               	LD	(ZWEND),HL
+  E4B8    CD F78D               	CALL	PAGE	;Page-Modus
+  E4BB    FB                    	EI
+  E4BC    CD E4E1               	CALL	MBI0	;Block lesen
+  E4BF    D8                    	RET	C	;Fehler
+  E4C0    11 E557               	LD	DE,COM
+  E4C3    DD 66 06              	LD	H,(IX+6)
+  E4C6    DD 7E 05              	LD	A,(IX+5)
+  E4C9    C6 08                 	ADD	A,8
+  E4CB    6F                    	LD	L,A
+  E4CC    06 04                 	LD	B,4
+  E4CE    1A                    ISRI1:	LD	A,(DE)
+  E4CF    96                    	SUB	(HL)
+  E4D0    A7                    	AND	A
+  E4D1    23                    	INC	HL
+  E4D2    13                    	INC	DE
+  E4D3    C0                    	RET	NZ
+  E4D4    10 F8                 	DJNZ	ISRI1
+  E4D6    DD CB 07 FE           	SET	7,(IX+7);COM-File
+  E4DA    C9                    	RET		;geschuetzt
+                                 
+  E4DB                          MBI:	;Einlesen 1 Block	;**05**
+  E4DB    DD CB 07 7E           	BIT	7,(IX+7)
+  E4DF    37                    	SCF		;kein COM-File!
+  E4E0    C0                    	RET	NZ
+  E4E1    3E 05                 MBI0:	LD	A,5	;DI,ZG16
+  E4E3    D3 8E                 	OUT	(CTC2),A
+  E4E5    3E 83                 	LD	A,83H	;EI
+  E4E7    D3 8A                 	OUT	(PIOAS),A	;an PIO A
+  E4E9    E5                    	PUSH	HL
+  E4EA    D5                    	PUSH	DE
+  E4EB    3E A3                 	LD	A,0A3H	;ZK
+	ASM 1520 (SCPX)	V 1.0		1-17
+
+
+  E4ED    D3 8E                 	OUT	(CTC2),A
+  E4EF    FB                    	EI
+  E4F0    06 16                 MBI1:	LD	B,16H
+  E4F2    AF                    	XOR	A
+  E4F3    DD 77 01              	LD	(IX+1),A;Pruefsumme=0
+  E4F6    CD E56D               MBI2:	CALL	STOP1
+  E4F9    38 F5                 	JR	C,MBI1
+  E4FB    FE BA                 	CP	0BAH
+  E4FD    CD E54A               	CALL	LEDOO
+  E500    38 EE                 	JR	C,MBI1	;10h korrekte
+  E502    10 F2                 	DJNZ	MBI2	;Schwingungen
+  E504    06 02                 MBI3:	LD	B,2	;erkennen
+  E506    AF                    MBI4:	XOR	A
+  E507    4F                    	LD	C,A
+  E508    DD 77 00              	LD	(IX),A
+  E50B    CD E57C               	CALL	STOP21	;2 halbe Trenn-
+  E50E    FE 5D                 	CP	5DH	;zeichen er-
+  E510    30 F2                 	JR	NC,MBI3	;kennen
+  E512    10 F2                 	DJNZ	MBI4
+  E514    CD E584               	CALL	BYTIN	;Blocknummer
+  E517    DC E54A               	CALL	C,LEDOO
+  E51A    DD 77 02              	LD	(IX+2),A
+  E51D    06 80                 	LD	B,80H
+  E51F    DD 6E 05              	LD	L,(IX+5)
+  E522    DD 66 06              	LD	H,(IX+6)
+  E525    CD E584               BLKIN:	CALL	BYTIN	;Datenbyte
+  E528    DC E54A               	CALL	C,LEDOO
+  E52B    77                    	LD	(HL),A
+  E52C    DD 7E 01              	LD	A,(IX+1)
+  E52F    86                    	ADD	A,(HL)	;aufsummieren
+  E530    DD 77 01              	LD	(IX+1),A
+  E533    23                    	INC	HL
+  E534    10 EF                 	DJNZ	BLKIN
+  E536    CD E584               	CALL	BYTIN	;Pruefsumme
+  E539    DC E54A               	CALL	C,LEDOO
+  E53C    47                    	LD	B,A
+  E53D    DD 7E 01              	LD	A,(IX+1)
+  E540    B8                    	CP	B	;gleich?
+  E541    D1                    	POP	DE
+  E542    E1                    	POP	HL
+  E543    3E 03                 	LD	A,3	;DI an PIO A
+  E545    D3 8A                 	OUT	(PIOAS),A
+  E547    28 01                 	JR	Z,LEDOO
+  E549    37                    	SCF		;Stoerung
+  E54A    F5                    LEDOO:	PUSH	AF
+  E54B    DB 88                 	IN	A,(PIOAD)
+  E54D    CB EF                 	SET	5,A	;LED ein
+  E54F    30 02                 	JR	NC,MBI5
+  E551    CB AF                 	RES	5,A	;LED aus
+  E553    D3 88                 MBI5:	OUT	(PIOAD),A
+  E555    F1                    	POP	AF
+  E556    C9                    	RET
+                                 
+  E557    43 4F 4D 01           COM:	DB	'COM',1
+                                 
+  E55B                          ISRPA:	;ISR PIO Kanal A (Kassette In)
+	ASM 1520 (SCPX)	V 1.0		1-18
+
+
+  E55B    F5                    	PUSH	AF
+  E55C    DB 8E                 	IN	A,(CTC2)
+  E55E    DD 77 00              	LD	(IX),A	;Uebergabezelle
+  E561    3E 07                 	LD	A,7
+  E563    D3 8E                 	OUT	(CTC2),A
+  E565    3E A3                 	LD	A,0A3H
+  E567    D3 8E                 ISR1E:	OUT	(CTC2),A
+  E569    F1                    ISR2E:	POP	AF
+  E56A    FB                    	EI
+  E56B    ED 4D                 	RETI
+                                 
+  E56D    AF                    STOP1:	XOR	A	;1 Bit einlesen
+  E56E    DD 77 00              	LD	(IX),A
+  E571    DD 7E 00              STOP11:	LD	A,(IX)	;warten auf
+  E574    B7                    	OR	A	;Interrupt
+  E575    28 FA                 	JR	Z,STOP11
+  E577    4F                    	LD	C,A
+  E578    AF                    	XOR	A
+  E579    DD 77 00              	LD	(IX),A
+  E57C    DD 7E 00              STOP21:	LD	A,(IX)
+  E57F    B7                    	OR	A
+  E580    28 FA                 	JR	Z,STOP21
+  E582    81                    	ADD	A,C	;beide 'Zeiten'
+  E583    C9                    	RET		;addieren
+                                 
+  E584                          BYTIN:	;Einlesen eines Bytes
+  E584    16 08                 	LD	D,8	;8 Bit
+  E586    AF                    	XOR	A
+  E587    5F                    	LD	E,A
+  E588    CD E56D               TRN1:	CALL	STOP1	;Bit einlesen
+  E58B    3F                    	CCF
+  E58C    30 04                 	JR	NC,TRN2
+  E58E    FE BA                 	CP	0BAH	;zu intolerant
+  E590    D8                    	RET	C
+  E591    37                    	SCF
+  E592    CB 1B                 TRN2:	RR	E	;Bit einschieben
+  E594    15                    	DEC	D
+  E595    20 F1                 	JR	NZ,TRN1	;8*
+  E597    CD E56D               	CALL	STOP1	;Trennzeichen
+  E59A    7B                    	LD	A,E	;mit CY-
+  E59B    C9                    	RET		;Rueckmeldung
+                                 
+  E59C    CD F3AC               TON:	CALL	LARG		;**35**
+  E59F    DD CB 08 4E           TON1:	BIT	1,(IX+8);alten Ton
+  E5A3    20 FA                 	JR	NZ,TON1	;abwarten
+  E5A5    7D                    	LD	A,L
+  E5A6    A7                    	AND	A
+  E5A7    3E 03                 	LD	A,3
+  E5A9    28 0B                 	JR	Z,TON3	;kein Ton1
+  E5AB    3E 07                 	LD	A,7
+  E5AD    CB 44                 	BIT	0,H
+  E5AF    28 02                 	JR	Z,TON2	;VT16
+  E5B1    F6 20                 	OR	20H	;VT256
+  E5B3    D3 8C                 TON2:	OUT	(CTC0),A
+  E5B5    7D                    	LD	A,L	;ZK1
+  E5B6    D3 8C                 TON3:	OUT	(CTC0),A
+	ASM 1520 (SCPX)	V 1.0		1-19
+
+
+  E5B8    7B                    	LD	A,E
+  E5B9    A7                    	AND	A
+  E5BA    3E 03                 	LD	A,3
+  E5BC    28 0B                 	JR	Z,TON5	;kein Ton2
+  E5BE    3E 07                 	LD	A,7
+  E5C0    CB 42                 	BIT	0,D
+  E5C2    28 02                 	JR	Z,TON4	;VT16
+  E5C4    F6 20                 	OR	20H	;VT256
+  E5C6    D3 8D                 TON4:	OUT	(CTC1),A
+  E5C8    7B                    	LD	A,E	;ZK2
+  E5C9    D3 8D                 TON5:	OUT	(CTC1),A
+  E5CB    79                    	LD	A,C	;Lautstaerke
+  E5CC    EE 1F                 	XOR	1FH	;da nullaktiv
+  E5CE    CB FF                 	SET	7,A	;Blinken ein
+  E5D0    4F                    	LD	C,A
+  E5D1    78                    	LD	A,B
+  E5D2    A7                    	AND	A
+  E5D3    28 0D                 	JR	Z,TON6	;Dauerton
+  E5D5    CB B9                 	RES	7,C	;Blinken aus
+  E5D7    DD CB 08 CE           	SET	1,(IX+8);neuer Ton
+  E5DB    3E C7                 	LD	A,0C7H	;EI, Zaehler 50Hz
+  E5DD    D3 8E                 	OUT	(CTC2),A
+  E5DF    78                    	LD	A,B	;Dauer
+  E5E0    D3 8E                 	OUT	(CTC2),A
+  E5E2    79                    TON6:	LD	A,C	;Lautstaerke
+  E5E3    D3 89                 	OUT	(PIOBD),A	;ausgeben
+  E5E5    C9                    	RET
+                                 
+  E5E6                          ISRC2:	;ISR CTC Kanal 2 (Tondauer)
+  E5E6    F5                    	PUSH	AF
+  E5E7    3E 03                 	LD	A,3	;Ton aus
+  E5E9    D3 8C                 	OUT	(CTC0),A
+  E5EB    D3 8D                 	OUT	(CTC1),A
+  E5ED    DB 89                 	IN	A,(PIOBD)
+  E5EF    CB FF                 	SET	7,A	;Blinken ein
+  E5F1    D3 89                 	OUT	(PIOBD),A
+  E5F3    DD CB 08 8E           	RES	1,(IX+8);Ton ist aus
+  E5F7    3E 47                 	LD	A,47H	;CTC2 auf
+  E5F9    D3 8E                 	OUT	(CTC2),A	;Blinken stellen
+  E5FB    3E 20                 	LD	A,20H	;ZK
+  E5FD    C3 E567               	JP	ISR1E
+                                
+                                IF HC900
+                                	DB	'214'	; ???
+                                ENDIF
+                                	ABSFILL	0E600h,<ROM-E-Ende>
+  E600                    +     	  DS	0E600h - $,0FFh
+                                
+                                ; EE00h Zeichensatz Grossbuchstaben
+                                
+  E600    00 00 00 00           	DB	000H, 000H, 000H, 000H, 000H, 000H, 000H, 000H	; 20h
+  E604    00 00 00 00           
+  E608    00 18 18 18           	DB	000H, 018H, 018H, 018H, 018H, 000H, 018H, 000H	; 21h
+  E60C    18 00 18 00           
+  E610    00 66 66 CC           	DB	000H, 066H, 066H, 0CCH, 000H, 000H, 000H, 000H	; 22h
+  E614    00 00 00 00           
+	ASM 1520 (SCPX)	V 1.0		1-20
+
+
+  E618    00 36 7F 36           	DB	000H, 036H, 07FH, 036H, 036H, 07FH, 036H, 000H	; 23h
+  E61C    36 7F 36 00           
+  E620    18 3E 6C 3E           	DB	018H, 03EH, 06CH, 03EH, 01BH, 01BH, 07EH, 018H	; 24h
+  E624    1B 1B 7E 18           
+  E628    00 63 66 0C           	DB	000H, 063H, 066H, 00CH, 018H, 036H, 066H, 000H	; 25h
+  E62C    18 36 66 00           
+  E630    18 24 28 11           	DB	018H, 024H, 028H, 011H, 02AH, 044H, 04AH, 031H	; 26h
+  E634    2A 44 4A 31           
+  E638    00 18 18 30           	DB	000H, 018H, 018H, 030H, 000H, 000H, 000H, 000H	; 27h
+  E63C    00 00 00 00           
+  E640    00 18 30 30           	DB	000H, 018H, 030H, 030H, 030H, 030H, 018H, 000H	; 28h
+  E644    30 30 18 00           
+  E648    00 18 0C 0C           	DB	000H, 018H, 00CH, 00CH, 00CH, 00CH, 018H, 000H	; 29h
+  E64C    0C 0C 18 00           
+  E650    00 00 24 18           	DB	000H, 000H, 024H, 018H, 07EH, 018H, 024H, 000H	; 2Ah
+  E654    7E 18 24 00           
+  E658    00 00 18 18           	DB	000H, 000H, 018H, 018H, 07EH, 018H, 018H, 000H	; 2Bh
+  E65C    7E 18 18 00           
+  E660    00 00 00 00           	DB	000H, 000H, 000H, 000H, 018H, 018H, 030H, 000H	; 2Ch
+  E664    18 18 30 00           
+  E668    00 00 00 00           	DB	000H, 000H, 000H, 000H, 03EH, 000H, 000H, 000H	; 2Dh
+  E66C    3E 00 00 00           
+  E670    00 00 00 00           	DB	000H, 000H, 000H, 000H, 000H, 018H, 018H, 000H	; 2Eh
+  E674    00 18 18 00           
+  E678    06 0C 18 30           	DB	006H, 00CH, 018H, 030H, 060H, 0C0H, 000H, 000H	; 2Fh
+  E67C    60 C0 00 00           
+                                
+  E680    00 3C 6E 6E           	DB	000H, 03CH, 06EH, 06EH, 076H, 076H, 03CH, 000H	; 30h
+  E684    76 76 3C 00           
+  E688    00 1C 3C 0C           	DB	000H, 01CH, 03CH, 00CH, 00CH, 00CH, 03EH, 000H	; 31h
+  E68C    0C 0C 3E 00           
+  E690    00 3C 66 06           	DB	000H, 03CH, 066H, 006H, 03CH, 060H, 07EH, 000H	; 32h
+  E694    3C 60 7E 00           
+  E698    00 3C 66 0C           	DB	000H, 03CH, 066H, 00CH, 006H, 066H, 03CH, 000H	; 33h
+  E69C    06 66 3C 00           
+  E6A0    00 3C 6C CC           	DB	000H, 03CH, 06CH, 0CCH, 0FEH, 00CH, 00CH, 000H	; 34h
+  E6A4    FE 0C 0C 00           
+  E6A8    00 7E 60 7C           	DB	000H, 07EH, 060H, 07CH, 006H, 066H, 03CH, 000H	; 35h
+  E6AC    06 66 3C 00           
+  E6B0    00 3C 60 7C           	DB	000H, 03CH, 060H, 07CH, 066H, 066H, 03CH, 000H	; 36h
+  E6B4    66 66 3C 00           
+  E6B8    00 7E 06 0C           	DB	000H, 07EH, 006H, 00CH, 018H, 030H, 060H, 000H	; 37h
+  E6BC    18 30 60 00           
+  E6C0    00 3C 66 3C           	DB	000H, 03CH, 066H, 03CH, 066H, 066H, 03CH, 000H	; 38h
+  E6C4    66 66 3C 00           
+  E6C8    00 3C 66 66           	DB	000H, 03CH, 066H, 066H, 03EH, 006H, 03CH, 000H	; 39h
+  E6CC    3E 06 3C 00           
+  E6D0    00 00 18 18           	DB	000H, 000H, 018H, 018H, 000H, 018H, 018H, 000H	; 3Ah
+  E6D4    00 18 18 00           
+  E6D8    00 00 18 00           	DB	000H, 000H, 018H, 000H, 018H, 018H, 030H, 000H	; 3Bh
+  E6DC    18 18 30 00           
+  E6E0    00 00 18 30           	DB	000H, 000H, 018H, 030H, 060H, 030H, 018H, 000H	; 3Ch
+  E6E4    60 30 18 00           
+  E6E8    00 00 00 3E           	DB	000H, 000H, 000H, 03EH, 000H, 03EH, 000H, 000H	; 3Dh
+  E6EC    00 3E 00 00           
+  E6F0    00 00 30 18           	DB	000H, 000H, 030H, 018H, 00CH, 018H, 030H, 000H	; 3Eh
+	ASM 1520 (SCPX)	V 1.0		1-21
+
+
+  E6F4    0C 18 30 00           
+  E6F8    00 3C 66 06           	DB	000H, 03CH, 066H, 006H, 01CH, 018H, 000H, 018H	; 3Fh
+  E6FC    1C 18 00 18           
+  E700    3C 42 81 35           	DB	03CH, 042H, 081H, 035H, 049H, 049H, 049H, 036H	; 40h
+  E704    49 49 49 36           
+  E708    00 3C 66 66           	DB	000H, 03CH, 066H, 066H, 07EH, 066H, 066H, 000H	; 41h
+  E70C    7E 66 66 00           
+  E710    00 7C 66 7C           	DB	000H, 07CH, 066H, 07CH, 066H, 066H, 07CH, 000H	; 42h
+  E714    66 66 7C 00           
+  E718    00 3C 66 60           	DB	000H, 03CH, 066H, 060H, 060H, 066H, 03CH, 000H	; 43h
+  E71C    60 66 3C 00           
+  E720    00 7C 66 66           	DB	000H, 07CH, 066H, 066H, 066H, 066H, 07CH, 000H	; 44h
+  E724    66 66 7C 00           
+  E728    00 7E 60 7C           	DB	000H, 07EH, 060H, 07CH, 060H, 060H, 07EH, 000H	; 45h
+  E72C    60 60 7E 00           
+  E730    00 7E 60 7C           	DB	000H, 07EH, 060H, 07CH, 060H, 060H, 060H, 000H	; 46h
+  E734    60 60 60 00           
+  E738    00 3C 66 60           	DB	000H, 03CH, 066H, 060H, 06EH, 066H, 03CH, 000H	; 47h
+  E73C    6E 66 3C 00           
+  E740    00 66 66 7E           	DB	000H, 066H, 066H, 07EH, 066H, 066H, 066H, 000H	; 48h
+  E744    66 66 66 00           
+  E748    00 3C 18 18           	DB	000H, 03CH, 018H, 018H, 018H, 018H, 03CH, 000H	; 49h
+  E74C    18 18 3C 00           
+  E750    00 1E 0C 0C           	DB	000H, 01EH, 00CH, 00CH, 00CH, 06CH, 038H, 000H	; 4Ah
+  E754    0C 6C 38 00           
+  E758    00 66 6C 78           	DB	000H, 066H, 06CH, 078H, 06CH, 066H, 063H, 000H	; 4Bh
+  E75C    6C 66 63 00           
+  E760    00 60 60 60           	DB	000H, 060H, 060H, 060H, 060H, 060H, 07EH, 000H	; 4Ch
+  E764    60 60 7E 00           
+  E768    00 63 77 6B           	DB	000H, 063H, 077H, 06BH, 063H, 063H, 063H, 000H	; 4Dh
+  E76C    63 63 63 00           
+  E770    00 63 73 6B           	DB	000H, 063H, 073H, 06BH, 067H, 063H, 063H, 000H	; 4Eh
+  E774    67 63 63 00           
+  E778    00 3C 66 66           	DB	000H, 03CH, 066H, 066H, 066H, 066H, 03CH, 000H	; 4Fh
+  E77C    66 66 3C 00           
+                                
+  E780    00 7C 66 7C           	DB	000H, 07CH, 066H, 07CH, 060H, 060H, 060H, 000H	; 50h
+  E784    60 60 60 00           
+  E788    00 3C 66 66           	DB	000H, 03CH, 066H, 066H, 06EH, 066H, 03AH, 001H	; 51h
+  E78C    6E 66 3A 01           
+  E790    00 7C 66 7C           	DB	000H, 07CH, 066H, 07CH, 06CH, 066H, 063H, 000H	; 52h
+  E794    6C 66 63 00           
+  E798    00 3C 60 3C           	DB	000H, 03CH, 060H, 03CH, 006H, 066H, 03CH, 000H	; 53h
+  E79C    06 66 3C 00           
+  E7A0    00 7E 18 18           	DB	000H, 07EH, 018H, 018H, 018H, 018H, 018H, 000H	; 54h
+  E7A4    18 18 18 00           
+  E7A8    00 66 66 66           	DB	000H, 066H, 066H, 066H, 066H, 066H, 03CH, 000H	; 55h
+  E7AC    66 66 3C 00           
+  E7B0    00 66 66 66           	DB	000H, 066H, 066H, 066H, 066H, 03CH, 018H, 000H	; 56h
+  E7B4    66 3C 18 00           
+  E7B8    00 63 63 6B           	DB	000H, 063H, 063H, 06BH, 06BH, 07FH, 036H, 000H	; 57h
+  E7BC    6B 7F 36 00           
+  E7C0    00 66 3C 18           	DB	000H, 066H, 03CH, 018H, 018H, 03CH, 066H, 000H	; 58h
+  E7C4    18 3C 66 00           
+  E7C8    00 66 3C 18           	DB	000H, 066H, 03CH, 018H, 018H, 018H, 018H, 000H	; 59h
+  E7CC    18 18 18 00           
+	ASM 1520 (SCPX)	V 1.0		1-22
+
+
+  E7D0    00 7E 0C 18           	DB	000H, 07EH, 00CH, 018H, 030H, 060H, 07EH, 000H	; 5Ah
+  E7D4    30 60 7E 00           
+  E7D8    FF FF FF FF           	DB	0FFH, 0FFH, 0FFH, 0FFH, 0FFH, 0FFH, 0FFH, 0FFH	; 5Bh
+  E7DC    FF FF FF FF           
+  E7E0    00 18 18 18           	DB	000H, 018H, 018H, 018H, 018H, 018H, 018H, 000H	; 5Ch
+  E7E4    18 18 18 00           
+  E7E8    00 7E 06 06           	DB	000H, 07EH, 006H, 006H, 000H, 000H, 000H, 000H	; 5Dh
+  E7EC    00 00 00 00           
+  E7F0    00 00 00 08           	DB	000H, 000H, 000H, 008H, 01CH, 036H, 000H, 000H	; 5Eh
+  E7F4    1C 36 00 00           
+  E7F8    00 00 00 00           	DB	000H, 000H, 000H, 000H, 000H, 000H, 000H, 0FFH	; 5Fh
+  E7FC    00 00 00 FF           
+                                
+  E800                          	DS	2048,0FFh	; ROM nicht bestueckt
+                                
+                                ;	.PHASE	0F000H
+                                ;**	CAOS 2.2 ROM F		**
+                                 
+                                ;	ORG	0F000H
+                                ;
+  F000    C3 F064               POWER:	JP	PWRON
+  F003    C3 F026               	JP	PV1	;m. DEFB nr
+  F006    C3 F042               	JP	PV2	;(ARGC)=nr
+  F009    C3 F056               	JP	PV3	;E=nr
+  F00C    C3 F012               	JP	PV4	;E=nr, IRM e/a
+  F00F    C3 F059               	JP	RCALL	;m. DEFW offset
+                                 
+  F012    F5                    PV4:	PUSH	AF
+  F013    DB 88                 	IN	A,(PIOAD)
+  F015    CB D7                 	SET	2,A
+  F017    D3 88                 	OUT	(PIOAD),A	;IRM ein
+  F019    F1                    	POP	AF
+  F01A    CD F056               	CALL	PV3
+  F01D    F5                    	PUSH	AF
+  F01E    DB 88                 	IN	A,(PIOAD)
+  F020    CB 97                 	RES	2,A
+  F022    D3 88                 	OUT	(PIOAD),A	;IRM aus
+  F024    F1                    	POP	AF
+  F025    C9                    	RET
+                                 
+  F026    F3                    PV1:	DI
+  F027    E5                    	PUSH	HL
+  F028    E1                    	POP	HL
+  F029    E1                    	POP	HL
+  F02A    23                    	INC	HL	;nr uebergehen
+  F02B    E5                    	PUSH	HL
+  F02C    2B                    	DEC	HL	;(HL)=nr
+  F02D    3B                    	DEC	SP
+  F02E    3B                    	DEC	SP
+  F02F    FB                    	EI
+  F030    F5                    	PUSH	AF
+  F031    D5                    	PUSH	DE
+  F032    5E                    	LD	E,(HL)
+  F033    16 00                 PV22:	LD	D,0
+  F035    2A B7B0               	LD	HL,(SUTAB)
+  F038    19                    	ADD	HL,DE
+	ASM 1520 (SCPX)	V 1.0		1-23
+
+
+  F039    19                    	ADD	HL,DE	;HL=Pos. in Tab
+  F03A    5E                    	LD	E,(HL)
+  F03B    23                    	INC	HL
+  F03C    56                    	LD	D,(HL)
+  F03D    EB                    	EX	DE,HL
+  F03E    D1                    	POP	DE
+  F03F    F1                    	POP	AF
+  F040    E3                    	EX	(SP),HL
+  F041    C9                    	RET		;UP anspringen
+                                 
+  F042    A7                    PV2:	AND	A	;VR: F
+  F043    E5                    PV21:	PUSH	HL
+  F044    D5                    	PUSH	DE
+  F045    C5                    	PUSH	BC
+  F046    E5                    	PUSH	HL
+  F047    21 F196               	LD	HL,POP3	;Returnadresse
+  F04A    E3                    	EX	(SP),HL	;kellern
+  F04B    E5                    	PUSH	HL
+  F04C    F5                    	PUSH	AF
+  F04D    D5                    	PUSH	DE
+  F04E    38 E3                 	JR	C,PV22	;falls PV3
+  F050    3A B780               	LD	A,(ARGC);sonst E
+  F053    5F                    	LD	E,A	;beschaffen
+  F054    18 DD                 	JR	PV22
+                                 
+  F056    37                    PV3:	SCF		;VR: F
+  F057    18 EA                 	JR	PV21
+                                 
+  F059    E3                    RCALL:	EX	(SP),HL	;VR: DE
+  F05A    5E                    	LD	E,(HL)
+  F05B    23                    	INC	HL
+  F05C    56                    	LD	D,(HL)
+  F05D    23                    	INC	HL	;DE=offset
+  F05E    EB                    	EX	DE,HL
+  F05F    19                    	ADD	HL,DE	;zur Absolut-
+  F060    EB                    	EX	DE,HL	;adr. addieren
+  F061    E3                    	EX	(SP),HL
+  F062    D5                    	PUSH	DE
+  F063    C9                    	RET		;wie JP (DE)
+                                 
+  F064                          PWRON:	;Einschalt-Init
+  F064    31 01D4               	LD	SP,STACK	; System-Stack 01D4H
+  F067    21 0000               	LD	HL,0
+  F06A    45                    	LD	B,L
+  F06B    4D                    	LD	C,L	;BC=0
+  F06C    AF                    	XOR	A
+  F06D    77                    PWR1:	LD	(HL),A	;Speicher
+  F06E    ED A1                 	CPI		;loeschen
+  F070    EA F06D               	JP	PE,PWR1
+  F073    01 FF80               	LD	BC,0FF80H
+  F076    ED B3                 	OTIR		;Module aus
+  F078    06 08                 	LD	B,8
+  F07A    ED 78                 	IN	A,(C)
+  F07C    FE F4                 	CP	0F4H	;M022 in 08?
+  F07E    20 0B                 	JR	NZ,PWR2
+  F080    3E 02                 	LD	A,2
+	ASM 1520 (SCPX)	V 1.0		1-24
+
+
+  F082    68                    	LD	L,B
+  F083    16 43                 	LD	D,43H	;als RAM4
+  F085    CD E37B               	CALL	MODU	;zuschalten
+  F088    CD E34A               	CALL	ERAM4	;RAM4 loeschen
+  F08B    CD F2CD               PWR2:	CALL	SYSI	;IRM init
+  F08E    01 0880               	LD	BC,880H	;ROM-Modul mit
+  F091    ED 78                 	IN	A,(C)	;Strukturbyte
+  F093    3D                    	DEC	A	;01?
+  F094    20 12                 	JR	NZ,MEN0	;nein
+  F096    68                    	LD	L,B
+  F097    16 43                 	LD	D,43H	;auf 4000H
+  F099    3E 02                 	LD	A,2	;zuschalten
+  F09B    CD E37B               	CALL	MODU
+  F09E    C3 4000               	JP	4000H	;anspringen
+                                 
+  F0A1    7F7F                  	DW	7F7FH
+  F0A3    4D 45 4E 55           	DB	'MENU',1
+  F0A7    01                    
+  F0A8    CD F157               MEN0:	CALL	OSTR
+  F0AB    0C                    	DB	0CH
+                                IF HC900
+                                	DB	LF,'* HC900-CAOS *',LF,CR,0
+                                ELSE
+  F0AC    2A 20 48 43           	DB	'* HC-CAOS 2.2 *',LF,CR,0
+  F0B0    2D 43 41 4F           
+  F0B4    53 20 32 2E           
+  F0B8    32 20 2A 0A           
+  F0BC    0D 00                 
+                                ENDIF
+  F0BE    21 0000               	LD	HL,0
+  F0C1    4D                    	LD	C,L
+  F0C2    44                    	LD	B,H
+  F0C3    CD F157               MENU:	CALL	OSTR
+  F0C6    02 0D 3E 00           	DB	2,CR,'>',0
+  F0CA    3E 7F                 	LD	A,7FH	;Prolog (fest!)
+  F0CC    ED B1                 MEN2:	CPIR
+  F0CE    E2 F0F3               	JP	PO,LOOP1
+  F0D1    ED A1                 	CPI		;2. Mal?
+  F0D3    20 F7                 	JR	NZ,MEN2
+  F0D5    7E                    MEN3:	LD	A,(HL)
+  F0D6    FE 02                 	CP	2	;Epilog?
+  F0D8    38 0F                 	JR	C,MEN4
+  F0DA    FE 30                 	CP	30H	;<30h?
+  F0DC    38 E5                 	JR	C,MENU
+  F0DE    FE 5F                 	CP	5FH	;>5Fh, Kleinb.?
+  F0E0    30 E1                 	JR	NC,MENU
+  F0E2    CD F187               	CALL	OCHR
+  F0E5    23                    	INC	HL
+  F0E6    0B                    	DEC	BC
+  F0E7    18 EC                 	JR	MEN3
+  F0E9    CD F249               MEN4:	CALL	CRLF
+  F0EC    18 D5                 	JR	MENU
+                                 
+  F0EE    CD F157               LOOP:	CALL	OSTR		;**12**
+  F0F1    3E 00                 	DB	'>',0	;Prompt
+  F0F3    CD F216               LOOP1:	CALL	INLIN
+	ASM 1520 (SCPX)	V 1.0		1-25
+
+
+  F0F6    13                    	INC	DE	;Zeichen danach
+  F0F7    1A                    	LD	A,(DE)
+  F0F8    FE 20                 	CP	' '
+  F0FA    28 F2                 	JR	Z,LOOP	;Leerzeile
+  F0FC    A7                    	AND	A
+  F0FD    28 EF                 	JR	Z,LOOP	;Nullzeile
+  F0FF    3E 7F                 	LD	A,7FH	;Prolog (fest!)
+  F101    CD F128               	CALL	MSUCH
+  F104    30 07                 	JR	NC,LOOP2;nicht gef.
+  F106    E5                    	PUSH	HL
+  F107    CD F2AE               	CALL	GARG	;Argumente
+  F10A    30 06                 	JR	NC,LOOP3
+  F10C    E1                    	POP	HL
+  F10D    CD F23F               LOOP2:	CALL	ERRM	;Fehler
+  F110    18 DC                 	JR	LOOP
+  F112    21 F0EE               LOOP3:	LD	HL,LOOP	;Rueckkehradr.
+  F115    E3                    	EX	(SP),HL	;kellern
+  F116    E5                    	PUSH	HL
+  F117    CD F3AC               	CALL	LARG
+  F11A    E3                    	EX	(SP),HL
+  F11B    7E                    	LD	A,(HL)	;Epilog
+  F11C    A7                    	AND	A
+  F11D    20 06                 	JR	NZ,LOOP4
+  F11F    DB 88                 	IN	A,(PIOAD)
+  F121    CB 97                 	RES	2,A	;IRM off
+  F123    D3 88                 	OUT	(PIOAD),A
+  F125    23                    LOOP4:	INC	HL	;Epilog
+  F126    E3                    	EX	(SP),HL	;uebergehen
+  F127    C9                    	RET
+                                 
+  F128    01 0000               MSUCH:	LD	BC,0
+  F12B    21 0000               	LD	HL,0
+  F12E    F5                    ZSUCH:	PUSH	AF		;**1D**
+  F12F    F1                    ZS1:	POP	AF
+  F130    F5                    	PUSH	AF
+  F131    ED B1                 ZS2:	CPIR
+  F133    E2 F154               	JP	PO,ZS6	;ausgesucht
+  F136    ED A1                 	CPI
+  F138    20 F7                 	JR	NZ,ZS2	;falsch
+  F13A    D5                    	PUSH	DE
+  F13B    1A                    ZS3:	LD	A,(DE)
+  F13C    13                    	INC	DE
+  F13D    FE 21                 	CP	'!'	;keine SPC und
+  F13F    38 07                 	JR	C,ZS4	;Steuerzeichen
+  F141    ED A1                 	CPI
+  F143    28 F6                 	JR	Z,ZS3
+  F145    D1                    	POP	DE
+  F146    18 E7                 	JR	ZS1
+  F148    3E 01                 ZS4:	LD	A,1
+  F14A    BE                    	CP	(HL)	;Epilog?
+  F14B    30 03                 	JR	NC,ZS5
+  F14D    D1                    	POP	DE
+  F14E    18 DF                 	JR	ZS1
+  F150    F1                    ZS5:	POP	AF
+  F151    F1                    	POP	AF
+  F152    37                    	SCF		;CY=1
+	ASM 1520 (SCPX)	V 1.0		1-26
+
+
+  F153    C9                    	RET
+  F154    F1                    ZS6:	POP	AF
+  F155    A7                    	AND	A	;CY=0
+  F156    C9                    	RET
+                                 
+  F157    E3                    OSTR:	EX	(SP),HL		;**23**
+  F158    7E                    OSTR1:	LD	A,(HL)
+  F159    23                    	INC	HL
+  F15A    B7                    	OR	A
+  F15B    20 02                 	JR	NZ,OSTR2
+  F15D    E3                    	EX	(SP),HL
+  F15E    C9                    NOT:	RET
+                                	;
+  F15F    CD F187               OSTR2:	CALL	OCHR
+  F162    18 F4                 	JR	OSTR1
+                                 
+  F164    CD F174               NORM:	CALL	NIN		;**13**
+  F167    21 E02D               NOUT:	LD	HL,ZEI0		;**20**
+  F16A    E5                    SOUT:	PUSH	HL		;**1E**
+  F16B    2A B7B9               	LD	HL,(OUTAB)
+  F16E    E3                    	EX	(SP),HL
+  F16F    22 B7B9               	LD	(OUTAB),HL
+  F172    E1                    	POP	HL
+  F173    C9                    	RET
+                                 
+  F174    21 E02E               NIN:	LD	HL,ZEI4		;**21**
+  F177    E5                    SIN:	PUSH	HL		;**1F**
+  F178    2A B7BB               	LD	HL,(INTAB)
+  F17B    E3                    	EX	(SP),HL
+  F17C    22 B7BB               	LD	(INTAB),HL
+  F17F    E1                    	POP	HL
+  F180    C9                    	RET
+                                 
+  F181    E5                    INTB:	PUSH	HL		;**16**
+  F182    2A B7BB               	LD	HL,(INTAB)
+  F185    18 04                 	JR	INTA1
+                                	;
+  F187    E5                    OCHR:	PUSH	HL		;**24**
+  F188    2A B7B9               	LD	HL,(OUTAB)
+  F18B    D5                    INTA1:	PUSH	DE	;s.a. PV1
+  F18C    C5                    	PUSH	BC	;(sehr aehnlich)
+  F18D    F5                    	PUSH	AF
+  F18E    7E                    	LD	A,(HL)
+  F18F    32 B780               	LD	(ARGC),A
+  F192    F1                    	POP	AF
+  F193    CD F042               	CALL	PV2
+  F196    C1                    POP3:	POP	BC
+  F197    D1                    	POP	DE
+  F198    E1                    	POP	HL
+  F199    C9                    	RET
+                                 
+  F19A    3D                    WTUP:	DEC	A	;UP fuer WAIT
+  F19B    C8                    	RET	Z
+  F19C    F5                    	PUSH	AF
+  F19D    F1                    	POP	AF
+  F19E    18 FA                 	JR	WTUP
+	ASM 1520 (SCPX)	V 1.0		1-27
+
+
+                                 
+  F1A0    47                    WAIT:	LD	B,A		;**14**
+  F1A1    AF                    	XOR	A
+  F1A2    CD F19A               WAIT1:	CALL	WTUP
+  F1A5    10 FB                 	DJNZ	WAIT1
+  F1A7    C9                    	RET
+                                 
+  F1A8    CD E0FC               KBD:	CALL	CUCP		;**04**
+  F1AB    DD CB 08 76           	BIT	6,(IX+8);F-Taste aktiv?
+  F1AF    20 20                 	JR	NZ,KBD5	;ja
+  F1B1    CD E326               KBD1:	CALL	KBDZ
+  F1B4    30 FB                 	JR	NC,KBD1
+  F1B6    FE F1                 	CP	0F1H	;F-Taste?
+  F1B8    38 14                 	JR	C,KBD4
+  F1BA    DD CB 08 F6           	SET	6,(IX+8);ja - merken
+  F1BE    D6 F0                 	SUB	0F0H
+  F1C0    47                    	LD	B,A
+  F1C1    21 B900               	LD	HL,0B900H
+  F1C4    7E                    KBD2:	LD	A,(HL)	;Pos. in F-
+  F1C5    A7                    	AND	A	;Puffer best.
+  F1C6    23                    	INC	HL
+  F1C7    20 FB                 	JR	NZ,KBD2
+  F1C9    10 F9                 	DJNZ	KBD2
+  F1CB    22 B7D1               KBD3:	LD	(FTAST),HL;Zeiger
+  F1CE    C3 E0FC               KBD4:	JP	CUCP
+                                	;
+  F1D1    CD F3A2               KBD5:	CALL	BRKT	;Abbruch?
+  F1D4    30 06                 	JR	NC,KBD7
+  F1D6    DD CB 08 B6           KBD6:	RES	6,(IX+8);F-Taste inaktiv
+  F1DA    18 F2                 	JR	KBD4
+                                	;
+  F1DC    2A B7D1               KBD7:	LD	HL,(FTAST);Zeiger auf
+  F1DF    7E                    	LD	A,(HL)	;naechstes CHR
+  F1E0    23                    	INC	HL
+  F1E1    A7                    	AND	A	;Ende?
+  F1E2    20 E7                 	JR	NZ,KBD3
+  F1E4    18 F0                 	JR	KBD6
+                                 
+  F1E6                          KCTAB:	;IRM-Defaulttabelle
+  F1E6    F15E                  	DW	NOT	;Hardcopy
+  F1E8    01                    	DB	1	;WINNR
+  F1E9    0100                  	DW	0100H	;WINON
+  F1EB    1E28                  	DW	1E28H	;WINLG
+  F1ED    0000                  	DW	0	;CURSO
+  F1EF    00                    	DB	0	;STBT
+  F1F0    39                    	DB	39H	;COLOR
+  F1F1    F6C1                  	DW	SCRLPG	;WEND
+  F1F3    E600                  	DW	0E600H	;CCTL0
+  F1F5    E600                  	DW	0E600H	;1
+  F1F7    E600                  	DW	0E600H	;2
+  F1F9    E600                  	DW	0E600H	;3
+  F1FB    01D4                  	DW	STACK	;SYSP 01D4H
+  F1FD    F53B                  	DW	SUTB	;SUTAB
+  F1FF    E015                  	DW	CRTTAB	;CTAB
+  F201    D3 88                 	OUT	(PIOAD),A	;BJUMP
+  F203    C3 F012               	JP	0F012H
+	ASM 1520 (SCPX)	V 1.0		1-28
+
+
+  F206    E02D                  	DW	ZEI0	;OUTAB
+  F208    E02E                  	DW	ZEI4	;INTAB
+  F20A    C3 F15E               	JP	NOT	;UOUT1	;**02**
+  F20D    C3 F15E               	JP	NOT	;UIN1	;**06**
+  F210    C3 F15E               	JP	NOT	;UOUT2	;**03**
+  F213    C3 F15E               	JP	NOT	;UIN2	;**07**
+                                 
+  F216    E5                    INLIN:	PUSH	HL		;**17**
+  F217    CD F181               INL1:	CALL	INTB
+  F21A    CD F187               	CALL	OCHR
+  F21D    FE 0D                 	CP	CR	;Enter?
+  F21F    20 F6                 	JR	NZ,INL1
+  F221    CD F249               	CALL	CRLF
+  F224    ED 5B B7A0            	LD	DE,(CURSO)
+  F228    CD E03C               	CALL	DABR
+  F22B    11 FFD8               	LD	DE,-40
+  F22E    19                    	ADD	HL,DE
+  F22F    EB                    	EX	DE,HL
+  F230    E1                    	POP	HL
+  F231    C9                    	RET
+                                 
+  F232    7C                    HLHX:	LD	A,H		;**1A**
+  F233    CD F257               	CALL	AHEX
+  F236    7D                    	LD	A,L
+  F237    CD F257               	CALL	AHEX
+  F23A    3E 20                 SPACE:	LD	A,20H		;**2B**
+  F23C    18 12                 	JR	SPAC0
+                                 
+  F23E    C9                    	RET		;???
+                                 
+  F23F    CD F157               ERRM:	CALL	OSTR		;**19**
+  F242    45 52 52 4F           	DB	'ERROR',7,0
+  F246    52 07 00              
+  F249    3E 0D                 CRLF:	LD	A,CR		;**2C**
+  F24B    CD F187               	CALL	OCHR
+  F24E    3E 0A                 	LD	A,LF
+  F250    C3 F187               SPAC0:	JP	OCHR
+                                 
+  F253    3E 10                 HOME:	LD	A,10H		;**2D**
+  F255    18 F9                 	JR	SPAC0
+                                 
+  F257    F5                    AHEX:	PUSH	AF		;**1C**
+  F258    1F                    	RRA		;Tetradentausch
+  F259    1F                    	RRA
+  F25A    1F                    	RRA
+  F25B    1F                    	RRA
+  F25C    CD F260               	CALL	AHEX0	;erst rufen,
+  F25F    F1                    	POP	AF	;dann reinlaufen
+  F260    E6 0F                 AHEX0:	AND	0FH	;Maske
+  F262    C6 30                 	ADD	A,30H
+  F264    FE 3A                 	CP	3AH
+  F266    38 02                 	JR	C,AHEX1	;0..9
+  F268    C6 07                 	ADD	A,7
+  F26A    18 E4                 AHEX1:	JR	SPAC0	;A..F
+                                 
+  F26C    C9                    	RET		;???
+	ASM 1520 (SCPX)	V 1.0		1-29
+
+
+                                 
+  F26D    CD F270               HLDE:	CALL	HLDE1		;**1B**
+  F270    CD F232               HLDE1:	CALL	HLHX
+  F273    EB                    	EX	DE,HL
+  F274    C9                    	RET
+                                 
+  F275    1A                    RHEX:	LD	A,(DE)		;**18**
+  F276    FE 20                 	CP	' '	;Trennzeichen
+  F278    13                    	INC	DE	;uebergehen
+  F279    28 FA                 	JR	Z,RHEX
+  F27B    1B                    	DEC	DE
+  F27C    21 0000               	LD	HL,0
+  F27F    22 B797               	LD	(NUMVX),HL
+  F282    AF                    	XOR	A
+  F283    21 B796               	LD	HL,NUMNX
+  F286    77                    	LD	(HL),A
+  F287    1A                    RH1:	LD	A,(DE)
+  F288    B7                    	OR	A	;Ende-Dummy?
+  F289    C8                    	RET	Z
+  F28A    FE 20                 	CP	' '	;Ende-Space?
+  F28C    C8                    	RET	Z
+  F28D    D6 30                 	SUB	'0'
+  F28F    D8                    	RET	C
+  F290    FE 0A                 	CP	10
+  F292    38 0B                 	JR	C,RH2
+  F294    D6 07                 	SUB	7
+  F296    FE 0A                 	CP	10
+  F298    D8                    	RET	C
+  F299    FE 10                 	CP	10H
+  F29B    38 02                 	JR	C,RH2
+  F29D    37                    	SCF
+  F29E    C9                    	RET
+                                	;
+  F29F    13                    RH2:	INC	DE
+  F2A0    34                    	INC	(HL)	;NUMNX erhoehen
+  F2A1    23                    	INC	HL
+  F2A2    ED 6F                 	RLD		;Tetrade
+  F2A4    23                    	INC	HL	;durchschieben
+  F2A5    ED 6F                 	RLD
+  F2A7    2B                    	DEC	HL
+  F2A8    2B                    	DEC	HL	;RLD setzt auch
+  F2A9    28 DC                 	JR	Z,RH1	;Z-Flag!
+  F2AB    1B                    	DEC	DE
+  F2AC    37                    	SCF		;Zahl zu gro~
+  F2AD    C9                    	RET
+                                 
+  F2AE                          GARG:	;bis 10 Arg. erfassen	;**22**
+  F2AE    01 B781               	LD	BC,ARGN
+  F2B1    AF                    	XOR	A
+  F2B2    02                    	LD	(BC),A	;(ARGN)=0
+  F2B3    CD F275               GARG1:	CALL	RHEX
+  F2B6    D8                    	RET	C	;Fehler
+  F2B7    7E                    	LD	A,(HL)
+  F2B8    B7                    	OR	A
+  F2B9    C8                    	RET	Z	;Ende-Dummy
+  F2BA    23                    	INC	HL
+	ASM 1520 (SCPX)	V 1.0		1-30
+
+
+  F2BB    03                    	INC	BC
+  F2BC    7E                    	LD	A,(HL)	;L(NUMVX)
+  F2BD    02                    	LD	(BC),A	;L(Argument)
+  F2BE    23                    	INC	HL
+  F2BF    03                    	INC	BC
+  F2C0    7E                    	LD	A,(HL)	;H(NUMVX)
+  F2C1    02                    	LD	(BC),A	;H(Argument)
+  F2C2    21 B781               	LD	HL,ARGN
+  F2C5    34                    	INC	(HL)
+  F2C6    7E                    	LD	A,(HL)
+  F2C7    FE 0B                 	CP	11	;10 Argumente?
+  F2C9    38 E8                 	JR	C,GARG1
+  F2CB    37                    	SCF		;zu viele
+  F2CC    C9                    	RET
+                                 
+  F2CD    11 B799               SYSI:	LD	DE,HCADR
+  F2D0    21 F1E6               	LD	HL,KCTAB
+  F2D3    01 0030               	LD	BC,30H
+  F2D6    ED B0                 	LDIR		;IRM init
+  F2D8    3E 01                 	LD	A,1
+                                	;
+  F2DA    21 E31A               SIXD:	LD	HL,ISRTAB	;**31**
+  F2DD    32 B7D7               	LD	(MIXIT),A
+  F2E0    1E E4                 	LD	E,0E4H
+  F2E2    57                    	LD	D,A
+  F2E3    7B                    	LD	A,E
+  F2E4    01 000C               	LD	BC,12	;Interrupttab.
+  F2E7    ED B0                 	LDIR		;kopieren
+  F2E9    C6 0C                 	ADD	A,12
+  F2EB    5F                    	LD	E,A
+  F2EC    D5                    	PUSH	DE	;IX-Arbeitsber.
+  F2ED    DD E1                 	POP	IX
+  F2EF    DD 36 08 88           	LD	(IX+8),88H
+  F2F3    DD 36 09 07           	LD	(IX+9),7
+  F2F7    DD 36 0E 9A           	LD	(IX+14),Low(KTAB)
+  F2FB    DD 36 0F E2           	LD	(IX+15),High(KTAB)
+  F2FF    F3                    INIT:	DI
+  F300    F5                    	PUSH	AF
+  F301    D5                    	PUSH	DE
+  F302    E5                    	PUSH	HL
+  F303    ED 5E                 	IM	2
+  F305    3A B7D7               	LD	A,(MIXIT)
+  F308    ED 47                 	LD	I,A
+  F30A    16 07                 	LD	D,7
+  F30C    21 F31F               	LD	HL,IOTAB
+  F30F    CD E343               	CALL	INIME
+  F312    E1                    	POP	HL
+  F313    D1                    	POP	DE
+  F314    F1                    	POP	AF
+  F315    FB                    	EI
+                                	;
+  F316    DD 36 05 00           KPUFF:	LD	(IX+5),Low(CASS)
+  F31A    DD 36 06 B7           	LD	(IX+6),High(CASS)
+  F31E    C9                    	RET
+                                 
+  F31F    8A                    IOTAB:	DB	PIOAS	;PIO-A-Steuerw.
+	ASM 1520 (SCPX)	V 1.0		1-31
+
+
+  F320    02                    	 DB	2
+  F321    E4                    	  DB	0E4H	;Int-Vektor
+  F322    4F                    	  DB	4FH	;Byte-IN
+  F323    88                    	DB	PIOAD	;PIO-A-Daten
+  F324    01                    	 DB	1
+  F325    9F                    	  DB	9FH	;IRM ein...
+  F326    8A                    	DB	PIOAS	;PIO-A-Steuerw.
+  F327    02                    	 DB	2
+  F328    0F                    	  DB	0FH	;Byte-OUT
+  F329    03                    	  DB	3	;DI
+  F32A    8B                    	DB	PIOBS	;PIO-B-Steuerw.
+  F32B    03                    	 DB	3
+  F32C    0F                    	  DB	0FH	;Byte-OUT
+  F32D    83                    	  DB	83H	;EI
+  F32E    E6                    	  DB	0E6H	;Int-Vektor
+  F32F    89                    	DB	PIOBD	;PIO-B-Daten
+  F330    01                    	 DB	1
+  F331    FF                    	  DB	0FFH	;Daten
+  F332    8C                    	DB	CTC0	;CTC0
+  F333    01                    	 DB	1
+  F334    E8                    	  DB	0E8H	;Int-Vektor
+  F335    8E                    	DB	CTC2	;CTC2 (blinken)
+  F336    02                    	 DB	2
+  F337    47                    	  DB	47H	;DI,Zaehler,RES
+  F338    14                    	  DB	14H	;Zeitkonstante
+                                 
+  F339    7F7F                  	DW	7F7FH
+  F33B    53 41 56 45           	DB	'SAVE',1
+  F33F    01                    
+  F340    CD F157               	CALL	OSTR
+  F343    4E 41 4D 45           	DB	'NAME :',0
+  F347    20 3A 00              
+  F34A    CD F216               	CALL	INLIN
+  F34D    21 0006               	LD	HL,6	;'NAME :'
+  F350    19                    	ADD	HL,DE	;uebergehen
+  F351    11 B700               SAVE:	LD	DE,CASS		;**36**
+  F354    01 000B               	LD	BC,11
+  F357    ED B0                 	LDIR		;Name -> Puffer
+  F359    EB                    	EX	DE,HL
+  F35A    36 00                 	LD	(HL),0	;Abschlu~-Null
+  F35C    21 B781               	LD	HL,ARGN
+  F35F    7E                    	LD	A,(HL)
+  F360    FE 02                 	CP	2	;mind 2 Arg!
+  F362    D8                    	RET	C
+  F363    11 B710               	LD	DE,CASS+10H
+  F366    0E 15                 	LD	C,15H	;alle Argumente
+  F368    ED B0                 	LDIR		;nach Puffer
+  F36A    CD E3E4               	CALL	ISRO
+  F36D    2A B782               	LD	HL,(ARG1)
+  F370    DD 75 05              SAV1:	LD	(IX+5),L
+  F373    DD 74 06              	LD	(IX+6),H
+  F376    DD 7E 02              	LD	A,(IX+2)
+  F379    CD F257               	CALL	AHEX	;Blocknummer
+  F37C    CD F157               	CALL	OSTR
+  F37F    20 20 00              	DB	'  ',0
+  F382    CD F3A2               	CALL	BRKT
+	ASM 1520 (SCPX)	V 1.0		1-32
+
+
+  F385    01 00A0               	LD	BC,0A0H
+  F388    38 12                 	JR	C,SAV2
+  F38A    11 0080               	LD	DE,80H
+  F38D    19                    	ADD	HL,DE
+  F38E    ED 5B B784            	LD	DE,(ARG2)
+  F392    A7                    	AND	A
+  F393    ED 52                 	SBC	HL,DE	;Ende erreicht?
+  F395    30 05                 	JR	NC,SAV2
+  F397    CD E402               	CALL	MBO
+  F39A    18 D4                 	JR	SAV1
+                                	;
+  F39C    CD F249               SAV2:	CALL	CRLF
+  F39F    C3 E487               	JP	CSRO
+                                 
+  F3A2    CD E32F               BRKT:	CALL	KBDS		;**2A**
+  F3A5    D0                    	RET	NC
+  F3A6    FE 03                 	CP	3	;Break?
+  F3A8    37                    	SCF
+  F3A9    C8                    	RET	Z
+  F3AA    A7                    	AND	A
+  F3AB    C9                    	RET
+                                 
+  F3AC    ED 4B B786            LARG:	LD	BC,(ARG3)	;**15**
+  F3B0    ED 5B B784            	LD	DE,(ARG2)
+  F3B4    2A B782               	LD	HL,(ARG1)
+  F3B7    C9                    	RET
+                                 
+  F3B8    7F7F                  	DW	7F7FH
+  F3BA    56 45 52 49           	DB	'VERIFY',1
+  F3BE    46 59 01              
+  F3C1    DD CB 07 86           VERIF:	RES	0,(IX+7)	;**11**
+  F3C5    18 0B                 	JR	LOAD0
+                                 
+  F3C7    7F7F                  	DW	7F7FH
+  F3C9    4C 4F 41 44           	DB	'LOAD',1
+  F3CD    01                    
+  F3CE    DD CB 07 C6           LOAD:	SET	0,(IX+7)	;**10**
+  F3D2    CD E4A3               LOAD0:	CALL	ISRI
+  F3D5    DD 7E 02              LOAD1:	LD	A,(IX+2)
+  F3D8    30 10                 	JR	NC,LOAD3
+  F3DA    CD F257               LOAD2:	CALL	AHEX
+  F3DD    CD F157               	CALL	OSTR
+  F3E0    2A 20 19 0A           	DB	'* ',19H,LF,0
+  F3E4    00                    
+  F3E5    CD E4E1               	CALL	MBI0
+  F3E8    18 EB                 	JR	LOAD1
+                                	;
+  F3EA    FE 02                 LOAD3:	CP	2	;Block 0 oder 1?
+  F3EC    30 EC                 	JR	NC,LOAD2
+  F3EE    3C                    	INC	A
+  F3EF    5F                    	LD	E,A
+  F3F0    21 B700               	LD	HL,CASS
+  F3F3    06 0B                 	LD	B,11
+  F3F5    7E                    LOAD4:	LD	A,(HL)	;Name anzeigen
+  F3F6    23                    	INC	HL
+  F3F7    CD F668               	CALL	CRT
+	ASM 1520 (SCPX)	V 1.0		1-33
+
+
+  F3FA    10 F9                 	DJNZ	LOAD4
+  F3FC    DD 73 03              	LD	(IX+3),E;erwarteter Blk
+  F3FF    3A B710               	LD	A,(CASS+10H)
+  F402    DD CB 07 46           	BIT	0,(IX+7)
+  F406    28 3D                 	JR	Z,LOAD6	;VERIFY
+  F408    DD 77 04              	LD	(IX+4),A;Anz. Arg.
+  F40B    FE 02                 	CP	2
+  F40D    38 62                 	JR	C,NOMC	;zu wenig Arg.
+  F40F    FE 0B                 	CP	11
+  F411    30 5E                 	JR	NC,NOMC	;zu viel Arg.
+  F413    ED 5B B713            	LD	DE,(CASS+13H)
+  F417    2A B711               	LD	HL,(CASS+11H)
+  F41A    3A B781               	LD	A,(ARGN)
+  F41D    A7                    	AND	A	;Ladeoffset?
+  F41E    28 17                 	JR	Z,LOAD5
+  F420    ED 4B B782            	LD	BC,(ARG1)
+  F424    09                    	ADD	HL,BC	;AAdr, EAdr
+  F425    EB                    	EX	DE,HL	;umrechnen
+  F426    09                    	ADD	HL,BC
+  F427    EB                    	EX	DE,HL
+  F428    DD CB 04 56           	BIT	2,(IX+4);4..7 Args?
+  F42C    20 09                 	JR	NZ,LOAD5
+  F42E    E5                    	PUSH	HL
+  F42F    2A B715               	LD	HL,(CASS+15H)
+  F432    09                    	ADD	HL,BC	;SAdr umrechnen
+  F433    22 B715               	LD	(CASS+15H),HL
+  F436    E1                    	POP	HL
+  F437    ED 4B B715            LOAD5:	LD	BC,(CASS+15H)
+  F43B    ED 43 B784            	LD	(ARG2),BC;SAdr merken
+  F43F    CD F23A               	CALL	SPACE
+  F442    CD F26D               	CALL	HLDE	;AAdr, EAdr
+  F445    CD F249               LOAD6:	CALL	CRLF
+                                	;Load-Hauptschleife
+  F448    CD F3A2               LOAD7:	CALL	BRKT
+  F44B    DD CB 07 7E           	BIT	7,(IX+7);COM-File?
+  F44F    28 03                 	JR	Z,LOAD8
+  F451    DA F000               	JP	C,POWER	;BRK -> POWER
+  F454    38 24                 LOAD8:	JR	C,CLCP	;BRK -> Abbruch
+  F456    CD E4E1               	CALL	MBI0
+  F459    DD 7E 02              	LD	A,(IX+2);Blocknr.
+  F45C    F5                    	PUSH	AF
+  F45D    DD BE 03              	CP	(IX+3)
+  F460    28 1A                 	JR	Z,LOAD9	;erwarteter Blk.
+  F462    3C                    	INC	A
+  F463    28 17                 	JR	Z,LOAD9	;letzter Blk.
+  F465    F1                    	POP	AF
+  F466    CD F257               	CALL	AHEX	;Blocknummer
+  F469    CD F157               	CALL	OSTR
+  F46C    2A 20 00              	DB	'* ',0
+  F46F    18 D7                 	JR	LOAD7
+                                	;
+  F471    CD F157               NOMC:	CALL	OSTR
+  F474    3F 3F 3F 19           	DB	'???',19H,LF,0
+  F478    0A 00                 
+  F47A    18 77                 CLCP:	JR	CSRI
+                                	;
+	ASM 1520 (SCPX)	V 1.0		1-34
+
+
+  F47C    F1                    LOAD9:	POP	AF
+  F47D    38 25                 	JR	C,LOAD13;Fehler
+  F47F    F5                    	PUSH	AF
+  F480    CD F257               	CALL	AHEX
+  F483    CD F157               	CALL	OSTR
+  F486    3E 20 00              	DB	'> ',0
+  F489    F1                    	POP	AF
+  F48A    3C                    LOAD10:	INC	A
+  F48B    28 55                 	JR	Z,LOAD15	;letzter
+  F48D    DD CB 07 46           	BIT	0,(IX+7)
+  F491    28 0C                 	JR	Z,LOAD11;VERIFY
+  F493    01 0080               	LD	BC,80H
+  F496    D5                    	PUSH	DE
+  F497    11 B700               	LD	DE,CASS	;ganzen Block
+  F49A    EB                    	EX	DE,HL	;in Speicher
+  F49B    ED B0                 	LDIR		;kopieren
+  F49D    EB                    	EX	DE,HL
+  F49E    D1                    	POP	DE
+  F49F    DD 34 03              LOAD11:	INC	(IX+3)	;naechster Block
+  F4A2    18 A4                 LOAD12:	JR	LOAD7
+                                	;
+  F4A4    DD CB 07 7E           LOAD13:	BIT	7,(IX+7)
+  F4A8    20 9E                 	JR	NZ,LOAD7;COM-File!
+  F4AA    CD F257               	CALL	AHEX	;Blocknummer
+  F4AD    CD F157               	CALL	OSTR
+  F4B0    20 3F 19 0A           	DB	' ?',19H,LF,0
+  F4B4    00                    
+  F4B5    DD CB 07 46           	BIT	0,(IX+7)
+  F4B9    28 8D                 	JR	Z,LOAD7	;VERIFY
+  F4BB    CD F157               	CALL	OSTR
+  F4BE    52 45 50 45           	DB	'REPEAT (N)?',LF,CR,0
+  F4C2    41 54 20 28           
+  F4C6    4E 29 3F 0A           
+  F4CA    0D 00                 
+  F4CC    DD CB 08 B6           	RES	6,(IX+8)
+  F4D0    CD F1A8               LOAD14:	CALL	KBD
+  F4D3    28 FB                 	JR	Z,LOAD14;keine Taste
+  F4D5    FE 4E                 	CP	'N'
+  F4D7    20 C9                 	JR	NZ,LOAD12
+  F4D9    DD 36 04 02           	LD	(IX+4),2;kein Start
+  F4DD    DD 7E 02              	LD	A,(IX+2)
+  F4E0    18 A8                 	JR	LOAD10
+                                	;
+  F4E2    EB                    LOAD15:	EX	DE,HL
+  F4E3    ED 52                 	SBC	HL,DE
+  F4E5    4D                    	LD	C,L	;Blockrest
+  F4E6    06 00                 	LD	B,0	;berechnen
+  F4E8    DD CB 07 46           	BIT	0,(IX+7)
+  F4EC    28 05                 	JR	Z,CSRI	;VERIFY
+  F4EE    21 B700               	LD	HL,CASS
+  F4F1    ED B0                 	LDIR		;kopieren
+  F4F3    2A B7CD               CSRI:	LD	HL,(ZWOUT)	;**0B**
+  F4F6    22 B7B9               	LD	(OUTAB),HL
+  F4F9    2A B7CF               	LD	HL,(ZWEND)
+  F4FC    22 B7A4               	LD	(WEND),HL
+  F4FF    CD F2FF               	CALL	INIT
+	ASM 1520 (SCPX)	V 1.0		1-35
+
+
+  F502    CD F249               	CALL	CRLF
+  F505    DD CB 07 46           	BIT	0,(IX+7)
+  F509    C8                    	RET	Z	;VERIFY
+  F50A    DD 7E 04              	LD	A,(IX+4)
+  F50D    FE 03                 	CP	3
+  F50F    DD 36 04 02           	LD	(IX+4),2
+  F513    D8                    	RET	C
+  F514    2A B784               	LD	HL,(ARG2);SAdr
+  F517    E9                    	JP	(HL)	 ;Programmstart
+                                 
+  F518    7F7F                  	DW	7F7FH
+  F51A    43 4F 4C 4F           	DB	'COLOR',1
+  F51E    52 01                 
+  F520    3E 1F                 COLR:	LD	A,1FH		;**0F**
+  F522    A5                    	AND	L
+  F523    17                    	RLA
+  F524    17                    	RLA
+  F525    17                    	RLA
+  F526    6F                    	LD	L,A
+  F527    3A B781               	LD	A,(ARGN)
+  F52A    FE 02                 	CP	2
+  F52C    30 0A                 	JR	NC,COLR2
+  F52E    3A B7A3               	LD	A,(COLOR)
+  F531    E6 07                 COLR1:	AND	7
+  F533    B5                    	OR	L
+  F534    32 B7A3               	LD	(COLOR),A
+  F537    C9                    	RET
+                                	;
+  F538    7B                    COLR2:	LD	A,E
+  F539    18 F6                 	JR	COLR1
+                                 
+  F53B                          SUTB:	;Unterprogrammtabelle
+  F53B    F668                  	DW	CRT	;00
+  F53D    E402                  	DW	MBO	;01
+  F53F    B7BD                  	DW	UOUT1	;02
+  F541    B7C3                  	DW	UOUT2	;03
+  F543    F1A8                  	DW	KBD	;04
+  F545    E4DB                  	DW	MBI	;05
+  F547    B7C0                  	DW	UIN1	;06
+  F549    B7C6                  	DW	UIN2	;07
+  F54B    E3E4                  	DW	ISRO	;08
+  F54D    E487                  	DW	CSRO	;09
+  F54F    E4A3                  	DW	ISRI	;0A
+  F551    F4F3                  	DW	CSRI	;0B
+  F553    E32F                  	DW	KBDS	;0C
+  F555    E000                  	DW	BYE	;0D
+  F557    E326                  	DW	KBDZ	;0E
+  F559    F520                  	DW	COLR	;0F
+  F55B    F3CE                  	DW	LOAD	;10
+  F55D    F3C1                  	DW	VERIF	;11
+  F55F    F0EE                  	DW	LOOP	;12
+  F561    F164                  	DW	NORM	;13
+  F563    F1A0                  	DW	WAIT	;14
+  F565    F3AC                  	DW	LARG	;15
+  F567    F181                  	DW	INTB	;16
+  F569    F216                  	DW	INLIN	;17
+	ASM 1520 (SCPX)	V 1.0		1-36
+
+
+  F56B    F275                  	DW	RHEX	;18
+  F56D    F23F                  	DW	ERRM	;19
+  F56F    F232                  	DW	HLHX	;1A
+  F571    F26D                  	DW	HLDE	;1B
+  F573    F257                  	DW	AHEX	;1C
+  F575    F12E                  	DW	ZSUCH	;1D
+  F577    F16A                  	DW	SOUT	;1E
+  F579    F177                  	DW	SIN	;1F
+  F57B    F167                  	DW	NOUT	;20
+  F57D    F174                  	DW	NIN	;21
+  F57F    F2AE                  	DW	GARG	;22
+  F581    F157                  	DW	OSTR	;23
+  F583    F187                  	DW	OCHR	;24
+  F585    E0FC                  	DW	CUCP	;25
+  F587    E37B                  	DW	MODU	;26
+  F589    E3C9                  	DW	JUMP	;27
+  F58B    F5A9                  	DW	LDMA	;28
+  F58D    F5AB                  	DW	LDAM	;29
+  F58F    F3A2                  	DW	BRKT	;2A
+  F591    F23A                  	DW	SPACE	;2B
+  F593    F249                  	DW	CRLF	;2C
+  F595    F253                  	DW	HOME	;2D
+  F597    F5B9                  	DW	MODI	;2E
+  F599    E1AA                  	DW	PUDE	;2F
+  F59B    E1AD                  	DW	PUSE	;30
+  F59D    F2DA                  	DW	SIXD	;31
+  F59F    E03C                  	DW	DABR	;32
+  F5A1    F65C                  	DW	TCIF	;33
+  F5A3    E12F                  	DW	PADR	;34
+  F5A5    E59C                  	DW	TON	;35
+  F5A7    F351                  	DW	SAVE	;36
+                                 
+  F5A9    77                    LDMA:	LD	(HL),A		;**28**
+  F5AA    C9                    	RET
+                                 
+  F5AB    7E                    LDAM:	LD	A,(HL)		;**29**
+  F5AC    C9                    	RET
+                                 
+  F5AD    7F7F                  	DW	7F7FH
+  F5AF    4D 4F 44 49           	DB	'MODIFY',1
+  F5B3    46 59 01              
+  F5B6    CD F3AC               MODI1:	CALL	LARG
+  F5B9    3E BF                 MODI:	LD	A,0BFH		;**2E**
+  F5BB    BC                    	CP	H
+  F5BC    D8                    	RET	C	;ab C000h gesp.
+  F5BD    22 B782               	LD	(ARG1),HL
+  F5C0    CD F232               	CALL	HLHX	;Adresse
+  F5C3    7E                    	LD	A,(HL)
+  F5C4    CD F257               	CALL	AHEX	;Datenbyte
+  F5C7    CD F157               	CALL	OSTR
+  F5CA    20 08 08 08           	DB	' ',8,8,8,0
+  F5CE    00                    
+  F5CF    CD F216               	CALL	INLIN
+  F5D2    CD F275               	CALL	RHEX	;Adresse
+  F5D5    38 4E                 	JR	C,MODI9	;Fehler
+  F5D7    7E                    	LD	A,(HL)
+	ASM 1520 (SCPX)	V 1.0		1-37
+
+
+  F5D8    B7                    	OR	A
+  F5D9    28 4A                 	JR	Z,MODI9	;kein Zeichen
+  F5DB    23                    	INC	HL
+  F5DC    D5                    	PUSH	DE
+  F5DD    5E                    	LD	E,(HL)
+  F5DE    23                    	INC	HL
+  F5DF    56                    	LD	D,(HL)
+  F5E0    EB                    	EX	DE,HL	;HL=Adresse
+  F5E1    D1                    	POP	DE
+  F5E2    06 00                 	LD	B,0
+  F5E4    E5                    MODI2:	PUSH	HL
+  F5E5    CD F275               	CALL	RHEX	;Datenbyte
+  F5E8    7E                    	LD	A,(HL)
+  F5E9    B7                    	OR	A
+  F5EA    28 07                 	JR	Z,MODI4	;kein Zeichen
+  F5EC    23                    	INC	HL
+  F5ED    7E                    	LD	A,(HL)
+  F5EE    E1                    	POP	HL
+  F5EF    77                    MODI3:	LD	(HL),A	;eintragen
+  F5F0    04                    	INC	B
+  F5F1    23                    	INC	HL
+  F5F2    E5                    	PUSH	HL
+  F5F3    E1                    MODI4:	POP	HL
+  F5F4    1A                    	LD	A,(DE)
+  F5F5    FE 2E                 	CP	'.'	;Abschlu~?
+  F5F7    C8                    	RET	Z
+  F5F8    FE 2C                 	CP	','	;1 Zeichen?
+  F5FA    20 05                 	JR	NZ,MODI5
+  F5FC    13                    	INC	DE
+  F5FD    1A                    	LD	A,(DE)	;vom VIDEO-RAM
+  F5FE    13                    	INC	DE
+  F5FF    18 EE                 	JR	MODI3	;eintragen
+                                	;
+  F601    78                    MODI5:	LD	A,B
+  F602    B7                    	OR	A
+  F603    20 01                 	JR	NZ,MODI6
+  F605    23                    	INC	HL
+  F606    1A                    MODI6:	LD	A,(DE)
+  F607    FE 3A                 	CP	':'	;Rueckschritt?
+  F609    20 04                 	JR	NZ,MODI7
+  F60B    2B                    	DEC	HL
+  F60C    2B                    	DEC	HL
+  F60D    18 AA                 	JR	MODI
+                                	;
+  F60F    FE 2F                 MODI7:	CP	'/'	;neue Adresse?
+  F611    20 0B                 	JR	NZ,MODI8
+  F613    13                    	INC	DE
+  F614    CD F275               	CALL	RHEX	;Adresse
+  F617    38 0C                 	JR	C,MODI9	;Fehler
+  F619    2A B797               	LD	HL,(NUMVX)
+  F61C    18 9B                 	JR	MODI
+                                	;
+  F61E    B7                    MODI8:	OR	A	;Ende-Dummy?
+  F61F    28 98                 	JR	Z,MODI
+  F621    FE 20                 	CP	' '
+  F623    28 BF                 	JR	Z,MODI2	;noch ein Byte
+	ASM 1520 (SCPX)	V 1.0		1-38
+
+
+  F625    CD F23F               MODI9:	CALL	ERRM
+  F628    18 8C                 	JR	MODI1
+                                 
+  F62A                          JPTAB:	;Sprungtabelle fuer CRT-Routinen
+  F62A    F738                  	DW	CLR	;01
+  F62C    E11A                  	DW	BEEP	;07
+  F62E    F6BD                  	DW	HCOPY	;0F
+  F630    F77D                  	DW	CBL	;0D
+  F632    F76B                  	DW	CLS	;0C
+  F634    F743                  	DW	CUL	;08
+  F636    F792                  	DW	DEL	;1F
+  F638    F6B3                  	DW	CUD	;0A
+  F63A    F7BD                  	DW	INS	;1A
+  F63C    F77D                  	DW	CBL	;19
+  F63E    F755                  	DW	CLLN	;02
+  F640    F780                  	DW	CUU	;0B
+  F642    F6AB                  	DW	CUR	;09
+  F644    F77B                  	DW	HOMEPG	;10
+  F646    F786                  	DW	SCROL	;12
+  F648    F78D                  	DW	PAGE	;11
+                                 
+  F64A                          CCTAB:	;CCTL-Tabelle
+                                	;Aufbau: Zeichen, Offset, CCTL
+  F64A    E0 C0 AC              	DB	0E0H,0C0H,Low(CCTL3)
+  F64D    A0 A0 AA              	DB	0A0H,0A0H,Low(CCTL2)
+  F650    80 80 AC              	DB	080H,080H,Low(CCTL3)
+  F653    60 40 A8              	DB	060H,040H,Low(CCTL1)
+  F656    20 20 A6              	DB	020H,020H,Low(CCTL0)
+  F659    00 00 A8              	DB	000H,000H,Low(CCTL1)
+                                 
+  F65C    3A B79E               TCIF:	LD	A,(WINLG)	;**33**
+  F65F    3D                    	DEC	A
+  F660    93                    	SUB	E	;Cursor-Spalte
+  F661    D8                    	RET	C
+  F662    3A B79F               	LD	A,(WINLG+1)
+  F665    3D                    	DEC	A
+  F666    92                    	SUB	D	;Cursor-Zeile
+  F667    C9                    	RET
+                                 
+  F668    F5                    CRT:	PUSH	AF		;**00**
+  F669    C5                    	PUSH	BC
+  F66A    D5                    	PUSH	DE
+  F66B    E5                    	PUSH	HL
+  F66C    F5                    	PUSH	AF
+  F66D    3A B7A2               	LD	A,(STBT)
+  F670    ED 5B B7A0            	LD	DE,(CURSO)
+  F674    6F                    	LD	L,A
+  F675    F1                    	POP	AF
+  F676    FE 20                 	CP	20H	;Steuerfunktion?
+  F678    30 1C                 	JR	NC,CRT1
+  F67A    CB 5D                 	BIT	3,L	;darstellen?
+  F67C    20 18                 	JR	NZ,CRT1
+  F67E    2A B7B2               	LD	HL,(CTAB)
+  F681    01 0010               	LD	BC,16
+  F684    ED B1                 	CPIR		;Funktion def.?
+  F686    20 15                 	JR	NZ,CRT3	;nein
+	ASM 1520 (SCPX)	V 1.0		1-39
+
+
+  F688    21 F62A               	LD	HL,JPTAB
+  F68B    09                    	ADD	HL,BC
+  F68C    09                    	ADD	HL,BC
+  F68D    4E                    	LD	C,(HL)
+  F68E    23                    	INC	HL
+  F68F    66                    	LD	H,(HL)
+  F690    69                    	LD	L,C	;HL=Sprungadr.
+  F691    CD F6BC               	CALL	JPHL
+  F694    18 03                 	JR	CRT2
+                                	;
+  F696    CD F6A2               CRT1:	CALL	PCHR
+  F699    ED 53 B7A0            CRT2:	LD	(CURSO),DE
+  F69D    E1                    CRT3:	POP	HL
+  F69E    D1                    	POP	DE
+  F69F    C1                    	POP	BC
+  F6A0    F1                    	POP	AF
+  F6A1    C9                    	RET
+                                	;
+  F6A2    F5                    PCHR:	PUSH	AF
+  F6A3    CD E03C               	CALL	DABR
+  F6A6    F1                    	POP	AF
+  F6A7    77                    	LD	(HL),A	;ASCII eintragen
+  F6A8    CD E06D               	CALL	WPIX	;darstellen
+  F6AB    1C                    CUR:	INC	E
+  F6AC    3A B79E               	LD	A,(WINLG)
+  F6AF    BB                    	CP	E
+  F6B0    C0                    	RET	NZ
+  F6B1    1E 00                 	LD	E,0
+  F6B3    14                    CUD:	INC	D
+  F6B4    3A B79F               	LD	A,(WINLG+1)
+  F6B7    BA                    	CP	D
+  F6B8    C0                    	RET	NZ
+  F6B9    2A B7A4               	LD	HL,(WEND)
+  F6BC    E9                    JPHL:	JP	(HL)	;PAGE o SCROLL
+                                 
+  F6BD    2A B799               HCOPY:	LD	HL,(HCADR)
+  F6C0    E9                    	JP	(HL)	;ShCLR
+                                 
+  F6C1    11 0000               SCRLPG:	LD	DE,0	;Cursol li/oben
+  F6C4    CD E03C               	CALL	DABR
+  F6C7    14                    	INC	D
+  F6C8    E5                    	PUSH	HL
+  F6C9    CD E03C               	CALL	DABR	;naechste Zeile
+  F6CC    D1                    	POP	DE
+  F6CD    38 62                 	JR	C,SCRL9
+  F6CF    3A B79E               	LD	A,(WINLG)  ;Spalten
+  F6D2    4F                    	LD	C,A
+  F6D3    3A B79F               	LD	A,(WINLG+1);Zeilen
+  F6D6    3D                    	DEC	A
+  F6D7    06 00                 	LD	B,0
+  F6D9    E5                    SCRL1:	PUSH	HL
+  F6DA    C5                    	PUSH	BC
+  F6DB    ED B0                 	LDIR		;im VRAM eine
+  F6DD    C1                    	POP	BC	;Zeile rollen
+  F6DE    D1                    	POP	DE
+  F6DF    21 0028               	LD	HL,40	;1 Zeile tiefer
+	ASM 1520 (SCPX)	V 1.0		1-40
+
+
+  F6E2    19                    	ADD	HL,DE
+  F6E3    3D                    	DEC	A
+  F6E4    20 F3                 	JR	NZ,SCRL1
+  F6E6    3A B79D               	LD	A,(WINON+1)
+  F6E9    07                    	RLCA
+  F6EA    07                    	RLCA
+  F6EB    07                    	RLCA
+  F6EC    67                    	LD	H,A	;Zeile*8
+  F6ED    3A B79F               	LD	A,(WINLG+1)
+  F6F0    3D                    	DEC	A
+  F6F1    07                    	RLCA
+  F6F2    07                    	RLCA
+  F6F3    07                    	RLCA		;Laenge*8
+  F6F4    F5                    	PUSH	AF
+  F6F5    3A B79C               	LD	A,(WINON);Spalte
+  F6F8    FE 20                 	CP	32
+  F6FA    4F                    	LD	C,A
+  F6FB    3A B79E               	LD	A,(WINLG);Breite
+  F6FE    30 0D                 	JR	NC,SCRL2 ;rechter Teil
+  F700    81                    	ADD	A,C
+  F701    FE 20                 	CP	32
+  F703    38 0F                 	JR	C,SCRL3
+  F705    06 20                 	LD	B,32
+  F707    90                    	SUB	B
+  F708    51                    	LD	D,C
+  F709    4F                    	LD	C,A
+  F70A    78                    	LD	A,B
+  F70B    18 0B                 	JR	SCRL4
+                                	;
+  F70D    41                    SCRL2:	LD	B,C
+  F70E    4F                    	LD	C,A
+  F70F    11 0000               	LD	DE,0
+  F712    18 06                 	JR	SCRL5
+                                	;
+  F714    51                    SCRL3:	LD	D,C
+  F715    01 0000               	LD	BC,0
+  F718    92                    SCRL4:	SUB	D
+  F719    5F                    	LD	E,A
+  F71A    F1                    SCRL5:	POP	AF
+  F71B    F5                    SCRL6:	PUSH	AF
+  F71C    7B                    	LD	A,E
+  F71D    A7                    	AND	A
+  F71E    28 04                 	JR	Z,SCRL7
+  F720    6A                    	LD	L,D
+  F721    CD E0C9               	CALL	SCRLUP
+  F724    79                    SCRL7:	LD	A,C
+  F725    A7                    	AND	A
+  F726    28 04                 	JR	Z,SCRL8
+  F728    68                    	LD	L,B
+  F729    CD E0C9               	CALL	SCRLUP
+  F72C    24                    SCRL8:	INC	H
+  F72D    F1                    	POP	AF
+  F72E    3D                    	DEC	A
+  F72F    20 EA                 	JR	NZ,SCRL6
+  F731    3A B79F               SCRL9:	LD	A,(WINLG+1)
+  F734    3D                    	DEC	A
+	ASM 1520 (SCPX)	V 1.0		1-41
+
+
+  F735    57                    	LD	D,A
+  F736    18 1D                 	JR	CLLN
+                                 
+  F738    D5                    CLR:	PUSH	DE
+  F739    CD E03C               	CALL	DABR
+  F73C    3E 20                 	LD	A,' '	;Leerzeichen
+  F73E    77                    	LD	(HL),A
+  F73F    CD E06D               	CALL	WPIX
+  F742    D1                    	POP	DE
+  F743    7B                    CUL:	LD	A,E	;Cursor links
+  F744    D6 01                 	SUB	1
+  F746    38 02                 	JR	C,CUL1
+  F748    5F                    	LD	E,A
+  F749    C9                    	RET
+                                	;
+  F74A    7A                    CUL1:	LD	A,D	;Zeile hoch
+  F74B    D6 01                 	SUB	1
+  F74D    D8                    	RET	C
+  F74E    57                    	LD	D,A
+  F74F    3A B79E               	LD	A,(WINLG)
+  F752    3D                    	DEC	A
+  F753    5F                    	LD	E,A
+  F754    C9                    	RET
+                                 
+  F755    1E 00                 CLLN:	LD	E,0	;ShDEL
+  F757    D5                    	PUSH	DE
+  F758    CD E03C               	CALL	DABR
+  F75B    3A B79E               	LD	A,(WINLG)
+  F75E    47                    	LD	B,A	;Spalten
+  F75F    36 00                 CLLN1:	LD	(HL),0	;VRAM loeschen
+  F761    3E 20                 	LD	A,' '
+  F763    CD E06D               	CALL	WPIX	;Space anzeigen
+  F766    23                    	INC	HL
+  F767    10 F6                 	DJNZ	CLLN1
+  F769    D1                    	POP	DE
+  F76A    C9                    	RET
+                                 
+  F76B    16 00                 CLS:	LD	D,0	;ShHOME
+  F76D    3A B79F               	LD	A,(WINLG+1)
+  F770    F5                    CLS1:	PUSH	AF
+  F771    D5                    	PUSH	DE
+  F772    CD F755               	CALL	CLLN	;Zeile fuer
+  F775    D1                    	POP	DE	;Zeile loeschen
+  F776    F1                    	POP	AF
+  F777    14                    	INC	D
+  F778    3D                    	DEC	A
+  F779    20 F5                 	JR	NZ,CLS1
+  F77B    16 00                 HOMEPG:	LD	D,0
+  F77D    1E 00                 CBL:	LD	E,0
+  F77F    C9                    	RET
+                                 
+  F780    7A                    CUU:	LD	A,D
+  F781    D6 01                 	SUB	1
+  F783    D8                    	RET	C
+  F784    57                    	LD	D,A
+  F785    C9                    	RET
+	ASM 1520 (SCPX)	V 1.0		1-42
+
+
+                                 
+  F786    21 F6C1               SCROL:	LD	HL,SCRLPG	;ShCUD
+  F789    22 B7A4               WADR:	LD	(WEND),HL
+  F78C    C9                    	RET
+                                 
+  F78D    21 F77B               PAGE:	LD	HL,HOMEPG	;ShCUU
+  F790    18 F7                 	JR	WADR
+                                 
+  F792    CD E03C               DEL:	CALL	DABR
+  F795    7E                    	LD	A,(HL)
+  F796    A7                    	AND	A	;Ende?
+  F797    C8                    	RET	Z
+  F798    D5                    	PUSH	DE	;Cursor
+  F799    E5                    	PUSH	HL	;VRAM
+  F79A    1C                    DEL1:	INC	E	;naechste Spalte
+  F79B    CD E03C               	CALL	DABR	;raus?
+  F79E    30 08                 	JR	NC,DEL2	;nein
+  F7A0    1E 00                 	LD	E,0	;Spalte 0 in
+  F7A2    14                    	INC	D	;neuer Zeile
+  F7A3    CD E03C               	CALL	DABR	;raus?
+  F7A6    38 0B                 	JR	C,DEL3	;ja, Ende
+  F7A8    7E                    DEL2:	LD	A,(HL)
+  F7A9    A7                    	AND	A	;Ende?
+  F7AA    28 07                 	JR	Z,DEL3
+  F7AC    E3                    	EX	(SP),HL
+  F7AD    77                    	LD	(HL),A	;eintragen
+  F7AE    CD E06D               	CALL	WPIX	;zeichnen
+  F7B1    18 E7                 	JR	DEL1	;von vorn
+                                	;
+  F7B3    E1                    DEL3:	POP	HL
+  F7B4    36 00                 	LD	(HL),0	;letztes CHR
+  F7B6    3E 20                 	LD	A,' '	;loeschen
+  F7B8    CD E06D               	CALL	WPIX
+  F7BB    D1                    	POP	DE
+  F7BC    C9                    	RET
+                                 
+  F7BD    D5                    INS:	PUSH	DE	;Cursor
+  F7BE    3E 20                 	LD	A,' '
+  F7C0    CD E03C               	CALL	DABR
+  F7C3    46                    INS1:	LD	B,(HL)	;altes
+  F7C4    77                    	LD	(HL),A	;neues Zeichen
+  F7C5    CD E06D               	CALL	WPIX	;zeichnen
+  F7C8    78                    	LD	A,B
+  F7C9    A7                    	AND	A	;Dummy?
+  F7CA    28 10                 	JR	Z,INS2
+  F7CC    1C                    	INC	E	;CUR
+  F7CD    CD E03C               	CALL	DABR	;raus?
+  F7D0    30 F1                 	JR	NC,INS1	;nein
+  F7D2    1E 00                 	LD	E,0	;Spalte 0 in
+  F7D4    14                    	INC	D	;neuer Zeile
+  F7D5    CD E03C               	CALL	DABR	;raus?
+  F7D8    30 E9                 	JR	NC,INS1	;nein
+  F7DA    D1                    	POP	DE
+  F7DB    C9                    	RET
+                                	;
+  F7DC    E5                    INS2:	PUSH	HL
+	ASM 1520 (SCPX)	V 1.0		1-43
+
+
+  F7DD    1C                    	INC	E	;CUR
+  F7DE    CD E03C               	CALL	DABR	;raus?
+  F7E1    30 08                 	JR	NC,INS3	;nein
+  F7E3    1E 00                 	LD	E,0
+  F7E5    14                    	INC	D
+  F7E6    CD E03C               	CALL	DABR
+  F7E9    38 07                 	JR	C,INS4
+  F7EB    7E                    INS3:	LD	A,(HL)
+  F7EC    A7                    	AND	A	;Dummy?
+  F7ED    20 03                 	JR	NZ,INS4
+  F7EF    E1                    	POP	HL
+  F7F0    D1                    	POP	DE
+  F7F1    C9                    	RET
+                                	;
+  F7F2    E1                    INS4:	POP	HL
+  F7F3    36 00                 	LD	(HL),0	;Zeichen
+  F7F5    3E 20                 	LD	A,' '	;loeschen
+  F7F7    CD E06D               	CALL	WPIX
+  F7FA    D1                    	POP	DE
+  F7FB    C9                    	RET
+                                
+                                IF HC900
+                                	DB	'14'
+                                ELSE
+  F7FC    4B 44 4B              	DB	'KDK'	; Copyright???
+                                ENDIF
+                                	ABSFILL	0F800h,<ROM-F-Ende>
+  F7FF                    +     	  DS	0F800h - $,0FFh
+                                
+                                	.DEPHASE
+                                	END
+	ASM 1520 (SCPX)	V 1.0		S
+
+
+Macros:
+ABSFILL         MESSAGE         
+
+Symbols:
+F257 	AHEX            F260 	AHEX0           F26A 	AHEX1           
+B782 	ARG1            B784 	ARG2            B786 	ARG3            
+B780 	ARGC            B781 	ARGN            E11A 	BEEP            
+E467 	BITO1           E46A 	BITO2           E462 	BITOUT          
+B7B4 	BJUMP           E525 	BLKIN           E42D 	BLKOT           
+F3A2 	BRKT            E000 	BYE             E00F 	BYE1            
+E584 	BYTIN           E447 	BYTOT           E44B 	BYTOUT          
+B700 	CASS            F77D 	CBL             F64A 	CCTAB           
+B7A6 	CCTL0           B7A8 	CCTL1           B7AA 	CCTL2           
+B7AC 	CCTL3           F47A 	CLCP            F755 	CLLN            
+F75F 	CLLN1           F738 	CLR             F76B 	CLS             
+F770 	CLS1            B7A3 	COLOR           F520 	COLR            
+F531 	COLR1           F538 	COLR2           E557 	COM             
+000D 	CR              F249 	CRLF            F668 	CRT             
+F696 	CRT1            F699 	CRT2            F69D 	CRT3            
+E015 	CRTTAB          F4F3 	CSRI            E487 	CSRO            
+B7B2 	CTAB            008C 	CTC0            008D 	CTC1            
+008E 	CTC2            008F 	CTC3            E0FC 	CUCP            
+E115 	CUCP1           F6B3 	CUD             F743 	CUL             
+F74A 	CUL1            F6AB 	CUR             B7A0 	CURSO           
+F780 	CUU             E03C 	DABR            F792 	DEL             
+F79A 	DEL1            F7A8 	DEL2            F7B3 	DEL3            
+E350 	ERA4            E34A 	ERAM4           F23F 	ERRM            
+E025 	FADR            E02E 	FADR1           B7D6 	FARB            
+B7D1 	FTAST           F2AE 	GARG            F2B3 	GARG1           
+E460 	HBITOT          0000 	HC900           B799 	HCADR           
+F6BD 	HCOPY           F26D 	HLDE            F270 	HLDE1           
+F232 	HLHX            F253 	HOME            F77B 	HOMEPG          
+B7D3 	HOR             E066 	IAD2            E33A 	INIEA           
+E343 	INIME           F2FF 	INIT            F217 	INL1            
+F216 	INLIN           F7BD 	INS             F7C3 	INS1            
+F7DC 	INS2            F7EB 	INS3            F7F2 	INS4            
+F18B 	INTA1           B7BB 	INTAB           F181 	INTB            
+F31F 	IOTAB           E567 	ISR1E           E569 	ISR2E           
+E472 	ISRC1           E5E6 	ISRC2           E1FA 	ISRC3           
+E4A3 	ISRI            E4CE 	ISRI1           E3E4 	ISRO            
+E55B 	ISRPA           E20A 	ISRPB           E31A 	ISRTAB          
+F6BC 	JPHL            F62A 	JPTAB           E3C9 	JUMP            
+F1A8 	KBD             F1B1 	KBD1            F1C4 	KBD2            
+F1CB 	KBD3            F1CE 	KBD4            F1D1 	KBD5            
+F1D6 	KBD6            F1DC 	KBD7            E32F 	KBDS            
+E326 	KBDZ            F1E6 	KCTAB           F316 	KPUFF           
+E29A 	KTAB            F3AC 	LARG            E45C 	LBITOT          
+F5AB 	LDAM            F5A9 	LDMA            E54A 	LEDOO           
+000A 	LF              F3CE 	LOAD            F3D2 	LOAD0           
+F3D5 	LOAD1           F48A 	LOAD10          F49F 	LOAD11          
+F4A2 	LOAD12          F4A4 	LOAD13          F4D0 	LOAD14          
+F4E2 	LOAD15          F3DA 	LOAD2           F3EA 	LOAD3           
+F3F5 	LOAD4           F437 	LOAD5           F445 	LOAD6           
+F448 	LOAD7           F454 	LOAD8           F47C 	LOAD9           
+F0EE 	LOOP            F0F3 	LOOP1           F10D 	LOOP2           
+F112 	LOOP3           F125 	LOOP4           E4DB 	MBI             
+E4E1 	MBI0            E4F0 	MBI1            E4F6 	MBI2            
+E504 	MBI3            E506 	MBI4            E553 	MBI5            
+	ASM 1520 (SCPX)	V 1.0		S-1
+
+
+E402 	MBO             E414 	MBO1            F0A8 	MEN0            
+F0CC 	MEN2            F0D5 	MEN3            F0E9 	MEN4            
+F0C3 	MENU            B7D7 	MIXIT           F5B9 	MODI            
+F5B6 	MODI1           F5E4 	MODI2           F5EF 	MODI3           
+F5F3 	MODI4           F601 	MODI5           F606 	MODI6           
+F60F 	MODI7           F61E 	MODI8           F625 	MODI9           
+E37B 	MODU            E393 	MODU1           E39D 	MODU2           
+E3A5 	MODU3           E3A7 	MODU4           E3AD 	MODU5           
+E3B9 	MODU6           F128 	MSUCH           F174 	NIN             
+F471 	NOMC            F164 	NORM            F15E 	NOT             
+F167 	NOUT            B796 	NUMNX           B797 	NUMVX           
+F187 	OCHR            F157 	OSTR            F158 	OSTR1           
+F15F 	OSTR2           B7B9 	OUTAB           E12F 	PADR            
+E147 	PADR1           E1A7 	PADR10          E154 	PADR2           
+E167 	PADR3           E168 	PADR4           E16E 	PADR5           
+E171 	PADR6           E186 	PADR7           E196 	PADR8           
+E19E 	PADR9           F78D 	PAGE            F6A2 	PCHR            
+0088 	PIOAD           008A 	PIOAS           0089 	PIOBD           
+008B 	PIOBS           F196 	POP3            E0C4 	POP4            
+F000 	POWER           E1AE 	PU1             E1BC 	PU2             
+E1D1 	PU3             E1E8 	PU4             E1EC 	PU5             
+E1F0 	PU6             E1AA 	PUDE            E1AD 	PUSE            
+F026 	PV1             F042 	PV2             F043 	PV21            
+F033 	PV22            F056 	PV3             F012 	PV4             
+F06D 	PWR1            F08B 	PWR2            F064 	PWRON           
+F059 	RCALL           E003 	RESET           F287 	RH1             
+F29F 	RH2             F275 	RHEX            F370 	SAV1            
+F39C 	SAV2            F351 	SAVE            F6D9 	SCRL1           
+F70D 	SCRL2           F714 	SCRL3           F718 	SCRL4           
+F71A 	SCRL5           F71B 	SCRL6           F724 	SCRL7           
+F72C 	SCRL8           F731 	SCRL9           F6C1 	SCRLPG          
+E0C9 	SCRLUP          F786 	SCROL           F177 	SIN             
+F2DA 	SIXD            F16A 	SOUT            F250 	SPAC0           
+F23A 	SPACE           01D4 	STACK           B7A2 	STBT            
+E56D 	STOP1           E571 	STOP11          E57C 	STOP21          
+B7B0 	SUTAB           F53B 	SUTB            F2CD 	SYSI            
+B7AE 	SYSP            F65C 	TCIF            E59C 	TON             
+E59F 	TON1            E5B3 	TON2            E5B6 	TON3            
+E5C6 	TON4            E5C9 	TON5            E5E2 	TON6            
+E588 	TRN1            E592 	TRN2            E25A 	TST1            
+E25D 	TST2            E269 	TST3            E273 	TST4            
+E288 	TST5            E290 	TST6            E293 	TST7            
+E294 	TST8            B7C0 	UIN1            B7C6 	UIN2            
+B7BD 	UOUT1           B7C3 	UOUT2           F3C1 	VERIF           
+B7D5 	VERT            B200 	VRAM            F789 	WADR            
+F1A0 	WAIT            F1A2 	WAIT1           B7A4 	WEND            
+B79E 	WINLG           B79C 	WINON           E06D 	WPIX            
+E082 	WPIX1           E08A 	WPIX2           E0A5 	WPIX3           
+E0AF 	WPIX4           E0ED 	WPIX5           E0F2 	WPIX6           
+F19A 	WTUP            E02D 	ZEI0            E02E 	ZEI4            
+B7C9 	ZEITB           F12F 	ZS1             F131 	ZS2             
+F13B 	ZS3             F148 	ZS4             F150 	ZS5             
+F154 	ZS6             F12E 	ZSUCH           E458 	ZTON            
+B7CF 	ZWEND           B7CD 	ZWOUT           
+
+
+
+No Fatal error(s)
+
+
+    E06D 	WPIX            
+E082 	WPIX1           E08A 	
