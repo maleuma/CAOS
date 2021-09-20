@@ -1,0 +1,72 @@
+;
+; CAOS 4.4 -> Export zu CP/M-Assembler
+;
+; Uebersetzen:	SLRZ80 CAOS45.@@Z/F
+;		REN CAOS45.COM CAOS45.KCC
+;
+;*********************************
+;**				**
+;**	CAOS 4.4   (c) ML-Soft	**
+;**				**
+;*********************************
+;**				**
+;**	Mario Leubner		**
+;**	Dorfstr. 3		**
+;**	09236 Claussnitz	**
+;**	----------------	**
+;**				**
+;**	von:	13.04.1994	**
+;**	bis:	09.02.2003	**
+;**				**
+;*********************************
+
+MESSAGE	MACRO	MSG1,N,MSG2
+	.PRINTX MSG1 N MSG2
+	ENDM
+
+INF	macro	; IN	F,(C)
+	db	0edh,70h
+	endm
+
+RES7IX4	macro	; RES	7,(IX+4),A
+	DB	0DDh,0CBh,4,0BFh
+	endm
+
+SET7IX4	macro	; SET	7,(IX+4),A
+	DB	0DDh,0CBh,4,0FFh
+	endm
+
+IF2	; Freie Bytes anzeigen...
+	MESSAGE	<Freie Bytes im ROM-C:>,%FREIC,<dez.>
+	MESSAGE	<Freie Bytes im ROM-D:>,%FREID,<dez.>
+	MESSAGE	<Freie Bytes im ROM-E:>,%FREIE,<dez.>
+	MESSAGE	<Freie Bytes im ROM-E:>,%FREIF,<dez.>
+ENDIF
+
+; CAOS-Vorblock:
+
+	DB	'CAOS44  KCC'
+	DS	5,0
+	DB	2		; 2 Adressen
+	DW	4000H		; AADR
+	DW	8000H		; EADR+1
+	DS	107,0
+
+	INCLUDE	EQU44.INC	; Vereinbarungen , Uebersicht
+
+	.PHASE	0C000H
+
+	INCLUDE	CC44.INC	; ROM-C (C000-CFFF)
+
+	INCLUDE	CD44.INC	; ROM-D (D000-DAB7)
+	INCLUDE	ZSIBM.INC	; IBM-Zeichensatz
+
+	INCLUDE	CE44.INC	; ROM-E (E000-EDFF)
+	INCLUDE ZSGROSS.INC	; Zeichensatz Grossbuchstaben
+
+	INCLUDE	CF44.INC	; ROM-F (F000-FDFF)
+	INCLUDE	ZSKLEIN.INC	; Zeichensatz Kleibuchstaben
+
+	.DEPHASE
+
+	END

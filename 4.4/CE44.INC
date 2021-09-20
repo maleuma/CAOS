@@ -1,0 +1,2206 @@
+;
+;**	CAOS 4.4 ROM E		**
+;	(02.11.2001)
+ 
+;	ORG	0E000H
+ 
+	JP	BYE	;Tasten-RESET
+	JP	BEXP1	;BASIC-
+	JP	BEXP2	;Expansionen
+	JP	BEXP3
+	DW	TOKTAB
+BASIO:	JP	BASPV
+ 
+	DW	7F7FH
+	DB	'BASIC'
+	DB	11H
+	CALL	BASON
+	JP	0C00DH	;Kaltstart
+ 
+	DW	7F7FH
+	DB	'REBASIC'
+	DB	11H
+	CALL	BASON
+	JP	0C08CH	;Warmstart
+ 
+BASON:	;BASIC vorbereiten
+	LD	BC,0B3F3H
+	IN	A,(C)
+	CP	5	;KC-BA?
+	JR	NZ,BASO1
+	CALL	CON
+	CALL	BASEX	;DISK-Treiber
+BASO1:	LD	D,0
+	LD	A,2
+	LD	L,5
+	CALL	MODU	;CAOSC off
+	LD	D,0C1H
+	LD	A,2
+	LD	L,A
+	CALL	MODU	;BASIC-Ebene on
+	JP	SCROFF	;IRM off
+ 
+;CRT-Treiber
+ 
+PADR0:	LD	DE,(CURSO)
+PADR1:	LD	HL,(WINON)
+	ADD	HL,DE
+	SLA	H
+	SLA	H
+	SLA	H
+	;
+PADR:	PUSH	AF		;**34**
+	LD	A,L	;Spalte
+	LD	L,H	;Pixelzeile
+	CP	28H
+	JR	NC,IAD2	;zu gro~
+	OR	80H
+	LD	H,A	;HL=Pixeladr.
+	POP	AF
+	AND	A	;CY=0
+	RET
+IAD2:	POP	AF
+	SCF		;CY=1
+	RET
+ 
+TCIF:	;Test Cursor im Fenster	 **33**
+	LD	A,(WINLG)
+	DEC	A
+	SUB	E	;Cursor-Spalte
+	RET	C
+	LD	A,(WINLG+1)
+	DEC	A
+	SUB	D	;Cursor-Zeile
+	RET
+ 
+DABR:	PUSH	AF		;**32**
+	CALL	TCIF
+	JR	C,IAD2
+	LD	A,(WINON)
+	ADD	E	;Cursor-Spalte
+	PUSH	DE
+	LD	E,A	;absolut
+	LD	A,(WINON+1)
+	ADD	D	;Cursor-Zeile
+	ADD	A
+	ADD	A
+	ADD	A	;*8
+	LD	L,A	;Pixelzeile
+	LD	H,0
+	LD	D,H	;D=0
+	ADD	HL,HL
+	ADD	HL,HL	;*4
+	ADD	HL,DE	;*5, zus. *40
+	LD	DE,(VRAM)
+	LD	E,A
+	ADD	HL,DE
+	POP	DE
+	POP	AF
+	AND	A
+	RET
+ 
+WPIX:	;Zeichen auf Grafikbildschirm
+	;sichtbar machen
+	;PE:	DE, A, STBT
+	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	PUSH	AF
+	LD	C,A	;Zeichen
+	LD	HL,(WINON)
+	ADD	HL,DE
+	EX	DE,HL	;DE:Absolut-Curs
+;	LD	A,D
+;	CP	20H
+;	JP	NC,WPX13;au~erhalb
+	LD	A,E
+	CP	28H
+	JP	NC,WPX13;au~erhalb!
+	LD	HL,STBT
+	BIT	5,(HL)	;IBM?
+	JR	Z,WPX03	;nein
+	LD	A,(IX+4);CAOSC merken
+	PUSH	AF
+	SET	7,A	;CAOSC on
+	LD	(IX+4),A;f}r IBM-Tab.
+	OUT	(86H),A
+	LD	A,C
+	LD	BC,0DC00H
+	ADD	A
+	JR	C,WPX02	;80..FF
+	DEC	B
+	CP	40H
+	JR	C,WPX02	;00..1F
+	LD	B,0EEH-1;Gro~buchst.
+	CP	2*5BH
+	JR	C,WPX02	;20..5A
+	CP	2*5EH
+	JR	C,WPX01	;5B..5D
+	CP	2*60H
+	JR	C,WPX02	;5E..5F
+	JR	Z,WPX01	;60
+	LD	B,0FEH-2;Kleinbuchst.
+	CP	2*7BH
+	JR	C,WPX02	;61..7A
+WPX01:	LD	BC,0DAB8H;Zusatztabelle
+	SUB	2*5BH
+	CP	6
+	JR	C,WPX02	;5B..5D
+	SUB	4
+	CP	6
+	JR	Z,WPX02	;60
+	SUB	34H
+WPX02:	LD	L,A
+	LD	H,0
+	ADD	HL,HL	;*4
+	JR	WPX07
+ 
+WPX03:	LD	A,C
+	LD	HL,CCTL0
+	ADD	A	;*2
+	JR	NC,WPX04
+	LD	L,LOW(CCTL2)
+WPX04:	SUB	40H
+	JP	P,WPX06	;CCTL0/2
+	INC	L
+	INC	L	;CCTL1/3
+	XOR	0C0H
+WPX06:	LD	C,(HL)
+	INC	L	;BC=(CCTL)
+	LD	B,(HL)
+	ADD	A	;*4
+	LD	L,A
+	LD	H,0
+WPX07:	ADD	HL,HL	;*8
+	ADD	HL,BC	;HL=Pixelmuster
+	LD	A,D
+	ADD	A
+	ADD	A
+	ADD	A
+	LD	D,E
+	LD	E,A
+	SET	7,D	;DE=IRM-Adresse
+	LD	BC,(STBT)
+	BIT	1,C
+	JR	NZ,WPIXNC;Farbe AUS
+	CALL	ESC9
+	BIT	3,(IX+1)
+	JR	NZ,WPIXA;LORES
+	BIT	6,C
+	JR	NZ,WPIXH1;HRG-Modus
+WPIXA:	LD	A,B	;Farbe
+	LD	B,E
+	CALL	WCOLOR	;8 Farbbytes
+	LD	E,B
+WPIXHE:	CALL	ESC9
+WPIXNC:	BIT	0,C
+	JR	NZ,WPX11;Farbe AUS
+	BIT	3,(IX+1)
+	JR	NZ,WPIXB;LORES
+	BIT	6,C
+	JR	NZ,WPIXH2;HRG-Modus
+WPIXB:	BIT	2,C
+	CALL	Z,WPIXEL;normal
+	CALL	NZ,WPIXI;invers
+WPX11:	BIT	5,C	;IBM?
+	JR	Z,WPX13	;nein
+	POP	AF
+	LD	(IX+4),A;CAOSC
+	OUT	(86H),A	;wie vorher
+WPX13:	POP	AF
+	POP	BC
+	POP	DE
+	POP	HL
+	RET
+ 
+WPIXH1:	;Farbebene im HRG-Modus
+	LD	A,B
+	RRCA
+	PUSH	HL
+	PUSH	DE
+	CALL	WPHRG
+	POP	DE
+	POP	HL
+	JR	WPIXHE
+ 
+WPIXH2:	;Pixelebene im HRG-Modus
+	LD	A,B
+	PUSH	HL
+	PUSH	DE
+	CALL	WPHRG
+	POP	DE
+	POP	HL
+	JR	WPX11
+ 
+	;Reaktion im HRG-Modus
+WPHRG:	AND	9	;Bits 0&3
+	JR	Z,WCOLOR;Ebene r}cks.
+	CP	9
+	JR	Z,COLFF	;Ebene setzen
+	BIT	2,C
+	JR	Z,WPHN
+	CPL		;invers
+	AND	9
+WPHN:	DEC	A
+	JR	Z,WPIXI	;Pixel invers
+WPIXEL:	;8 Pixelbytes kopieren
+	PUSH	BC
+	LDI
+	LDI
+	LDI
+	LDI
+	LDI
+	LDI
+	LDI
+	LDI
+	POP	BC
+	RET
+ 
+WPIXI:	PUSH	BC
+	LD	B,8	;8 Pixelmuster
+WPIXI1:	LD	A,(HL)	;invers
+	CPL
+	LD	(DE),A
+	INC	HL
+	INC	E
+	DJNZ	WPIXI1
+	POP	BC
+	RET
+ 
+COLFF:	LD	A,0FFH
+WCOLOR:	LD	(DE),A	;8 Farbbytes
+	INC	E
+	LD	(DE),A
+	INC	E
+	LD	(DE),A
+	INC	E
+	LD	(DE),A
+	INC	E
+	LD	(DE),A
+	INC	E
+	LD	(DE),A
+	INC	E
+	LD	(DE),A
+	INC	E
+	LD	(DE),A
+	RET
+ 
+MOVELN:	;Rolle Fenster f}r Scrolling
+	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	PUSH	AF
+	EX	AF,AF'
+	PUSH	AF
+	LD	A,C	;BC:Pixelzeilen
+	EX	AF,AF'
+	LD	A,(WINLG) ;Spalten
+MOLN1:	PUSH	HL
+	PUSH	DE
+MOLN2:	LDI		;zeichenweise
+	LDI
+	LDI
+	LDI
+	LDI
+	LDI
+	LDI
+	LDI
+	JP	PE,MOLN2
+	POP	DE
+	POP	HL
+	INC	H	;neue Spalte
+	INC	D
+	EX	AF,AF'
+	LD	C,A
+	EX	AF,AF'
+	DEC	A	;Spaltenz{hler
+	JR	NZ,MOLN1
+	EX	AF,AF'
+	POP	AF
+	EX	AF,AF'
+	POP	AF
+	POP	BC
+	POP	DE
+	POP	HL
+	RET
+ 
+PCHR:	;CRT-Grundprogramm
+	LD	DE,(CURSO)
+	LD	HL,STBT
+	BIT	4,(HL)	;ESC aktiv?
+	JR	Z,PCHR3
+CRT1:	RES	4,(HL)
+	CP	'0'
+	RET	C
+	CP	'9'+1
+	JR	NC,PCHR1
+	SUB	'0'
+	JR	PCHR2
+	;
+PCHR1:	CP	'A'
+	RET	C
+	RES	5,A
+	CP	'Z'+1
+	RET	NC
+	SUB	'A'-10
+PCHR2:	LD	HL,L3SIZ;Tabelle
+	CP	(HL)	;lang genug?
+	RET	NC
+	ADD	A	;*2
+	LD	HL,(L3TAB) ;klar zum
+	JR	PCHR4	;Ansprung
+	;
+PCHR3:	CP	20H	;Steuerfunktion?
+	JR	NC,PCHR5
+	BIT	3,(HL)	;darstellen?
+	JR	NZ,PCHR5
+	ADD	A	;*2
+	LD	HL,(CTAB)
+PCHR4:	LD	C,A
+	LD	B,0
+	ADD	HL,BC
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+JPHL:	JP	(HL)	;anspringen
+ 
+ESC0:	LD	A,E	;Tabulator
+	OR	7	;8er Step
+	INC	A
+	LD	E,A
+	JR	CUR1
+	;
+PCHR5:	CALL	DABR
+	RET	C	;au~erhalb
+	LD	(HL),A	;ASCII eintragen
+	CALL	WPIX	;darstellen
+CUR:	INC	E
+CUR1:	LD	A,(WINLG)
+	DEC	A
+	CP	E
+	RET	NC
+NL:	LD	E,0	;NL f}r 1E
+CUD:	INC	D
+	LD	A,(WINLG+1)
+	CP	D
+	RET	NZ
+	LD	HL,(WEND)
+	JP	(HL)	;PAGE o. SCROLL
+ 
+HCOPY:	LD	HL,(HCADR) ;ShCLR
+	JP	(HL)
+ 
+CUL:	LD	A,E
+	AND	A
+	JR	Z,CUL1
+	DEC	E
+	RET
+ 
+CUL1:	LD	A,D
+	AND	A
+	RET	Z
+	DEC	D
+CEL:	LD	A,(WINLG)
+	DEC	A
+	LD	E,A
+	RET
+ 
+CUU:	LD	A,D
+	AND	A
+	RET	Z
+	DEC	D
+	RET
+ 
+PAGE:	LD	HL,HOMEPG ;ShCUU
+WADR:	LD	(WEND),HL
+	RET
+ 
+SCROL:	LD	HL,SCRLPG ;ShCUD
+	JR	WADR
+ 
+CLR:	CALL	CUL
+DEL:	PUSH	DE	;Cursor retten
+	CALL	DABR
+	LD	A,(HL)
+	AND	A	;Ende?
+	JR	Z,POPDE
+	PUSH	HL	;VRAM
+DEL1:	PUSH	DE	;Cursor
+	INC	E	;n{chste Spalte
+	CALL	DABR	;raus?
+	JR	NC,DEL2
+	LD	E,0	;ja, wie NL
+	INC	D
+	CALL	DABR	;raus?
+	JR	C,DEL3	;ja-wie Ende
+DEL2:	LD	A,(HL)
+	AND	A	;Ende?
+	JR	Z,DEL3
+	LD	B,D
+	LD	C,E	;BC:=DE
+	POP	DE	;DE=links davon
+	EX	(SP),HL	;HL=VRAM links
+	LD	(HL),A	;eintragen
+	CALL	WPIX	;zeichnen
+	LD	D,B
+	LD	E,C	;DE:=BC
+	JR	DEL1	;von vorn
+ 
+DEL3:	POP	DE
+	POP	HL
+	LD	(HL),0
+	LD	A,' '
+	CALL	WPIX
+POPDE:	POP	DE
+	RET
+ 
+INS:	PUSH	DE	;Cursor
+	LD	A,' '
+	CALL	DABR
+INS1:	LD	B,(HL)	;VRAM
+	LD	(HL),A	;neues Zeichen
+	CALL	WPIX	;zeichnen
+	LD	A,B
+	AND	A	;Dummy?
+	JR	Z,INS2
+	INC	E	;CUR
+	CALL	DABR	;raus?
+	JR	NC,INS1
+	LD	E,0	;wie NL
+	INC	D
+	CALL	DABR	;raus?
+	JR	NC,INS1
+INS2:	POP	DE	;wenn ja Schlu~
+	RET
+ 
+CLS:	LD	A,(WINLG+1) ;ShHOME
+	LD	D,0
+CLS1:	PUSH	AF
+	CALL	CLLN
+	POP	AF
+	INC	D
+	DEC	A
+	JR	NZ,CLS1	;A Zeilen
+HOMEPG:	LD	D,0
+CBL:	LD	E,0
+	RET
+ 
+CLLINE:	;L|schen einer Zeile
+	;HL: Adr. C: L{nge, A: Byte
+	LD	B,C
+CLL1:	LD	D,L	;L retten
+	LD	(HL),A	;zeichenweise
+	INC	L	;ohne Schleife
+	LD	(HL),A
+	INC	L
+	LD	(HL),A
+	INC	L
+	LD	(HL),A
+	INC	L
+	LD	(HL),A
+	INC	L
+	LD	(HL),A
+	INC	L
+	LD	(HL),A
+	INC	L
+	LD	(HL),A
+	LD	L,D	;L holen
+	INC	H
+	DJNZ	CLL1
+	RET
+ 
+SCRLPG:	LD	A,(WINLG) ;Spalten
+	LD	C,A
+	LD	B,0
+	LD	A,(WINLG+1) ;Zeilen
+	DEC	A	;nur 1 Zeile?
+	JR	Z,SCRL3	;nur CLLN
+	PUSH	DE
+	PUSH	AF
+	LD	DE,0	;Cursor li/oben
+	CALL	DABR
+	EX	DE,HL
+SCRL1:	LD	HL,40	;1 Zeile tiefer
+	ADD	HL,DE
+	PUSH	HL
+	PUSH	BC
+	LDIR		;im VRAM eine
+	POP	BC	;Zeile rollen
+	POP	DE
+	DEC	A
+	JR	NZ,SCRL1;A*
+	POP	AF
+	ADD	A
+	ADD	A
+	ADD	A	;*8: Pixelzeile
+	LD	C,A
+	LD	DE,0
+	LD	B,D
+	CALL	PADR1
+	EX	DE,HL	;DE=PixAdr.
+	LD	L,8	;H war 0
+	ADD	HL,DE
+	LD	A,(STBT)
+	RRA
+	RRA
+	JR	C,SCRL2	;Farbe AUS
+	PUSH	AF
+	CALL	ESC9
+	CALL	MOVELN
+	CALL	ESC9
+	POP	AF
+SCRL2:	RLA		;Pixel AUS?
+	CALL	NC,MOVELN
+	POP	DE
+SCRL3:	DEC	D
+	;
+CLLN:	LD	E,0	;ShDEL
+	CALL	DABR	;au~erhalb?
+	RET	C	;(Selbstschutz)
+	LD	A,(WINLG)
+	LD	B,A	;Spalten
+	LD	C,A
+	XOR	A
+CLLN1:	LD	(HL),A	;VRAM l|schen
+	INC	HL
+	DJNZ	CLLN1
+	CALL	PADR1
+	RET	C
+	PUSH	DE
+	BIT	3,(IX+1)
+	LD	A,(STBT)
+	JR	NZ,CLLALT;LORES
+	BIT	6,A
+	JR	NZ,CLLHR;HRG-Modus
+CLLALT:	RRCA		;Pixel AUS?
+	LD	E,A	;nach E merken
+	JR	C,CLLN2
+	XOR	A
+	PUSH	HL
+	CALL	CLLINE	;Pixel l|schen
+	POP	HL
+CLLN2:	RRC	E	;Farbe AUS?
+	JR	C,CLLN3
+	CALL	ESC9
+	LD	A,(COLOR)
+	CALL	CLLINE	;Farbe setzen
+	CALL	ESC9
+CLLN3:	POP	DE
+	RET
+	;
+CLLHR:	LD	A,(COLOR)
+	AND	3	;Paper
+	LD	DE,0	;schwarz
+	OR	A
+	JR	Z,CLLH2
+	DEC	D	;rot
+	DEC	A
+	JR	Z,CLLH2
+	DEC	E	;wei~
+	DEC	A
+	JR	NZ,CLLH2
+	INC	D	;t}rkis
+CLLH2:	LD	A,D	;Pixel
+	LD	B,2
+	JR	CLLH4
+CLLH3:	CALL	ESC9
+	LD	A,E	;Color
+CLLH4:	PUSH	HL
+	PUSH	BC
+	CALL	CLLINE
+	POP	BC
+	POP	HL
+	DJNZ	CLLH3
+	CALL	ESC9
+	POP	DE
+	RET
+ 
+BEEP:	LD	BC,0A0FH
+	LD	HL,48
+	PUSH	DE
+	LD	E,H	;E=0
+	CALL	TON2
+	LD	A,1EH
+	CALL	WAIT
+	LD	A,3
+	OUT	(8CH),A
+	LD	A,10H
+	POP	DE
+	JP	WAIT
+ 
+CLIK:	LD	BC,0307H
+	LD	HL,36
+	PUSH	DE
+	LD	E,H	;E=0
+	CALL	TON2
+	POP	DE
+	RET
+ 
+ESC8:	LD	HL,COLOR;Farbtausch
+	LD	A,(HL)
+	PUSH	AF
+	AND	0C0H
+	LD	C,A	;Bit 6,7
+	POP	AF
+	PUSH	AF
+	AND	7	;hFarbe
+	RLCA
+	RLCA
+	RLCA
+	OR	C
+	LD	C,A
+	POP	AF
+	RRCA
+	RRCA
+	RRCA
+	AND	7	;vFarbe
+	OR	C
+LDMA:	LD	(HL),A		;**28**
+	RET
+ 
+LDAM:	LD	A,(HL)		;**29**
+	RET
+ 
+CLICK:	LD	A,(IX+8);ShINS
+	XOR	20H
+	LD	(IX+8),A
+NOT:	RET
+ 
+ESCPRG:	LD	HL,STBT	;ShSTOP
+	SET	4,(HL)
+	RET
+ 
+CRT:	PUSH	HL		;**00**
+	PUSH	DE
+	PUSH	BC
+	PUSH	AF
+	CALL	PCHR
+	LD	(CURSO),DE
+	POP	AF
+	POP	BC
+	POP	DE
+	POP	HL
+	RET
+ 
+;	=== KBD-Treiber ===
+ 
+;
+; ISR CTC Kanal 3 (Tastatur)
+;
+ISRC3:	EI
+	PUSH	AF
+	LD	A,23H	  	; DI,ZG256,Res
+	OUT	(8FH),A	  	; CTC K3
+	LD	(IX+13),0	; Zeichen tot
+	JR	TST5		; freigeben
+;
+; ISR PIO Kanal B (Tastatur)
+;
+ISRPB:	PUSH	AF
+	IN	A,(8FH)		; gemessene Zeit
+	PUSH	AF
+	LD	A,0A7H		; EI,ZG256,Res
+	OUT	(8FH),A
+	LD	A,8FH		; Zeitkonstante
+	OUT	(8FH),A
+	POP	AF
+	EI
+	CP	20
+	JR	C,TST5		; zu lang
+	CP	120
+	JR	NC,TST5		; zu kurz
+	CP	101		; Diskriminator
+	JR	NC,TST1
+	ADD	190
+	JR	NC,TST2		; Stop-Bit
+TST1:	RR	(IX+12)		; Bit einschieben
+	JR	TST5
+TST2:	PUSH	HL
+	PUSH	DE
+	LD	A,(IX+12)
+	RRA			; 7bit-Scancode
+	XOR	1		; Startbit neg.
+	LD	L,(IX+14)
+	LD	H,(IX+15)
+	LD	D,0
+	LD	E,A
+	ADD	HL,DE		; Pos. in KTAB
+	LD	A,(HL)		; ASCII holen
+	BIT	7,(IX+8)	; CAPS aktiv?
+	JR	NZ,TST3		; 1=nein
+	CP	40H
+	JR	C,TST3
+	CP	80H
+	JR	NC,TST3
+	XOR	20H		; klein<=>gross
+TST3:	LD	D,A		; Code merken
+	CP	(IX+13)		; = letzter Code?
+	JR	NZ,TST6		; nein
+	IN	A,(88H)
+	LD	E,A		; IRM Schaltzustand merken
+	SET	2,A		; IRM on
+	OUT	(88H),A
+	LD	A,(COUNT)
+	CP	(IX+10)		; FastRepeat?
+	LD	A,E
+	OUT	(88H),A		; IRM Schaltzustand regenerieren
+	JR	C,TST7
+	INC	(IX+10)		; Zeit abwarten
+TST4:	POP	DE
+	POP	HL
+TST5:	IN	A,(89H)		; PIO-Logik
+	OUT	(89H),A		; freigeben
+	POP	AF
+	RETI
+ 
+TST6:	LD	(IX+10),0	; neuer Code
+	CP	16H		; CAPS?
+	JR	NZ,TST8
+	LD	A,(IX+8)
+	XOR	80H		; CAPS on/off
+	LD	(IX+8),A
+TST7:	LD	A,D		; Code
+TST8:	LD	(IX+13),A	; eintragen
+	SET	0,(IX+8)	; gueltig machen
+	JR	TST4
+ 
+KBDS:	;Abfrage ohne Quittung	 **0C**
+	OR	A
+	BIT	0,(IX+8);Code g}ltig?
+	RET	Z
+	LD	A,(IX+13)
+	SCF		;wenn ja
+	RET
+ 
+KBDZ:	;Abfrage mit Quittung	 **0E**
+	CALL	KBDS
+	RET	NC
+	RES	0,(IX+8)
+	RET
+ 
+BRKT:	;Test auf BRK-Anforderung**2A**
+	CALL	KBDS
+	RET	NC
+	CP	3
+	SCF
+	RET	Z
+	AND	A
+	RET
+ 
+;TAPE-Treiber
+ 
+ISRI1:	DI
+	IN	A,(88H)
+	OR	40H	;Motor ein
+	AND	0DFH	;LED aus
+ISRO1:	OUT	(88H),A
+	EI
+	LD	HL,(WEND)
+	LD	(ZWEND),HL
+	CALL	NOUT	;kein Drucker!
+	LD	(ZOTAB),HL
+	CALL	PAGE	;Page Mode
+TOFF:	LD	A,3	;Ton aus
+	OUT	(8CH),A	;CTC0
+	OUT	(8DH),A	;CTC1
+	RES	1,(IX+8)
+	JR	CSRO2
+;
+;	Abschluss Bandausgabe		**09**
+;
+CSRO:	LD	(IX+2),0FEH	; Nr. letzter Block
+	CALL	MBO		; Block auf Kassette ausgeben
+CSROI:	LD	HL,(ZOTAB) 	; intern
+	LD	(OUTAB),HL
+	LD	HL,(ZWEND)	; grosses
+	LD	(WEND),HL	; Ruecksetzen
+	CALL	CLC		; Puffer loeschen (VR: HL)
+	IN	A,(88H)
+	AND	9FH		; Motor, LED aus
+	OUT	(88H),A
+	CALL	CRLF		; VR: AF
+	RES	0,(IX+8)
+CSRO2:	BIT	3,(IX+1)	; HiRes?
+	JR	Z,CSRO3
+	IN	A,(89H)		; nein-
+	SET	7,A		; Blinken ein
+	OUT	(89H),A
+CSRO3:	BIT	1,(IX+8)	; neuer Ton?
+	JR	NZ,CSRO3	; Ende abwarten
+	IN	A,(88H)
+	LD	L,A		; Schaltzustand IRM merken
+	SET	2,A		; IRM on
+	OUT	(88H),A
+	LD	A,(CTCMD)	; CTC2-Modus
+	AND	60H
+	OR	7
+	OUT	(8EH),A		; Blinken
+	LD	A,(BLINK)	; ZK laden
+	OUT	(8EH),A
+	LD	A,L
+	OUT	(88H),A		; IRM wie zuvor einstellen
+	RET
+;
+; Kassettenpuffer loeschen:
+; PA:	HL = CASS
+;
+CLC:	LD	HL,CASS+80H
+	XOR	A
+CLC1:	DEC	L
+	LD	(HL),A
+	JR	NZ,CLC1
+	RET
+ 
+ISRO:	;Init. Bandausgabe	 **08**
+	DI
+	IN	A,(88H)
+	OR	60H	;Motor,LED ein
+	CALL	ISRO1
+	LD	(IX+2),0
+	LD	BC,1000H
+	;
+MBO:	;Ausgabe 1 Block	 **01**
+	INC	(IX+2)
+	DI
+	LD	A,87H	;EI,ZG16,Res
+	OUT	(8DH),A
+	LD	A,2FH	;Vorton
+	OUT	(8DH),A
+	EI
+	LD	D,A	;D=2Fh
+	LD	E,A	;E=2Fh
+MBO1:	CALL	BITOUT
+	CPI
+	JP	PE,MBO1	;BC mal
+	CALL	ZTON	;Trennzeichen
+	LD	A,(IX+2)
+	CALL	BYTOT	;Blocknummer
+	LD	L,(IX+5)
+	LD	H,(IX+6)
+	LD	B,80H
+BLKOT:	LD	A,(HL)
+	CALL	BYTOT	;Datenbyte
+	LD	A,C
+	ADD	(HL)	;Pr}fsumme
+	LD	C,A	;nebenher
+	INC	HL
+	DJNZ	BLKOT
+	CALL	BYTOT	;und ausgeben
+	LD	A,D
+	CALL	HBITOT	;noch ein
+	LD	E,L	;Knacks
+	LD	D,H
+	LD	A,3	;CTC stoppen
+	OUT	(8DH),A
+	RET
+ 
+BYTOT:	;Ausgabe eines Bytes
+	PUSH	BC
+	LD	C,A
+	LD	B,8
+BYTOUT:	RRC	C	;mit Bit0
+	LD	E,17H	;beginnend
+	CALL	NC,BITOUT
+	LD	E,2FH	;Zeitkonstanten
+	CALL	C,BITOUT
+	DJNZ	BYTOUT	;8*
+	POP	BC
+ZTON:	LD	E,5DH	;ZK Trennz.
+BITOUT:	CALL	HBITOT	;Aufrufen und
+HBITOT:	LD	(IX),D	;reinlaufen
+HBIT1:	LD	A,(IX)	;Warten auf
+	AND	A	;Interrupt
+	JR	NZ,HBIT1
+	LD	D,E
+	RET
+ 
+ISRI:	;Init. Bandeingabe	 **0A**
+	CALL	ISRI1
+	;
+MBI:	;Einlesen 1 Block	 **05**
+	LD	A,83H	;EI
+	OUT	(8AH),A	;an PIO A
+	PUSH	HL
+	PUSH	DE
+MBI1:	LD	B,16H
+	LD	(IX+13),0 ;Pr}fsumme=0
+MBI2:	CALL	STOP1
+	JR	C,MBI1
+	CP	0BAH
+	CALL	LEDOO
+	JR	C,MBI1	;16h korrekte
+	DJNZ	MBI2	;Schwingungen
+MBI3:	LD	B,2	;erkennen
+MBI4:	XOR	A
+	LD	C,A
+	LD	(IX),A
+	CALL	STOP21	;2 halbe Trenn-
+	CP	5DH	;zeichen er-
+	JR	NC,MBI3	;kennen
+	DJNZ	MBI4
+	CALL	BYTIN	;Blocknummer
+	JR	C,MBI5	;St|rung
+	LD	(IX+2),A
+	LD	B,80H
+	LD	L,(IX+5)
+	LD	H,(IX+6)
+BLKIN:	CALL	BYTIN	;Datenbyte
+	JR	C,MBI5	;St|rung
+	LD	(HL),A
+	LD	A,(IX+13)
+	ADD	(HL)	;aufsummieren
+	LD	(IX+13),A
+	INC	HL
+	DJNZ	BLKIN
+	CALL	BYTIN	;Pr}fsumme
+	JR	C,MBI5	;St|rung
+	SUB	(IX+13)	;gleich?
+	ADD	0FFH	;CY:=/Z
+MBI5:	POP	DE
+	POP	HL
+	DI
+	LD	A,3	;DI an PIO A
+	OUT	(8AH),A
+	EI
+LEDOO:	IN	A,(88H)	;LED ein/aus
+	SET	5,A	;je nach CY
+	JR	NC,MBI6
+	RES	5,A
+MBI6:	OUT	(88H),A
+	RET
+;
+; ISR CTC Kanal 1 (Kassette-Out)
+;
+ISRC1:	PUSH	AF
+	LD	A,87H
+	OUT	(8DH),A
+	LD	A,(IX)		; Uebergabezelle
+	OUT	(8DH),A
+	LD	(IX),0		; Quittierung
+	JR	ISR1E
+;
+; ISR PIO Kanal A (Kassette-In)
+;
+ISRPA:	PUSH	AF
+	IN	A,(8EH)
+	LD	(IX),A		; Uebergabezelle
+	LD	A,7
+	OUT	(8EH),A
+	LD	A,0A3H
+	OUT	(8EH),A
+ISR1E:	POP	AF
+IRET:	EI
+	RETI
+ 
+STOP1:	LD	(IX),0	;1 Bit einlesen
+STOP11:	IN	A,(88H)	;PIO-Logik
+	OUT	(88H),A	;freigeben
+	LD	A,(IX)	;Warten auf
+	OR	A	;Interrupt
+	JR	Z,STOP11
+	LD	C,A
+	LD	(IX),0
+STOP21:	IN	A,(88H)	;dto.
+	OUT	(88H),A
+	LD	A,(IX)
+	OR	A
+	JR	Z,STOP21
+	ADD	C	;beide 'Zeiten'
+	RET		;addieren
+ 
+BYTIN:	;Einlesen eines Bytes
+	;PA: A:Byte, CY=1: St|rung
+	LD	DE,800H
+TRN1:	CALL	STOP1
+	JR	C,TRN2
+	CP	0BAH	;zu intolerant
+	RET	C
+TRN2:	CCF
+	RR 	E	;Bit einschieben
+	DEC	D
+	JR	NZ,TRN1	;8*
+	CALL	STOP1	;Trennzeichen
+	LD	A,E	;mit CY-
+	RET		;R}ckmeldung
+ 
+;BASIC:
+ 
+BEXP1:	;BASIC-Exp 1
+	LD	A,B
+	SUB	9
+	JR	C,SNERR1
+	CP	27
+	JR	NC,SNERR1	;>26
+	RLCA		;*2
+	LD	C,A
+	LD	B,0
+	EX	DE,HL
+	LD	HL,TOKJP+8
+	JP	0C8B7H	;R}cksprung
+ 
+BEXP2:	;BASIC-Exp 2
+	LD	A,(HL)
+	CP	0DFH
+	RET	C		;<DFH
+	CP	0E3H
+	RET	NC		;>E2H
+	CP	0E1H	;AT?
+	JP	Z,PRAT
+	LD	A,(3FDH)
+	AND	A	;PRINT-Erw.?
+	JR	NZ,SNERR1
+	INC	A
+	LD	(3FDH),A
+PREX1:	PUSH	HL
+	LD	HL,COLOR
+	CALL	IRMRD
+	POP	HL
+	LD	(37EH),A ;Farbe merken
+	LD	A,(HL)
+	CP	0DFH	;INK?
+	JR	Z,PRINK
+	CP	0E2H	;COLOR?
+	JP	Z,PRCOL
+	CALL	0C8BDH
+	CALL	PAPER
+PREX2:	LD	A,(HL)
+	CP	';'
+	JR	Z,PREX5
+	JR	SNERR1
+ 
+PRCOL:	CALL	0C8BDH
+	CALL	BCOLOR
+	JR	PREX2
+ 
+SNERR1:	JP	0C348H	;SN-ERROR
+ 
+PRINK:	CALL	0C8BDH
+	CALL	INK
+	LD	A,(HL)
+	CP	';'
+	JR	Z,PREX5
+	CALL	0C8CCH	;Komma?
+	DB	','
+	CP	0E0H	;PAPER?
+	JR	NZ,SNERR1
+	CALL	0C8BDH
+	CALL	PAPER
+	CALL	0C8CCH
+	DB	';'
+PREX3:	CALL	0CB03H
+	LD	A,(37EH)  ;Farbe
+	PUSH	HL
+	LD	HL,COLOR
+	CALL	IRMWR	  ;eintragen
+	POP	HL
+	POP	BC
+	RET
+PREX4:	PUSH	BC
+	JR	PREX1
+PREX5:	CALL	0C8BDH
+	JR	PREX3
+ 
+BEXP3:	;BASIC-Exp 3
+	LD	A,C
+	CP	62H
+	JP	Z,VPEEK
+	CP	6EH
+	JP	Z,PTEST
+	CP	7CH
+	JP	Z,CSRLN
+	CP	76H
+	JP	Z,VGET
+	SUB	3EH
+	JR	C,SNERR1
+	CP	7
+	JR	NC,SNERR1
+	EX	DE,HL
+	LD	BC,TOKJP ;Tokentab.
+	POP	HL
+	LD	L,A
+	ADD	HL,BC
+	LD	C,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,C
+	PUSH	HL	;Routine
+	EX	DE,HL	;anspringen
+	RET
+ 
+STRING:	;String vervielf{ltigen
+	CALL	0C8CCH
+	DB	'('	;Klammer auf?
+	CALL	0D421H
+	PUSH	AF
+	CALL	0C8D6H	;Komma?
+	CALL	0CD3AH
+	CALL	0C8DBH	;Klammer zu?
+	POP	AF
+	PUSH	HL
+	PUSH	AF
+	CALL	0D330H	;L{nge holen
+	INC	HL
+	INC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	POP	BC
+	PUSH	BC
+	PUSH	AF
+	PUSH	DE
+	LD	C,A
+	XOR	A
+	CP	C
+	JR	Z,STR2
+	CP	B
+	JR	Z,STR2
+	LD	A,C
+	DEC	B
+	JR	Z,STR2
+STR1:	ADD	C
+	JR	C,STR5
+	DJNZ	STR1
+STR2:	LD	B,A
+	LD	C,0
+	PUSH	BC
+	CALL	0D1E1H	;Str.-Arithm.
+	POP	BC
+	POP	BC
+	PUSH	BC
+	CALL	0D17EH
+	POP	HL
+	EX	(SP),HL
+	LD	A,H
+	POP	HL
+	EX	(SP),HL
+	LD	L,A
+	INC	H
+STR3:	DEC	H
+	PUSH	HL
+	PUSH	BC
+	JR	Z,STR4
+	CALL	0D2F2H
+	POP	BC
+	POP	HL
+	JR	STR3
+STR4:	POP	BC
+	POP	HL
+	POP	DE
+	CALL	0D302H
+	JP	0D1A9H
+STR5:	LD	E,1CH	;ST-
+	JP	0C356H	;ERROR
+ 
+RENUM:	;neu nummerieren
+	PUSH	HL
+	LD	HL,10
+	LD	(354H),HL	;DISTAN
+	LD	HL,(35FH)	;Start
+	PUSH	AF
+	PUSH	HL
+	INC	HL
+	INC	HL
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	LD	(34EH),HL	;ZL-Nr
+	LD	(352H),HL	;NANF
+	LD	DE,(3D7H)	;Ende
+	DEC	DE
+	DEC	DE
+REN1:	POP	HL
+	PUSH	HL
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	CALL	0C689H
+	EX	(SP),HL
+	JR	NZ,REN1
+	POP	DE
+	INC	HL
+	INC	HL
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	LD	(350H),HL ;ZL-Abst.
+	LD	B,4
+	POP	AF
+	LD	HL,34EH
+	EX	(SP),HL
+REN2:	JR	Z,REN5
+	CALL	0C986H
+	PUSH	AF
+	LD	A,D
+	OR	E
+REN3:	JP	Z,0C967H  ;FC-ERROR
+	POP	AF
+	EX	(SP),HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	JR	Z,REN5
+	PUSH	AF
+	DEC	B
+	JR	Z,REN4
+	POP	AF
+	EX	(SP),HL
+	CALL	0C8D6H	;Komma?
+	JR	REN2
+REN4:	POP	AF
+	JP	NZ,SNERR2
+REN5:	LD	HL,(350H)
+	LD	DE,(34EH)
+	CALL	0C689H
+REN6:	JP	C,0C967H
+	LD	HL,(35FH)
+REN7:	CALL	0C4BEH
+	JR	C,REN8
+	JR	Z,REN3
+	JR	REN7
+REN8:	POP	HL
+	PUSH	BC
+	LD	DE,(350H)
+	LD	HL,0
+	LD	(350H),HL
+REN9:	LD	H,B
+	LD	L,C
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	LD	A,B
+	OR	C
+	JR	Z,REN3
+	INC	HL
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	CALL	0C689H
+	LD	HL,(350H)
+	INC	HL
+	LD	(350H),HL
+	JR	NZ,REN9
+	INC	HL
+	INC	HL
+	ADD	HL,HL
+	INC	HL
+	LD	DE,(3D7H)
+	ADD	HL,DE
+	JR	C,REN6
+	CALL	0C327H	;genug RAM?
+	LD	(3D7H),HL
+	XOR	A
+	DEC	HL
+	LD	(HL),A
+	DEC	HL
+	LD	(HL),A
+	DEC	DE
+	DEC	DE
+	EX	DE,HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	DEC	A
+	LD	(HL),A
+	INC	HL
+	LD	(HL),A
+	INC	HL
+	EX	DE,HL
+	LD	HL,(352H)
+	LD	(34EH),HL
+REN10:	POP	HL
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	PUSH	BC
+	LD	BC,34EH
+	LD	A,(HL)
+	LD	(DE),A
+	LD	A,(BC)
+	LD	(HL),A
+	INC	HL
+	INC	DE
+	INC	BC
+	LD	A,(HL)
+	LD	(DE),A
+	LD	A,(BC)
+	LD	(HL),A
+	INC	DE
+	LD	HL,(34EH)
+	LD	BC,(354H)
+	ADD	HL,BC
+	LD	(34EH),HL
+	LD	HL,(350H)
+	DEC	HL
+	LD	A,H
+	OR	L
+	LD	(350H),HL
+	JR	NZ,REN10
+	LD	(DE),A
+	POP	HL
+	LD	HL,(35FH)
+	PUSH	HL
+REN11:	POP	HL
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	PUSH	BC
+	LD	A,(HL)
+	INC	HL
+	AND	(HL)
+	INC	A
+	JR	Z,REN15
+REN12:	INC	HL
+REN13:	LD	A,(HL)
+	OR	A
+	JR	Z,REN11
+	CP	88H	;GOTO
+	JR	Z,REN16
+	CP	8CH	;GOSUB
+	JR	Z,REN16
+	CP	8BH	;RESTORE
+	JR	Z,REN14
+	CP	0D4H	;ELSE
+	JR	Z,REN14
+	CP	0A9H	;THEN
+	JR	NZ,REN12
+REN14:	CALL	0C987H
+	LD	A,E
+	OR	D
+	CALL	NZ,RENUP1 ;Vergl.m. Tab.
+	CALL	NZ,RENUP2 ;Zahl {ndern
+	JR	REN13
+REN15:	DEC	HL
+	LD	(3D7H),HL
+	DEC	HL
+	LD	(HL),A
+	DEC	HL
+	LD	(HL),A
+	POP	HL
+	POP	HL
+	JP	0C48AH
+REN16:	CALL	0C987H
+	LD	A,E
+	OR	D
+	JR	Z,REN13
+	CALL	RENUP1
+	CALL	NZ,RENUP2
+	LD	A,(HL)
+	CP	2CH
+	JR	NZ,REN13
+	JR	REN16
+ 
+RENUP1:	PUSH	HL
+	PUSH	DE
+	LD	DE,-1
+	CALL	0C4BBH	;n{chste Zeile
+	POP	DE
+	INC	BC
+	INC	BC
+	INC	BC
+	INC	BC
+	LD	H,B
+	LD	L,C
+	LD	BC,(352H)
+RUP11:	LD	A,(HL)
+	INC	HL
+	PUSH	HL
+	OR	(HL)
+	JR	Z,RUP13
+	LD	A,(HL)
+	DEC	HL
+	LD	L,(HL)
+	LD	H,A
+	CALL	0C689H
+	JR	Z,RUP12
+	LD	HL,(354H)
+	ADD	HL,BC
+	LD	B,H
+	LD	C,L
+	POP	HL
+	INC	HL
+	JR	RUP11
+RUP12:	LD	A,0FFH
+	OR	A
+RUP13:	POP	HL
+	POP	HL
+	RET
+ 
+RENUP2:	PUSH	BC
+	EX	DE,HL
+	LD	HL,(3D7H)
+	SBC	HL,DE
+	PUSH	HL
+RUP21:	POP	BC
+	LD	H,D
+	LD	L,E
+	DEC	DE
+	LD	A,(DE)
+	CP	','
+	JR	Z,RUP22
+	CP	':'
+	JR	NC,RUP22
+	PUSH	BC
+	PUSH	DE
+	LDIR
+	POP	DE
+	JR	RUP21
+RUP22:	EX	DE,HL
+	POP	DE
+	PUSH	HL
+	PUSH	BC
+	XOR	A
+	LD	B,98H
+	CALL	0D6AEH
+	CALL	0D834H
+	POP	BC
+	POP	DE
+	INC	HL
+	INC	DE
+RUP23:	LD	A,(HL)
+	OR	A
+	JR	Z,RUP24
+	PUSH	BC
+	PUSH	HL
+	EX	DE,HL
+	ADD	HL,BC
+	LD	D,H
+	LD	E,L
+	DEC	HL
+	LDDR
+	POP	HL
+	LDI
+	POP	BC
+	JR	RUP23
+RUP24:	PUSH	DE
+	LD	DE,(35FH)
+	CALL	0C493H
+RUP25:	INC	HL
+	LD	A,(HL)
+	INC	HL
+	OR	(HL)
+	JR	NZ,RUP25
+	EX	DE,HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	DE
+	INC	DE
+	LD	(3D7H),DE
+	POP	HL
+	LD	D,H
+	LD	E,L
+RUP26:	LD	A,(HL)
+	OR	A
+	INC	HL
+	JR	NZ,RUP26
+	POP	BC
+	EX	(SP),HL
+	PUSH	BC
+	EX	DE,HL
+	RET
+ 
+DELETE:	;Zeile(n) l|schen
+	RET	Z
+	CALL	0C986H
+	JP	Z,0C442H
+	CALL	0C8D6H
+	PUSH	DE
+	CALL	0C986H
+	POP	HL
+	RET	NZ
+	EX	DE,HL
+	PUSH	HL
+	CALL	0C4BBH	;n{chste Zeile
+	JP	NC,0C44DH ;UL-ERROR
+	POP	DE
+	PUSH	AF
+	PUSH	BC
+	CALL	0C4BEH
+	JP	NC,0C44DH ;UL-ERROR
+	POP	BC
+	JP	0C450H	;einsortieren
+ 
+PAUSE:	;Programm unterbrechen
+	CALL	0C8BEH
+	JR	NZ,PAUS2
+PAUS1:	CALL	KBDS
+	JR	NC,PAUS1
+	CP	3	;BRK?
+	RET	Z
+	CP	LF	;CUU?
+	JR	NZ,PAUS1
+	JP	0DDE4H	;Eingabe ASCII
+PAUS2:	CALL	0D421H
+	LD	C,A
+PAUS3:	LD	A,10H	;96 sek.
+	LD	E,14H	;WAIT
+	CALL	0F015H	;PV5
+;	PUSH	BC
+	CALL	KBDS
+;	POP	BC
+	JR	NC,PAUS4
+	CP	3	;BRK?
+	RET	Z
+	CP	LF	;CUU?
+	JR	NZ,PAUS4
+	JP	0DDE4H	;Eingabe ASCII
+PAUS4:	DEC	C
+	JR	NZ,PAUS3
+	RET
+ 
+BBEEP:	;Signalton
+	LD	B,1	;ohne Angabe 1x
+	CALL	0C8BEH
+	JR	Z,BBP1
+	CALL	0D421H
+	LD	B,A	;Anzahl
+BBP1:	LD	A,7	;Beep
+	LD	E,0	;CRT
+	CALL	0F015H	;PV5
+	DJNZ	BBP1
+	RET
+ 
+WINDOW:	;Fenster einstellen
+	CALL	0C8BEH
+	JR	Z,WINDOW1
+	PUSH	HL
+	CALL	0D421H
+	EX	(SP),HL	    ;in
+	LD	HL,WNDFN+90 ;Fenster 9
+	CALL	IRMWR	    ;erstellen
+	INC	HL
+	EX	(SP),HL
+	CALL	0C8D6H
+	CALL	0D421H
+	EX	(SP),HL
+	CALL	IRMWR
+	INC	HL
+	EX	(SP),HL
+	CALL	0C8D6H
+	CALL	0D421H
+	EX	(SP),HL
+	CALL	IRMWR
+	EX	(SP),HL
+	CALL	0C8D6H
+	CALL	0D421H
+	EX	(SP),HL
+	LD	D,A
+	CALL	0F018H	;IRMON
+	CP	28H
+	JR	NC,WINERR
+	LD	A,(WNDFN+92)
+	LD	E,A
+	CP	28H
+	JR	NC,WINERR
+	LD	A,D
+	SUB	E
+	JR	C,WINERR
+	INC	A
+	LD	(WINLG),A
+	LD	A,E
+	LD	(WINON),A
+	LD	A,(WNDFN+91)
+	CP	20H
+	JR	NC,WINERR
+	LD	D,A
+	LD	A,(WNDFN+90)
+	CP	20H
+	JR	NC,WINERR
+	LD	E,A
+	LD	A,D
+	SUB	E
+	JR	C,WINERR
+	INC	A
+	LD	(WINLG+1),A
+	LD	A,E
+	LD	(WINON+1),A
+	JR	WINDOW2
+WINDOW1:	PUSH	HL
+	CALL	0F018H	;IRMON
+	LD	HL,100H
+	LD	(WINON),HL
+	LD	HL,1E28H
+	LD	(WINLG),HL
+WINDOW2:	LD	HL,0
+	LD	(CURSO),HL
+	CALL	0F01BH	;IRMOF
+	POP	HL
+	RET
+WINERR:	CALL	0F01BH	;IRMOF
+	JR	SNERR2
+ 
+BLOAD:	;MC-Programm laden
+	PUSH	HL
+	LD	HL,ARGN
+	XOR	A
+	CALL	IRMWR	;ARGN=0
+	POP	HL
+	LD	E,10H	;LOAD
+	JP	0F015H	;PV5
+ 
+VPEEK:	CALL	0CDE1H
+	EX	(SP),HL
+	LD	DE,0CDF3H ;RET-Adr.
+	PUSH	DE
+	CALL	0C96FH
+	PUSH	HL
+	LD	HL,8000H;IRM-Offset
+	ADD	HL,DE
+	JR	C,VPK	;Error
+	LD	A,0BFH
+	CP	H
+VPK:	JR	C,SNERR2
+	CALL	IRMRD
+	POP	HL
+	JP	0D3E9H
+ 
+SNERR2:	JP	0C348H	;SN-ERROR
+ 
+VPOKE:	;in IRM schreiben
+	CALL	0C96CH
+	PUSH	DE
+	CALL	0C8D6H
+	CALL	0D421H
+	EX	(SP),HL
+	LD	DE,8000H;IRM-Offset
+	ADD	HL,DE
+	JR	C,VPK	;Error
+	LD	D,A
+	LD	A,0BFH
+	CP	H
+	JR	C,VPK	;nur bis BFFFH
+	LD	A,D
+	CALL	IRMWR	;schreiben
+	POP	HL
+	RET
+ 
+BORDER:	;schaltet RAM-8!
+	CALL	0D421H
+	RRCA
+	RRCA
+	RRCA
+	AND	60H	;Auswahl
+	LD	C,A
+	LD	B,9FH	;Maske
+	JP	TONB
+ 
+PRAT:	;PRINT AT
+	LD	A,(3FDH)
+	BIT	1,A
+	SET	1,A
+	LD	(3FDH),A
+	JR	NZ,SNERR2
+	PUSH	DE
+	PUSH	HL
+	CALL	0F018H	;IRMON
+	LD	HL,WINON
+	LD	(WNDFN+90),HL
+	LD	DE,WNDFN+80
+	LD	BC,6	;Fenster
+	LDIR		;retten
+	LD	HL,0	;Fenster gro~
+	LD	(WINON),HL
+	LD	HL,2028H
+	LD	(WINLG),HL
+	CALL	0F01BH	;IRMOF
+	POP	HL
+	CALL	LOCAT
+	CALL	0C8DBH
+	CALL	0C8CCH
+	DB	';'
+	LD	A,(HL)
+	CP	0DFH
+	JR	C,PRAT2	;<DFH
+	CP	0E3H
+	JR	NC,PRAT2;>E2H
+	CALL	PREX4	;INK,PAPER,COLOR
+PRAT1:	PUSH	HL
+	CALL	0F018H	;IRMON
+	LD	HL,WNDFN+80
+	LD	DE,WINON
+	LD	BC,6	;Fenster
+	LDIR		;regenerieren
+	CALL	0F01BH	;IRMOF
+	POP	HL
+	POP	DE
+	POP	BC
+	RET
+PRAT2:	CALL	0CB03H
+	JR	PRAT1
+ 
+SNERR3:	JP	0C348H	;SN-ERROR
+ 
+INK:	CALL	0D421H
+	CP	32
+	JR	NC,SNERR3
+	SLA	A
+	SLA	A
+	SLA	A
+	LD	D,A
+	PUSH	HL
+	LD	HL,COLOR
+	CALL	IRMRD
+	POP	HL
+	AND	7
+	JR	COL2
+ 
+PAPER:	CALL	0D421H
+COL1:	CP	8
+	JR	NC,SNERR3
+	LD	D,A
+	PUSH	HL
+	LD	HL,COLOR
+	CALL	IRMRD
+	POP	HL
+	AND	0F8H
+COL2:	OR	D
+	PUSH	HL
+	LD	HL,COLOR
+	CALL	IRMWR	;neuer Farbwert
+	POP	HL
+	RET
+ 
+BCOLOR:	CALL	0C8BEH
+	JR	Z,SNERR3
+	CALL	INK	;Vordergrund
+	CALL	0C8BEH
+	RET	Z
+	CALL	0C8D6H
+	JR	PAPER	;Hintergrund
+ 
+LOCAT:	;Cursor positionieren
+	CALL	0C8BDH
+	CALL	0C8CCH
+	DB	'('
+LOCATE:	CALL	0D421H
+	LD	D,A
+	PUSH	HL
+	LD	HL,WINLG+1
+	CALL	IRMRD
+	POP	HL
+	DEC	A
+	CP	D
+	JR	C,SNERR3
+	CALL	0C8D6H
+	PUSH	DE
+	CALL	0D421H
+	POP	DE
+	LD	C,A
+	PUSH	HL
+	LD	HL,WINLG
+	CALL	IRMRD
+	POP	HL
+	DEC	A
+	CP	C
+	JR	C,SNERR3
+	LD	A,C
+	PUSH	HL
+	LD	HL,CURSO
+	CALL	IRMWR
+	LD	A,D
+	INC	HL
+LOC1:	CALL	IRMWR
+	POP	HL
+	RET
+ 
+INKEY:	;Eingabe ein Zeichen
+	PUSH	HL
+	CALL	KBDS
+	JR	NC,INKEY3
+	LD	A,1
+	CALL	0D17BH
+	CALL	0DDE4H	;Eingabe ASCII
+INKEY1:	LD	HL,(3C2H)
+	LD	(HL),A
+INKEY2:	JP	0D1A9H
+INKEY3:	XOR	A
+	CALL	0D17BH
+	JR	INKEY2
+ 
+SOUND:	;Tonausgabe
+	CALL	0D421H
+	PUSH	HL
+	LD	HL,ARG1
+	LD	B,4	;4 Argumente
+SOUND1:	CALL	IRMWR
+	INC	HL
+	EX	(SP),HL
+	DEC	B
+	JR	Z,SOUND2
+	PUSH	BC
+	CALL	0C8D6H
+	CALL	0D421H
+	POP	BC
+	EX	(SP),HL
+	JR	SOUND1
+SOUND2:	CALL	0C8BEH
+	JR	Z,SOUND3
+	CALL	0C8D6H
+	CALL	0D421H
+	EX	(SP),HL
+	CALL	IRMWR
+	INC	HL
+	EX	(SP),HL
+	CALL	0C8BEH
+	JR	Z,SOUND3
+	CALL	0C8D6H
+	CALL	0D421H
+	EX	(SP),HL
+	CALL	IRMWR
+	EX	(SP),HL
+SOUND3:	LD	E,35H	;TON
+	POP	BC
+	JP	0F015H	;PV5
+ 
+PSET:	;Punkt setzen
+	LD	B,1	;setzen
+POINT:	PUSH	BC
+	CALL	0C96CH
+	PUSH	HL
+	LD	A,E
+	LD	HL,HOR
+	CALL	IRMWR
+	LD	A,D
+	INC	HL
+	CALL	IRMWR
+	EX	(SP),HL
+	CALL	0C8D6H
+	CALL	0D421H
+	EX	(SP),HL
+	INC	HL
+	CALL	IRMWR
+	POP	HL
+	CALL	GFARB
+	LD	E,30H	;PUSE
+	POP	BC
+	DEC	B
+	JR	Z,POINT2
+	DEC	E	;PUDE
+POINT2:	CALL	0F015H	;PV1
+	JP	C,SNERR2
+	RET
+ 
+PRESET:	;Punkt l|schen
+	LD	B,0	;l|schen
+	JR	POINT
+ 
+GFARB:	CALL	0C8BEH
+	RET	Z
+	CALL	0C8D6H
+	CALL	0D421H
+	PUSH	HL
+	LD	HL,FARB	;Grafik-Farbe
+	RLA
+	RLA
+	RLA
+	JP	LOC1	;in IRM schreib.
+ 
+INSTR:	;String1 in String2 suchen
+	CALL	0CD36H	;Klammer auf?
+	CALL	0C8D6H
+	PUSH	HL
+	CALL	0D330H
+	JR	Z,INSTR4
+	LD	B,A
+	INC	HL
+	INC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	POP	HL
+	PUSH	DE
+	PUSH	BC
+	CALL	0CD3AH
+	CALL	0C8DBH	;Klammer zu?
+	POP	BC
+	POP	DE
+	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	CALL	0D330H
+	JR	Z,INSTR4
+	INC	HL
+	INC	HL
+	LD	C,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,C
+	POP	BC
+	LD	C,A
+	POP	DE
+	PUSH	HL
+INSTR0:	PUSH	BC
+	PUSH	DE
+	LD	A,(DE)
+INSTR1:	CP	(HL)
+	JR	Z,INSTR5
+	INC	HL
+	DEC	C
+	JR	NZ,INSTR1
+INSTR2:	XOR	A
+	POP	HL
+	POP	HL
+	POP	HL
+INSTR3:	LD	DE,0CDF3H ;RET-Adr.
+	PUSH	DE
+	JP	0D0C0H
+INSTR4:	JP	0C967H	;FC-ERROR
+INSTR5:	INC	HL
+	PUSH	HL
+	DEC	HL
+INSTR6:	INC	HL
+	DEC	C
+	JR	Z,INSTR7
+	INC	DE
+	DEC	B
+	JR	Z,INSTR8
+	LD	A,(DE)
+	CP	(HL)
+	JR	Z,INSTR6
+	POP	HL
+	POP	DE
+	POP	BC
+	DEC	C
+	JR	INSTR0
+INSTR7:	INC	DE
+	DEC	B
+	POP	HL
+	JR	NZ,INSTR2
+	JR	INSTR9
+INSTR8:	POP	HL
+INSTR9:	POP	DE
+	POP	DE
+	POP	DE
+	AND	A
+	SBC	HL,DE
+	LD	A,L
+	JR	INSTR3
+ 
+IRMWR:	LD	E,28H	;LDMA
+	JR	JPV5
+ 
+IRMRD:	LD	E,29H	;LDAM
+	JR	JPV5
+ 
+BKEY:	;F-Taste belegen
+	CALL	0D421H
+	CP	16	;F0 ... F15
+	JR	NC,SNERR4
+	LD	E,39H	;KEY
+JPV5:	JP	0F015H	;PV5
+ 
+KEYLIST:	;F-Tasten auflisten
+	LD	E,3AH	;KEYLI
+	JR	JPV5
+ 
+SWITCH:	;Module schalten
+	CALL	0D421H
+	PUSH	AF
+	CALL	0C8D6H
+	CALL	0D421H
+	LD	D,A	;Steuerbyte
+	POP	AF
+	PUSH	HL
+	LD	L,A	;Steckplatz
+	LD	A,2	;schalten
+	LD	E,26H	;MODU
+	CALL	0F015H	;PV5
+	POP	HL
+	RET
+ 
+PTEST:	CALL	0CDE1H
+	EX	(SP),HL
+	LD	DE,0CDF3H ;RET-Adr.
+	PUSH	DE
+	CALL	0C96FH
+	PUSH	HL
+	LD	A,E	;nur
+	LD	HL,HOR	;X-Koordinate
+	CALL	IRMWR	;eintragen
+	LD	A,D
+	INC	HL	;Y-Koordinate
+	CALL	IRMWR
+	LD	E,2FH	;PUDE
+	CALL	0F015H	;PV5
+	LD	B,0
+	JR	Z,PTST1	;war gel|scht
+	INC	HL
+	INC	HL
+	CALL	IRMWR	;Grafikfarbe
+	LD	E,30H	;PUSE
+	CALL	0F015H	;PV5
+	LD	B,1
+PTST1:	LD	A,B	;R}ckgabewert
+	POP	HL
+	JP	0D3E9H
+ 
+SNERR4:	JP	0C348H	;SN-ERROR
+ 
+CLOSE:	;Kanal schlie~en
+	LD	C,0
+	LD	A,(HL)
+	CP	'I'	;Eingabe?
+	JR	Z,CLOS1
+	INC	C
+	CP	'O'	;Ausgabe?
+	JR	NZ,SNERR4
+CLOS1:	PUSH	BC
+	INC	HL
+	LD	A,(HL)
+	CP	'#'
+CLOS2:	JR	NZ,SNERR4
+	INC	HL
+	CALL	0D421H
+	AND	3	;4 Ger{te
+	POP	BC
+	RET	Z	;Console
+	PUSH	HL
+	RLA		;*2
+	ADD	C	;Ein-/Ausgabe
+	PUSH	AF
+	DEC	A
+	LD	B,A
+	LD	A,-1
+CLOS3:	RLA		;Bit platzieren
+	DJNZ	CLOS3
+	LD	HL,307H ;E/A-Flag
+	AND	(HL)	;Bit l|schen
+	LD	(HL),A
+	POP	AF
+	POP	HL
+	SET	6,A	;close
+	PUSH	DE
+	LD	E,A
+	LD	D,3
+	CALL	BASIO
+	POP	DE
+	RET
+ 
+RANDOM:	;Zufallsgenerator
+	LD	A,R
+	LD	(31DH),A
+	RET
+ 
+OPEN:	;Kanal |ffnen
+	LD	A,(HL)
+	INC	HL
+	CP	'I'	;Eingabe?
+	JR	Z,OPEN1
+	CP	'O'	;Ausgabe?
+	JR	NZ,CLOS2;SNERR
+	CALL	0DE25H
+	CALL	0DDC8H
+	RET	Z
+	LD	A,0D5H
+	CALL	0DCB2H
+	LD	HL,3EAH	;Druckpuffer
+	XOR	A
+	CALL	0DDD5H
+	POP	HL
+	RET
+OPEN1:	CALL	0DE5FH	;Eingabe
+	LD	A,(309H);IN-Index
+	AND	3
+	RET	Z
+	LD	A,0D5H
+	CALL	0DCB2H
+	LD	HL,3EAH	;Druckuffer
+	CALL	0DDE4H	;Eingabe ASCII
+	POP	HL
+	RET
+ 
+BLINE:	;Linie zeichnen
+	LD	BC,43EH	;4 Par.,LINE
+	JR	GRAPH
+ 
+CIRCLE:	;Kreis zeichnen
+	LD	BC,33FH	;3 Par.,CIRCLE
+GRAPH:	PUSH	BC
+	CALL	0C96CH
+	POP	BC
+	PUSH	BC
+	PUSH	HL
+	LD	HL,ARG1
+GRAPH1:	LD	A,E
+	CALL	IRMWR
+	INC	HL
+	LD	A,D
+	CALL	IRMWR
+	INC	HL
+	DEC	B
+	JR	Z,GRAPH2
+	EX	(SP),HL
+	PUSH	BC
+	CALL	0C8D6H
+	CALL	0C96CH
+	POP	BC
+	EX	(SP),HL
+	JR	GRAPH1
+GRAPH2:	POP	HL
+	CALL	GFARB
+	POP	DE
+	JP	0F015H	;PV5
+ 
+CSRLN:	;akt. Zeile holen
+	CALL	0CDE1H
+	EX	(SP),HL
+	LD	DE,0CDF3H ;RET-Adr.
+	PUSH	DE
+	CALL	0D424H
+	PUSH	HL
+	AND	A
+	LD	A,0
+	JR	NZ,CSRLN1
+	LD	HL,WINON+1
+	CALL	IRMRD
+CSRLN1:	LD	B,A
+	LD	HL,CURSO+1
+	CALL	IRMRD
+	ADD	B	;akt. Zeile
+	POP	HL
+	JP	0D3E9H
+ 
+VGET:	;Zeichen von Bildschirm lesen
+	EX	(SP),HL
+	LD	A,1
+	CALL	0D17BH
+	CALL	0F018H	;IRMON
+	LD	DE,(CURSO)
+	CALL	DABR
+	LD	A,(HL)
+	CALL	0F01BH	;IRMOF
+	JP	INKEY1	;als Zeichen
+			;zur}ckgeben
+ 
+L3TB:	;ESC-Tabelle
+	DW	ESC0	;Tabulator
+	DW	ESC1	;Anz0	Zugr0
+	DW	ESC2	;1	1
+	DW	ESC3	;0	1
+	DW	ESC4	;1	0
+	DW	ESC5	;MODUL
+	DW	ESC6	;SYSTEM
+	DW	ESC7	;PixInvers o/o
+	DW	ESC8	;ColSwap o/o
+	DW	ESC9	;Farbebene o/o
+	DW	ESCA	;HiRes o/o
+	DW	ESCB	;HRG o/o
+	DW	ESCC	;IBM/CAOS
+ 
+FREIE	EQU	0EDFFH-$	; freie Bytes
+IF	$ GT 0EDFFH
+	MESSAGE	<ROM-E:>,%-FREIE,< Byte(s) zu lang!>
+ELSE
+	DS	FREIE,0FFH	; mit FF belegen
+ENDIF
+ 
+VERSION:	DB	44H	; CAOS-Version
