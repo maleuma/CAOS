@@ -1,5 +1,11 @@
 # CAOS
- Betriebssystem fuer den KC85/2-5 von Muehlhausen
+ Betriebssysteme fuer die Kleincomputer KC85/2-5 von Muehlhausen
+
+ CAOS 2.2: Standardbetriebssystem fuer den KC85/2 von MPM
+
+ CAOS 3.1: Standardbetriebssystem fuer den KC85/3 von MPM
+
+ CAOS 3.4: schnelles Betriebssystem fuer den KC85/3 mit Bildschirmroutinen wie KC85/4
 
  CAOS 4.1: Betriebssystem von MPM, erste bekannte Version fuer den KC85/4
 
