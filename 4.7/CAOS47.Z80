@@ -1,0 +1,204 @@
+;*************************************************
+;**						**
+;**	CAOS 4.7   (c) KC-Club 2019		**
+;**						**
+;*************************************************
+;**						**
+;**	Entwickler:				**
+;**		Mario Leubner			**
+;**		Daniel Elstner (CAOS 4.5)	**
+;**						**
+;**	CAOS-Versionen:				**
+;**	13.04.1994 - CAOS 4.2 Reassemblierung	**
+;**	17.02.1995 - CAOS 4.3			**
+;**	09.02.2003 - CAOS 4.4			**
+;**	06.09.2010 - CAOS 4.5			**
+;**	04.02.2015 - CAOS 4.6 beta1		**
+;**	05.03.2016 - CAOS 4.6 beta2 (KC-Labor)	**
+;**	18.02.2017 - CAOS 4.7 beta1 (KC-Labor)	**
+;**	21.02.2017 - CAOS 4.7 beta2 (KC-Labor)	**
+;**	26.07.2017 - CAOS 4.7 beta3 (KC-Labor)	**
+;**	20.11.2017 - CAOS 4.7 beta4 (KC-Labor)	**
+;**	05.02.2018 - CAOS 4.7 beta5 (KC-Labor)	**
+;**	03.04.2018 - CAOS 4.7 beta6 (KC-Labor)	**
+;**	04.12.2018 - CAOS 4.7 (beta7 mit Turbo)	**
+;**	27.12.2018 - CAOS 4.7 (EDIT 0.2 -> 0.3)	**
+;**	03.02.2018 - CAOS 4.7 final & EDIT 0.4	**
+;**	10.04.2019 - CAOS 4.7 Patch 1		**
+;*************************************************
+;**	10.04.2019 - CAOS 4.7			**
+;*************************************************
+
+DATUM	MACRO
+	DB	'10.04.2019'	; Versionsdatum nur hier aendern!
+	ENDM
+
+Turbo	EQU	0		; Turbolader einbinden?
+	;benoetigt  14 Byte im ROM C
+	;benoetigt 253 Byte im ROM D
+	;benoetigt  33 Byte im ROM E
+	;benoetigt   4 Byte im ROM F
+
+RAM1MB	EQU	0		; RAM8 mit 1MB verwalten?
+	;benoetigt 28 Byte im ROM C
+; Diese Erweiterung setzt 1MByte RAM statt des 256K RAM im Grundgeraet voraus.
+; Die Idee dazu stammt von Frank Dachselt und war im Original sogar 2MByte gross
+; und zusaetzlich noch auf Moduladresse 06 mit dem zweiten Megabyte praesent.
+; Hardware: Die zusaetzlichen beiden RAM-Adressen werden auf Bit 2 und 3 des
+; Port2 (86h) gelegt (Bei 2MB war das Bit 4 auch noch mit genutzt)
+
+SYSROM	EQU	0		; Erweiterung des System-ROM durch Flash-ROM
+	;benoetigt 22 Byte im ROM C
+	;spart     -3 Byte im ROM D
+	;benoetigt 25 Byte im ROM F
+; Diese Erweiterung setzt einen 128K-Flash-ROM an Stelle des CAOS- und BASIC-
+; ROM voraus. Enthalten sind 4x die CAOS-ROM C und E sowie 2x der USER-ROM
+; Umgeschalten wird mit Jumper, alternativ auch mit Bit 2 und 3 des Port 86h
+; Wenn diese Erweiterung aktiv ist, dann kann nicht gleichzeitig die 1MB-RAM-
+; erweiterung eingebaut werden.
+
+if Turbo
+beta	equ	1		; 0 fuer Vollversion, 1 fuer beta-Version
+else
+beta	equ	0		; 0 fuer Vollversion, 1 fuer beta-Version
+endif
+; Uebersetzen ohne Erzeugen eines Listings:
+;	SLRZ80 CAOS47.@@Z/F
+; oder:	Z80ASM CAOS47.@@Z/F
+;	REN CAOS47.COM CAOS47.KCC
+
+; Uebersetzen mit Erzeugen eines Listings:
+;	SLRZ80 CAOS47/F
+; oder:	Z80ASM CAOS47/F
+;	REN CAOS47.COM CAOS47.KCC
+
+; Hardware:	(KC85/5)
+;
+;256 KByte interner RAM (RAM0,RAM4,RAM8)
+; 64 KByte IRM (2 unabhaengige Bilder)
+; 16 KByte CAOS-ROM C000-FFFF
+; 32 KByte USER-ROM C000-DFFF (4 Ebenen)
+
+;---------------------------------------------------------------------
+
+;**	Speicheruebersicht, Belegung der CAOS-ROMs	**
+
+;Inhalt ROM-C:
+;C000	IRM-Defaulttabelle
+;	System-Initialisierung, Erzeugung Device-Treibertabellen
+;	SYSTEM-Check, Modulcheck
+;	Module lesen und schalten (SWITCH)
+;	F-Tastenbelegung (KEY, KEYLIST)
+;	Farben setzen (COLOR)
+;	Fensterfunktionen (WINDOW, WINAK, WININ)
+;	Grafikfunktionen (LINE, PUSE, CIRCLE, PUDE)
+;	Speicherfunktionen (DISPLAY, MODIFY)
+;	Initialisierung Druckerausgabe, Duplexbetrieb
+;	allgemeine Druckroutine mit Protokoll, Screen- oder Hardcopy
+;	Byteweise Ein-/Ausgaberoutinen (MBOUT, MBIN)
+;	Tabelle der Modulnamen
+
+;Inhalt ROM-D:
+;D000	(Turbo-TAPE-Treiber = Kassettenausgabe, Kassetteneingabe MPM-Turbo)
+;	TAPE-Treiber = Kassettenausgabe, Kassetteneingabe Standard
+;	DISK-Treiber = D004/D008 Floppy-Routinen
+;	Pixelausgabe, Fensterscrolling, Zeile loeschen
+;	Wurzelberechnung, Multiplikation (SQR, MULT)
+;	Speichercheck VIEW
+;	Unterprogramme fuer Modulcheck
+;	DISK: DIR, STAT, ERA, REN
+;	TYPE, DUMP, INIT
+;	DEVICE-Treiber umschalten, auflisten
+;	DISK: Laufwerk wechseln mit DRIVE
+;	TAPE: Kassetteninhalt auflisten mit TAPELIST
+;	Grafiksequenzen fuer die Drucker
+;	V.24-Initialisierungstabellen
+;	Original der Unterprogrammtabelle SUTAB
+;	Treibertabelle fuer TAPE (Turbo,) und DISK
+;	Portinittabellen
+;	M001-Initialisierungstabelle fuer Centronics
+;	Defaulttabelle fuer Joystick-Belegung
+;	ISRTAB	Interrupttabelle
+;	IBM-Codierungen fuer Druckerausgabe
+;	CAOS-Versionsanzeige (help)
+;DAB8	IBM-Zeichensatz
+
+;Inhalt ROM-E:
+;E000	RESET, BASIC-Verteiler
+;	CRT-Treiber (PADR, DABR, CRT-Grundprogramm)
+;	Routinen der Steuercodes
+;	Tastaturtreiber mit ISR CTC Kanal 3, PIO-B, SIO-B
+;	Joysticktreiber fuer M008/M021
+;	Kassetten-Routinen Eingabe/Ausgabe
+;	Programmverteiler PV7 fuer DEVICE-Umleitungen
+;	DEVICE-Routinen MBO, MBI, ISRO, CSRO, ISRI, CSRI
+;	Interruptroutinen fuer Kassetten-Ein/Ausgabe
+;	BASIC-Erweiterungen
+;	Sprung aus CAOS-ROM-C in ROM-Modul (z.B. M052-USB)
+;	Initialisierungstabelle fuer M021
+;	(CTC-Interrupt fuer Turbo-Routinen)
+;EDFF	CAOS-Versionsnummer
+;EE00	Zeichenbildtabelle Grossbuchstaben
+
+;Inhalt ROM-F:
+;F000	Power-ON, Programmverteiler, IRMON, IRMOF, RCALL
+;	Zeichenkette anzeigen (OSTR)
+;	Kommandos SWITCH und JUMP
+;	Systemstart mit Autostart ROM-Modul oder Floppy
+;	Kommandointerpreter, MENU, ZSUCH
+;	Zeichenaus-/eingabe (HLHX, AHEX, OCHR, INTB, ...)
+;	Tastatureingabe KBD, INLIN
+;	Kommando go
+;	Hex-Zahlen/Argumente erfassen (RHEX, GARG)
+;	Ports initialisieren (INIEA, INIMEX)
+;	Device-Kommandos (SAVE, VERIFY, LOAD)
+;	Kommandos COLOR, DISPLAY, MODIFY
+;	Kommandos WINDOW, KEY (mit Keylist)
+;	Cursordarstellung, Grafikroutinen
+;	BASIC-I/O-Verteiler
+;	Zeichenkette anzeigen (ZKOUT)
+;	Tonausgabe (TON)
+;	ESC-Programme
+;	Drucker-, und Duplexroutinen (M001, M021, V.24-Modul)
+;	SIO-Empfangsinterrupt (Tastatur, ESC...)
+;	Umschaltroutine fuer CAOS-ROM-C und SIXD
+;	Menuewort DEVICE
+;	Versteckte Menueworte DIR, CD, ERA, REN
+;	Tastencodetabelle KTAB
+;	Tabelle der ESC-Funktionen
+;	CRTTAB	Steuerfunktionstabelle
+;	TOKTAB	BASIC-Token mit Sprungtabelle
+;FDF0	BASIC-Unterprogrammtabelle
+;FDF8	Bittabelle fuer Punktroutinen
+;FE00	Zeichenbildtabelle Kleinbuchstaben
+
+;---------------------------------------------------------------------
+
+; CAOS-Vorblock:
+
+	DB	'CAOS47  KCC'
+	DS	5,0
+	DB	2		; 2 Adressen
+	DW	4000H		; AADR
+	DW	8000H		; EADR+1
+	DS	97,0
+	DATUM			; Versionsdatum
+
+	INCLUDE	EQU47.INC	; Vereinbarungen, Uebersicht
+
+	.PHASE	0C000H
+
+	INCLUDE	CC47.INC	; ROM-C (C000-CFFF)
+
+	INCLUDE	CD47.INC	; ROM-D (D000-DAB7)
+	INCLUDE	ZSIBM.INC	; IBM-Zeichensatz
+
+	INCLUDE	CE47.INC	; ROM-E (E000-EDFF)
+LARGE:	INCLUDE ZSGROSS.INC	; Zeichensatz Grossbuchstaben
+
+	INCLUDE	CF47.INC	; ROM-F (F000-FDFF)
+SMALL:	INCLUDE	ZSKLEIN.INC	; Zeichensatz Kleinbuchstaben
+
+	.DEPHASE
+
+	END
