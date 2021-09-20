@@ -1,0 +1,159 @@
+;*************************************************
+;**						**
+;**	CAOS 4.5   (c) KC-Club 2010		**
+;**						**
+;*************************************************
+;**						**
+;**	Entwickler:				**
+;**		Mario Leubner			**
+;**		Daniel Elstner			**
+;**		...				**
+;**						**
+;**	Versionen:				**
+;**	13.04.1994 - CAOS 4.2 Reassemblierung	**
+;**	17.02.1995 - CAOS 4.3			**
+;**	09.02.2003 - CAOS 4.4			**
+;**	26.05.2010 - CAOS 4.5 beta		**
+;**	29.05.2010 - CAOS 4.5 beta2		**
+;**	30.05.2010 - CAOS 4.5 beta3		**
+;**	08.06.2010 - CAOS 4.5 beta4		**
+;**	13.06.2010 - CAOS 4.5 beta5		**
+;**	19.06.2010 - CAOS 4.5 beta6		**
+;**	30.07.2010 - CAOS 4.5 beta7		**
+;**	28.08.2010 - CAOS 4.5 beta8		**
+;**	06.09.2010 - finale Version		**
+;**						**
+;*************************************************
+
+beta	equ	0		; 0 fuer Vollversion, 1 fuer beta-Version
+DATUM	MACRO
+	DB	'06.09.2010'	; Versionsdatum nur hier aendern!
+	ENDM
+
+; Uebersetzen ohne Erzeugen eines Listings:
+;	SLRZ80 CAOS45.@@Z/F
+; oder:	Z80ASM CAOS45.@@Z/F
+;	REN CAOS45.COM CAOS45.KCC
+
+; Uebersetzen mit Erzeugen eines Listings:
+;	SLRZ80 CAOS45/F
+; oder:	Z80ASM CAOS45/F
+;	REN CAOS45.COM CAOS45.KCC
+
+; Hardware:	(KC85/5)
+;
+;256 KByte interner RAM (RAM0,RAM4,RAM8)
+; 64 KByte IRM (2 unabhaengige Bilder)
+; 16 KByte CAOS-ROM C000-FFFF
+; 32 KByte USER-ROM C000-DFFF (4 Ebenen)
+
+;---------------------------------------------------------------------
+
+;**	Speicheruebersicht, Belegung der CAOS-ROMs	**
+
+;ROM-C:
+;C000	IRM-Defaulttabelle
+;	System-Initialisierung, Portinittabellen
+;	SYSTEM-Check, Modulcheck
+;	Modulschaltung (SWITCH)
+;	F-Tastenbelegung (KEY, KEYLIST)
+;	Farben setztn (COLOR)
+;	Fensterfunktionen (WINDOW, WINAK, WININ)
+;	Grafikfunktionen (LINE, PUSE, CIRCLE, PUDE)
+;	Speicherfunktionen (DISPLAY, MODIFY)
+;	Initialisierung Druckerausgabe, Duplexbetrieb
+;	allgemeine Druckroutine mit Protokoll, Screen- oder Hardcopy
+;	V.24-Initialisierungstabellen
+;	Byteweise Kassettenroutinen (MBOUT, MBIN)
+;	Speichercheck VIEW
+;	Druck-Kommando PRINT
+;	Tabelle der Modulnamen
+
+;ROM-D:
+;D000	DISK-Sprungverteiler und Floppy-Routinen
+;	BASEX-Erweiterung fuer BASIC
+;	Pixelausgabe fuer IBM-Zeichensatz
+;	Fensterscrolling, Zeile loeschen
+;	FLOAD, FSAVE, DIR, STAT, REN, ERA, SETRO, SETWR
+;	DRIVE, TYPE, DUMP, INIT
+;	Datum und Uhrzeit anzeigen (TIME)
+;	Wurzelberechnung, Multiplikation (SQR, MULT)
+;	CAOS-Versionsanzeige (help)
+;	M001-Initialisierungstabelle fuer Centronics
+;	Defaulttabelle fuer Joystick-Belegung
+;	IBM-Codierungen fuer Druckerausgabe
+;DAB8	IBM-Zeichensatz
+
+;ROM-E:
+;E000	RESET, BASIC-Verteiler
+;	CRT-Treiber (PADR, DABR, WPIX)
+;	Tastaturtreiber mit ISR CTC Kanal 3, PIO-B, SIO-B
+;	Joysticktreiber fuer M008/M021
+;	Kassetten-Routinen Eingabe/Ausgabe
+;	BASIC-Erweiterungen
+;	Initialisierungstabelle fuer M021
+;	Tabelle der ESC-Funktionen
+;EDFF	CAOS-Versionsnummer
+;EE00	Zeichenbildtabelle Grossbuchstaben
+
+;ROM-F:
+;F000	Power-ON, Programmverteiler, IRMON, IRMOF, RCALL
+;	Kommandos SWITCH und JUMP
+;	Kommandointerpreter, MENU
+;	WAIT
+;	Zeichenaus-/eingabe (HLHX, AHEX, OCHR, INTB ...)
+;	Tastatureingabe KBD, INLIN
+;	Kommando go
+;	Hex-Zahlen/Argumente erfassen (RHEX, GARG)
+;	Ports initialisieren (INIEA, INIMEX)
+;	Kassettenkommandos (SAVE, VERIFY, LOAD)
+;	Kommandos COLOR, DISPLAY, MODIFY
+;	Kommandos WINDOW, KEY (mit Keylist)
+;	Cursordarstellung, Grafikroutinen
+;	Kommando SYSTEM
+;	BASIC-I/O-Verteiler
+;	Zeichenkette anzeigen (ZKOUT)
+;	Tonausgabe (TON)
+;	ESC-Programme
+;	Drucker-, und Duplexroutinen (M001, M021, V.24-Modul)
+;	SIO-Empfangsinterrupt (Tastatur, ESC...)
+;	Umschaltroutine fuer CAOS-ROM-C
+;	I/O-UP-Nummer-Tabelle
+;	Unterprogrammtabelle fuer SUTAB
+;	Tastencodetabelle KTAB
+;	ISRTAB	Interrupttabelle
+;	CRTTAB	Steuerfunktionstabelle
+;	TOKTAB	BASIC-Token mit Sprungtabelle
+;FDF0	BASIC-Unterprogrammtabelle
+;FDF8	Bittabelle fuer Punktroutinen
+;FE00	Zeichenbildtabelle Kleinbuchstaben
+
+;---------------------------------------------------------------------
+
+; CAOS-Vorblock:
+
+	DB	'CAOS45  KCC'
+	DS	5,0
+	DB	2		; 2 Adressen
+	DW	4000H		; AADR
+	DW	8000H		; EADR+1
+	DS	107,0
+
+	INCLUDE	EQU45.INC	; Vereinbarungen, Uebersicht
+
+	.PHASE	0C000H
+
+	INCLUDE	CC45.INC	; ROM-C (C000-CFFF)
+
+	INCLUDE	CD45.INC	; ROM-D (D000-DAB7)
+	INCLUDE	ZSIBM.INC	; IBM-Zeichensatz
+
+	INCLUDE	CE45.INC	; ROM-E (E000-EDFF)
+	INCLUDE ZSGROSS.INC	; Zeichensatz Grossbuchstaben
+
+	INCLUDE	CF45.INC	; ROM-F (F000-FDFF)
+	INCLUDE	ZSKLEIN.INC	; Zeichensatz Kleinbuchstaben
+
+	.DEPHASE
+
+	END
