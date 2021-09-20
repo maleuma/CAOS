@@ -1,0 +1,16 @@
+; Zusammensetzen der Einzeldateien zu CAOS 3.4i
+; (C) Mario Leubner, 10.05.2019
+;-------------------------------------------------
+; CAOS-Vorblock:
+	ORG	0E000H-128
+	DB	'CAOS34i KCC'
+	DS	5,0
+	DB	2		; 2 Adressen
+	DW	4000H		; AADR
+	DW	6000H		; EADR+1
+	DS	107,0
+;-------------------------------------------------
+include	caosei.asm		; ROM-E
+include zsgross.inc
+include	caosfvi.asm		; ROM-F
+include zsklein.inc
