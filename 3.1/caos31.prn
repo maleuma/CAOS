@@ -1,0 +1,4828 @@
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   1
+CAOS31  Z80
+
+    1                   ;*********************************
+    2                   ;**				**
+    3                   ;**	CAOS 3.1 reassembliert	**
+    4                   ;**		 von ML-Soft	**
+    5                   ;**				**
+    6                   ;**	14.05.95 bis 21.05.95	**
+    7                   ;**				**
+    8                   ;*********************************
+    9                    
+   10                   ;	Speicheruebersicht	**
+   11                   ;	_________________
+   12                    
+   13                    
+   14                   ;C000	BASIC-ROM
+   15                    
+   16                   ;------------------------------------
+   17                    
+   18                   ;E000	RESET und BASIC-Verteiler
+   19                   ;E024	DABR
+   20                   ;E055	Zeichenausgabe WPIX
+   21                   ;E0BF	PADR
+   22                   ;E13A	Punktroutinen PUDE, PUSE
+   23                   ;E189	KBD-Treiber
+   24                   ;E213	Tastaturtabelle KTAB
+   25                   ;E293	Interrupttabelle ISRTAB
+   26                   ;E29F	KBDZ, KBDS, INIEA, INIME, ERAM
+   27                   ;E2CF	SWITCH und MODUL
+   28                   ;E347	JUMP
+   29                   ;E36A	Tape-Treiber
+   30                   ;E527	TON-Ausgabe
+   31                   ;E581	BASIC-Token
+   32                   ;E62B	Sprungtabelle f. BASIC-Token
+   33                   ;E669	BASIC-Extension
+   34                   ;EE00	Zeichenbildtabelle Grossbuchstaben
+   35                    
+   36                   ;------------------------------------
+   37                    
+   38                   ;F000	PWRON und Programm-Verteiler
+   39                   ;F109	Kommandointerpreter (MENU)
+   40                   ;F1C6	Ein-/Ausgabe OSTR, INTB, OCHR
+   41                   ;F210	KBD, IRM-Default, INLIN
+   42                   ;F2C0	Hexzahlenverarbeitung
+   43                   ;F357	Systeminit, SIXD, Portinittab.
+   44                   ;F3D5	SAVE
+   45                   ;F43E	BRKT, LARG
+   46                   ;F45B	VERIFY, LOAD, COLOR
+   47                   ;F5D4	Unterprogrammtabelle SUTAB
+   48                   ;F662	LDMA, LDAM, MODIFY
+   49                   ;F6E3	Sprungtabelle fuer CRT-Routinen
+   50                   ;F707	CCTL-Belegungstabelle CCTAB
+   51                   ;F725	CRT-Treiber
+   52                   ;F8BE	Bildschirm-Steuercodes CRTTAB
+   53                   ;F8D0	FADR,
+   54                   ;F8E7	BASIC-I/O-Verteiler
+   55                   ;F956	MBOUT, MBIN
+   56                   ;FAFB	DISPLAY
+   57                   ;FB69	CSTBT, KEYLIST, KEY
+   58                   ;FC1A	WININ, WINAK
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   2
+CAOS31  Z80
+
+   59                   ;FC82	LINE, CIRCLE, SQR, MULT
+   60                   ;FE00	Zeichenbildtabelle Kleinbuchstaben
+   61                   ;------------------------------------
+   62                   
+   63                   ;**	EQU-Liste		**
+   64                   
+   65         000A      LF	EQU	0AH
+   66         000D      CR	EQU	0DH
+   67                   
+   68         B200      VRAM	EQU	0B200H	; VIDEO-RAM
+   69         B700      CASS	EQU	0B700H	; Kass.-Puffer
+   70         B780      ARGC	EQU	0B780H	; UP-Nr. (PV2)
+   71         B781      ARGN	EQU	0B781H	; Anz. Argumente
+   72         B782      ARG1	EQU	0B782H	; 1. Argument
+   73         B784      ARG2	EQU	0B784H	; 2. Argument
+   74         B786      ARG3	EQU	0B786H	; 3. Argument
+   75         B788      ARG4	EQU	0B788H	; 4. Argument
+   76                   
+   77         B796      NUMNX	EQU	0B796H	; Zeichenanzahl
+   78         B797      NUMVX	EQU	0B797H	; Wert der Zahl
+   79         B799      HCADR	EQU	0B799H	; Hardcopy-Adresse
+   80         B79B      WINNR	EQU	0B79BH	; Fensternummer
+   81         B79C      WINON	EQU	0B79CH	; Fensteranfang
+   82         B79E      WINLG	EQU	0B79EH	; Fensterlaenge
+   83         B7A0      CURSO	EQU	0B7A0H	; Cursorposition
+   84         B7A2      STBT	EQU	0B7A2H	; BS-Steuerbyte
+   85         B7A3      COLOR	EQU	0B7A3H	; Zeichenfarbe
+   86         B7A4      WEND	EQU	0B7A4H	; PAGE/SCROLL
+   87         B7A6      CCTL0	EQU	0B7A6H	; Zeichentab. 0
+   88         B7A8      CCTL1	EQU	0B7A8H	; Zeichentab. 1
+   89         B7AA      CCTL2	EQU	0B7AAH	; Zeichentab. 2
+   90         B7AC      CCTL3	EQU	0B7ACH	; Zeichentab. 3
+   91         B7AE      SYSP	EQU	0B7AEH	; System-Stack
+   92         B7B0      SUTAB	EQU	0B7B0H	; UP-Tabelle
+   93         B7B2      CTAB	EQU	0B7B2H	; Adresse CRTTAB
+   94         B7B4      BJUMP	EQU	0B7B4H	; JUMP-Adresse
+   95         B7B9      OUTAB	EQU	0B7B9H	; Ausgabe-UP
+   96         B7BB      INTAB	EQU	0B7BBH	; Eingabe-UP
+   97         B7BD      UOUT1	EQU	0B7BDH	; USER-out #1
+   98         B7C0      UIN1	EQU	0B7C0H	; USER-in #1
+   99         B7C3      UOUT2	EQU	0B7C3H	; USER-out #2
+  100         B7C6      UIN2	EQU	0B7C6H	; USER-in #2
+  101         B7C9      IOERR	EQU	0B7C9H	; -> ?IO ERROR
+  102                   
+  103         B7CF      ZWEND	EQU	0B7CFH	; WEND-Merker
+  104         B7D1      FTAST	EQU	0B7D1H	; F-Tastenzeiger
+  105         B7D3      HOR	EQU	0B7D3H	; hor. Koordin.
+  106         B7D5      VERT	EQU	0B7D5H	; vert. Koordin.
+  107         B7D6      FARB	EQU	0B7D6H	; Grafikfarbe
+  108         B7D7      MIXIT	EQU	0B7D7H	; IX-Bereich
+  109         B7D8      ZEITB	EQU	0B7D8H	; Zeichentabelle
+  110         B7DA      VORTN	EQU	0B7DAH	; Vortonlaenge
+  111         B7DC      DTADR	EQU	0B7DCH	; Datenzeiger
+  112         B7DE      DTNR	EQU	0B7DEH	; Datennummer
+  113         B7DF      XSTEP	EQU	0B7DFH	; X-Schrittmass
+  114         B7E1      YSTEP	EQU	0B7E1H	; Y-Schrittmass
+  115         B7E3      XCNT	EQU	0B7E3H	; X-Zaehler
+  116         B7E5      YCNT	EQU	0B7E5H	; Y-Zaehler
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   3
+CAOS31  Z80
+
+  117         B7E7      XDIR	EQU	0B7E7H	; X-Richtung
+  118         B7E9      YDIR	EQU	0B7E9H	; Y-Richtung
+  119                   
+  120         B99C      WNDFN	EQU	0B99CH	; Fenstervektoren
+  121                   
+  122                   ; Setze Bit 7 des ersten Zeichens fuer BASIC-Token:
+  123                   TOKEN	MACRO	STRING
+  124                   Y	 DEFL	80h
+  125                   	 IRPC	X,STRING
+  126                   	  DB	'&X' + Y
+  127                   Y	  DEFL	0
+  128                   	 ENDM
+  129                   	ENDM
+  130                   
+  131                   ;-------------------------------------------------------
+  132                   ; CAOS-Vorblock:
+  133                   
+  134 0100  43 41 4F 53 	DB	'CAOS31  KCC'
+  135 010B  00 00 00 00 	DS	5,0
+  136 0110  02          	DB	2		; 2 Adressen
+  137 0111  4000        	DW	4000H		; AADR
+  138 0113  8000        	DW	8000H		; EADR+1
+  139 0115  00 00 00 00 	DS	107,0
+  140                   
+  141                   ;-------------------------------------------------------
+  142                   ;**	CAOS 3.1 ROM E		**
+  143                   ;	ORG	0E000H
+  144                   
+  145                   	.PHASE	0E000H
+  146                   ;
+  147 E000  C3 E011     BYE:	JP	RESET		; Tasten-RESET
+  148 E003  C3 E669     	JP	BEXP1		; BASIC-
+  149 E006  C3 E67D     	JP	BEXP2		; Expansionen
+  150 E009  C3 E6F5     	JP	BEXP3
+  151 E00C  E581        	DW	TOKTAB		; BASIC-Token
+  152 E00E  C3 F8E7     BASIO:	JP	BASPV
+  153                    
+  154 E011              RESET:	;Tasten-RESET
+  155 E011  DD 7E 07    	LD	A,(IX+7)
+  156 E014  E6 C0       	AND	0C0H		; RESET-Schutz?
+  157 E016  28 06       	JR	Z,BYE1
+  158 E018  CD E2C3     	CALL	ERAM4		; RAM4 loeschen!
+  159 E01B  C3 F000     	JP	POWER		; 0F000H
+  160                   	;
+  161 E01E  31 01C4     BYE1:	LD	SP,01C4H	; System-Stackpointer
+  162 E021  C3 F0DD     	JP	PWR2
+  163                   
+  164 E024  D5          DABR:	PUSH	DE					;**32**
+  165 E025  F5          	PUSH	AF
+  166 E026  CD F719     	CALL	TCIF
+  167 E029  38 23       	JR	C,IAD2
+  168 E02B  3A B79D     	LD	A,(WINON+1)
+  169 E02E  82          	ADD	D		; Cursor-Zeile
+  170 E02F  26 00       	LD	H,0
+  171 E031  6F          	LD	L,A
+  172 E032  29          	ADD	HL,HL
+  173 E033  29          	ADD	HL,HL
+  174 E034  29          	ADD	HL,HL		; *8
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   4
+CAOS31  Z80
+
+  175 E035  C5          	PUSH	BC
+  176 E036  E5          	PUSH	HL
+  177 E037  C1          	POP	BC
+  178 E038  29          	ADD	HL,HL
+  179 E039  29          	ADD	HL,HL
+  180 E03A  09          	ADD	HL,BC		; *40
+  181 E03B  3A B79C     	LD	A,(WINON)
+  182 E03E  83          	ADD	E		; Cursor-Spalte
+  183 E03F  85          	ADD	L
+  184 E040  6F          	LD	L,A
+  185 E041  3E 00       	LD	A,0
+  186 E043  8C          	ADC	H
+  187 E044  67          	LD	H,A
+  188 E045  01 B200     	LD	BC,VRAM		; 0B200H
+  189 E048  09          	ADD	HL,BC
+  190 E049  C1          	POP	BC
+  191 E04A  F1          	POP	AF
+  192 E04B  A7          	AND	A
+  193 E04C  D1          	POP	DE
+  194 E04D  C9          	RET
+  195                   
+  196 E04E  F1          IAD2:	POP	AF
+  197 E04F  37          	SCF
+  198 E050  D1          	POP	DE
+  199 E051  21 B200     	LD	HL,VRAM		; 0B200H
+  200 E054  C9          	RET
+  201                    
+  202 E055              WPIX:	;Zeichen auf Grafikbildschirm
+  203                   	;sichtbar machen, PE: DE,A
+  204 E055  E5          	PUSH	HL
+  205 E056  D5          	PUSH	DE
+  206 E057  C5          	PUSH	BC
+  207 E058  F5          	PUSH	AF
+  208 E059  F5          	PUSH	AF
+  209 E05A  CD F8D0     	CALL	FADR		; Farbadresse
+  210 E05D  F1          	POP	AF
+  211 E05E  E5          	PUSH	HL		; wofuer?
+  212 E05F  CD E0BF     	CALL	PADR
+  213 E062  38 48       	JR	C,POP4		; ausserhalb!
+  214 E064  E5          	PUSH	HL		; Pixeladresse
+  215 E065  21 F707     	LD	HL,CCTAB
+  216 E068  0E B7       	LD	C,0B7H		; High(CCTLx)
+  217 E06A  BE          WPIX1:	CP	(HL)
+  218 E06B  23          	INC	HL
+  219 E06C  30 04       	JR	NC,WPIX2
+  220 E06E  23          	INC	HL
+  221 E06F  23          	INC	HL
+  222 E070  18 F8       	JR	WPIX1
+  223 E072  96          WPIX2:	SUB	(HL)		; Offset
+  224 E073  23          	INC	HL
+  225 E074  6E          	LD	L,(HL)
+  226 E075  61          	LD	H,C		; HL=CCTLx
+  227 E076  4E          	LD	C,(HL)
+  228 E077  23          	INC	HL
+  229 E078  66          	LD	H,(HL)
+  230 E079  69          	LD	L,C		; Zeichentabelle
+  231 E07A  22 B7D8     	LD	(ZEITB),HL
+  232 E07D  4F          	LD	C,A
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   5
+CAOS31  Z80
+
+  233 E07E  3A B7A2     	LD	A,(STBT)
+  234 E081  47          	LD	B,A
+  235 E082  CB 48       	BIT	1,B
+  236 E084  20 07       	JR	NZ,WPIX3	; Farbe aus
+  237 E086  3A B7A3     	LD	A,(COLOR)
+  238 E089  12          	LD	(DE),A		; oberes Byte
+  239 E08A  CB EB       	SET	5,E
+  240 E08C  12          	LD	(DE),A		; unteres Byte
+  241 E08D  D1          WPIX3:	POP	DE		; Pixeladr.
+  242 E08E  E1          	POP	HL		; Farbadr.
+  243 E08F  CB 40       	BIT	0,B
+  244 E091  20 19       	JR	NZ,POP4		; Pixel aus
+  245 E093  06 00       	LD	B,0
+  246 E095  3E 03       	LD	A,3
+  247 E097  CB 21       WPIX4:	SLA	C
+  248 E099  CB 10       	RL	B		; *8
+  249 E09B  3D          	DEC	A
+  250 E09C  20 F9       	JR	NZ,WPIX4
+  251 E09E  2A B7D8     	LD	HL,(ZEITB)
+  252 E0A1  09          	ADD	HL,BC		; Zeichenadr.
+  253 E0A2  D5          	PUSH	DE
+  254 E0A3  CD E0B0     	CALL	WPIX5		; 4 Byte schreib.
+  255 E0A6  D1          	POP	DE
+  256 E0A7  CB EB       	SET	5,E
+  257 E0A9  CD E0B0     	CALL	WPIX5		; 4 Byte schreib.
+  258 E0AC  F1          POP4:	POP	AF
+  259 E0AD  C3 F1FE     	JP	POP3
+  260                   	;
+  261 E0B0  01 0080     WPIX5:	LD	BC,80H		; Offset fuer
+  262 E0B3  3E 04       	LD	A,4		; naechstes Byte
+  263 E0B5  ED A0       WPIX6:	LDI
+  264 E0B7  EB          	EX	DE,HL
+  265 E0B8  09          	ADD	HL,BC
+  266 E0B9  EB          	EX	DE,HL
+  267 E0BA  03          	INC	BC		; BC korrigieren
+  268 E0BB  3D          	DEC	A
+  269 E0BC  20 F7       	JR	NZ,WPIX6
+  270 E0BE  C9          	RET
+  271                    
+  272 E0BF              PADR:	;Pixel- und Farbadr berechnen
+  273 E0BF  F5          	PUSH	AF					;**34**
+  274 E0C0  7D          	LD	A,L		; Spalte
+  275 E0C1  FE 28       	CP	40
+  276 E0C3  30 39       	JR	NC,PADR5	; zu gross
+  277 E0C5  C5          	PUSH	BC
+  278 E0C6  FE 20       	CP	32
+  279 E0C8  30 37       	JR	NC,PADR6	; rechte Seite
+  280 E0CA  7C          	LD	A,H
+  281 E0CB  07          	RLCA
+  282 E0CC  07          	RLCA
+  283 E0CD  07          	RLCA
+  284 E0CE  E6 60       	AND	60H
+  285 E0D0  B5          	OR	L
+  286 E0D1  CB 44       	BIT	0,H
+  287 E0D3  28 02       	JR	Z,PADR1
+  288 E0D5  CB FF       	SET	7,A
+  289 E0D7  4F          PADR1:	LD	C,A
+  290 E0D8  7C          	LD	A,H
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   6
+CAOS31  Z80
+
+  291 E0D9  1F          	RRA
+  292 E0DA  1F          	RRA
+  293 E0DB  1F          	RRA
+  294 E0DC  E6 1E       	AND	1EH
+  295 E0DE  CB 4C       	BIT	1,H
+  296 E0E0  28 02       	JR	Z,PADR2
+  297 E0E2  CB C7       	SET	0,A
+  298 E0E4  F6 80       PADR2:	OR	80H		; Pixel-RAM I
+  299 E0E6  47          	LD	B,A
+  300 E0E7  1F          	RRA
+  301 E0E8  1F          	RRA
+  302 E0E9  E6 07       	AND	7
+  303 E0EB  F6 A8       	OR	0A8H		; Color-RAM I
+  304 E0ED  57          	LD	D,A
+  305 E0EE  79          	LD	A,C
+  306 E0EF  E6 7F       	AND	7FH
+  307 E0F1  CB 64       	BIT	4,H
+  308 E0F3  28 02       	JR	Z,PADR3
+  309 E0F5  CB FF       	SET	7,A
+  310 E0F7  5F          PADR3:	LD	E,A
+  311 E0F8  69          PADR4:	LD	L,C
+  312 E0F9  60          	LD	H,B
+  313 E0FA  C1          	POP	BC
+  314 E0FB  F1          	POP	AF
+  315 E0FC  B7          	OR	A		; CY=0
+  316 E0FD  C9          	RET
+  317                   	;
+  318 E0FE  F1          PADR5:	POP	AF
+  319 E0FF  37          	SCF			; ausserhalb
+  320 E100  C9          	RET
+  321                   	;
+  322 E101  E6 07       PADR6:	AND	7
+  323 E103  6F          	LD	L,A
+  324 E104  7C          	LD	A,H
+  325 E105  07          	RLCA
+  326 E106  07          	RLCA
+  327 E107  07          	RLCA
+  328 E108  E6 60       	AND	60H
+  329 E10A  B5          	OR	L
+  330 E10B  6F          	LD	L,A
+  331 E10C  7C          	LD	A,H
+  332 E10D  1F          	RRA
+  333 E10E  E6 18       	AND	18H
+  334 E110  CB 44       	BIT	0,H
+  335 E112  28 02       	JR	Z,PADR7
+  336 E114  CB FF       	SET	7,A
+  337 E116  B5          PADR7:	OR	L
+  338 E117  4F          	LD	C,A
+  339 E118  7C          	LD	A,H
+  340 E119  07          	RLCA
+  341 E11A  07          	RLCA
+  342 E11B  07          	RLCA
+  343 E11C  E6 06       	AND	6
+  344 E11E  F6 A0       	OR	0A0H		; Pixel-RAM II
+  345 E120  CB 4C       	BIT	1,H
+  346 E122  28 02       	JR	Z,PADR8
+  347 E124  CB C7       	SET	0,A
+  348 E126  47          PADR8:	LD	B,A
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   7
+CAOS31  Z80
+
+  349 E127  16 B0       	LD	D,0B0H		; Color-RAM II
+  350 E129  CB 57       	BIT	2,A
+  351 E12B  28 01       	JR	Z,PADR9
+  352 E12D  14          	INC	D
+  353 E12E  79          PADR9:	LD	A,C
+  354 E12F  E6 7F       	AND	7FH
+  355 E131  CB 48       	BIT	1,B
+  356 E133  28 02       	JR	Z,PADR10
+  357 E135  CB FF       	SET	7,A
+  358 E137  5F          PADR10:	LD	E,A
+  359 E138  18 BE       	JR	PADR4
+  360                    
+  361 E13A              PUDE:	;Punkt loeschen					;**2F**
+  362 E13A  37          	SCF
+  363 E13B  18 01       	JR	PU1
+  364                   
+  365 E13D              PUSE:	;Punkt setzen					;**30**
+  366 E13D  A7          	AND	A
+  367 E13E  E5          PU1:	PUSH	HL
+  368 E13F  D5          	PUSH	DE
+  369 E140  C5          	PUSH	BC
+  370 E141  2A B7D3     	LD	HL,(HOR)
+  371 E144  ED 4B B7D5  	LD	BC,(VERT)
+  372 E148  F5          	PUSH	AF		; merke Set/Reset
+  373 E149  AF          	XOR	A
+  374 E14A  06 03       	LD	B,3
+  375 E14C  CB 3C       PU2:	SRL	H
+  376 E14E  CB 1D       	RR	L
+  377 E150  1F          	RRA
+  378 E151  10 F9       	DJNZ	PU2
+  379 E153  5F          	LD	E,A
+  380 E154  79          	LD	A,C
+  381 E155  2F          	CPL
+  382 E156  67          	LD	H,A		; Pixelzeile
+  383 E157  4B          	LD	C,E		; Bitposition
+  384 E158  CD E0BF     	CALL	PADR		; Pixeladresse
+  385 E15B  38 1E       	JR	C,PU5		; ausserhalb
+  386 E15D  37          	SCF
+  387 E15E  79          	LD	A,C
+  388 E15F  0E 00       	LD	C,0
+  389 E161  CB 19       PU3:	RR	C		; "1" an Bitpos.
+  390 E163  D6 20       	SUB	20H		; schieben
+  391 E165  30 FA       	JR	NC,PU3
+  392 E167  F1          	POP	AF
+  393 E168  79          	LD	A,C
+  394 E169  38 14       	JR	C,PU6		; loeschen
+  395 E16B  B6          	OR	(HL)
+  396 E16C  77          	LD	(HL),A
+  397 E16D  3A B7D6     	LD	A,(FARB)
+  398 E170  E6 F8       	AND	0F8H		; Vordergrund
+  399 E172  47          	LD	B,A
+  400 E173  1A          	LD	A,(DE)
+  401 E174  E6 07       	AND	7		; Hintergrund
+  402 E176  B0          	OR	B		; lassen
+  403 E177  12          	LD	(DE),A
+  404 E178  C3 F1FE     PU4:	JP	POP3
+  405 E17B  F1          PU5:	POP	AF
+  406 E17C  37          	SCF			; CY=1 ausserhalb
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   8
+CAOS31  Z80
+
+  407 E17D  18 F9       	JR	PU4
+  408 E17F  F5          PU6:	PUSH	AF
+  409 E180  46          	LD	B,(HL)
+  410 E181  2F          	CPL
+  411 E182  A6          	AND	(HL)		; Punkt loeschen
+  412 E183  77          	LD	(HL),A
+  413 E184  F1          	POP	AF
+  414 E185  A0          	AND	B
+  415 E186  1A          	LD	A,(DE)		; Farbe holen
+  416 E187  18 EF       	JR	PU4
+  417                    
+  418                   ; KBD-Treiber
+  419                    
+  420 E189              ISRC3:	;ISR CTC Kanal 3 (Tastatur)
+  421 E189  FB          	EI
+  422 E18A  F5          	PUSH	AF
+  423 E18B  3E 23       	LD	A,23H		; DI,ZG256,Res
+  424 E18D  D3 8F       	OUT	(8FH),A		; CTC K3
+  425 E18F  DD CB 08 DE 	SET	3,(IX+8)	; Timeout
+  426 E193  DD 36 0D 00 	LD	(IX+13),0	; Zeichen tot
+  427 E197  18 6D       	JR	TST4
+  428                    
+  429 E199              ISRPB:	;ISR PIO Kanal B (Tastatur)
+  430 E199  FB          	EI
+  431 E19A  F5          	PUSH	AF
+  432 E19B  DB 8F       	IN	A,(8FH)		; gemessene
+  433 E19D  F5          	PUSH	AF		; Zeit retten
+  434 E19E  3E A7       	LD	A,0A7H		; EI,ZG256,Res
+  435 E1A0  D3 8F       	OUT	(8FH),A
+  436 E1A2  3E 8F       	LD	A,8FH		; ZK
+  437 E1A4  D3 8F       	OUT	(8FH),A
+  438 E1A6  F1          	POP	AF
+  439 E1A7  DD CB 08 5E 	BIT	3,(IX+8)	; Timeout?
+  440 E1AB  DD CB 08 9E 	RES	3,(IX+8)	; ruecksetzen
+  441 E1AF  20 55       	JR	NZ,TST4
+  442 E1B1  FE 65       	CP	101
+  443 E1B3  30 54       	JR	NC,TST5		; 0-Bit
+  444 E1B5  FE 44       	CP	68
+  445 E1B7  30 53       	JR	NC,TST6	 	; 1-Bit
+  446 E1B9  E5          	PUSH	HL
+  447 E1BA  D5          	PUSH	DE
+  448 E1BB  DD CB 0C 3E 	SRL	(IX+12)
+  449 E1BF  DD 7E 08    	LD	A,(IX+8)
+  450 E1C2  E6 80       	AND	80H		; CAPS?
+  451 E1C4  07          	RLCA
+  452 E1C5  DD AE 0C    	XOR	(IX+12)		; 7bit-Scancode
+  453 E1C8  26 00       	LD	H,0
+  454 E1CA  DD 5E 0E    	LD	E,(IX+14)
+  455 E1CD  DD 56 0F    	LD	D,(IX+15)
+  456 E1D0  6F          	LD	L,A
+  457 E1D1  19          	ADD	HL,DE		; Pos. in KTAB
+  458 E1D2  7E          	LD	A,(HL)		; ASCII holen
+  459 E1D3  D1          	POP	DE
+  460 E1D4  E1          	POP	HL
+  461 E1D5  DD BE 0D    	CP	(IX+13)		; =letzter Code?
+  462 E1D8  28 11       	JR	Z,TST2
+  463 E1DA  DD 77 0D    	LD	(IX+13),A	; eintragen
+  464 E1DD  DD CB 08 A6 	RES	4,(IX+8)	; Repeat ruecksetzen
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   9
+CAOS31  Z80
+
+  465 E1E1  DD CB 08 C6 TST1:	SET	0,(IX+8)	; gueltig machen
+  466 E1E5  DD 36 0A 00 	LD	(IX+10),0	; neuer Code
+  467 E1E9  18 1B       	JR	TST4
+  468                   	;
+  469 E1EB  DD 34 0A    TST2:	INC	(IX+10)		; Zeit abwarten
+  470 E1EE  DD CB 08 66 	BIT	4,(IX+8)	; Fast Repeat?
+  471 E1F2  20 0C       	JR	NZ,TST3
+  472 E1F4  DD CB 0A 66 	BIT	4,(IX+10)	; 16 erreicht?
+  473 E1F8  28 0C       	JR	Z,TST4
+  474 E1FA  DD CB 08 E6 	SET	4,(IX+8)	; Repeat aktiv
+  475 E1FE  18 E1       	JR	TST1
+  476                   	;
+  477 E200  DD CB 0A 4E TST3:	BIT	1,(IX+10)	; nur jeder 2.
+  478 E204  20 DB       	JR	NZ,TST1		; Interrupt!
+  479 E206  F1          TST4:	POP	AF
+  480 E207  ED 4D       	RETI
+  481                   	;
+  482 E209  B7          TST5:	OR	A		; 0-Bit
+  483 E20A  18 01       	JR	TST7
+  484 E20C  37          TST6:	SCF			; 1-Bit
+  485 E20D  DD CB 0C 1E TST7:	RR	(IX+12)		; einschieben
+  486 E211  18 F3       	JR	TST4
+  487                   
+  488                   ; Tastaturtabelle:
+  489                   
+  490 E213  57 77       KTAB:	DB	'Ww'
+  491 E215  41 61       	DB	'Aa'
+  492 E217  32 22       	DB	'2"'
+  493 E219  08 19       	DB	8,19H		; CUL
+  494 E21B  10 0C       	DB	10H,0CH		; HOME
+  495 E21D  2D 3D       	DB	'-='
+  496 E21F  F2 F8       	DB	0F2H,0F8H	; F2
+  497 E221  59 79       	DB	'Yy'
+  498 E223  45 65       	DB	'Ee'
+  499 E225  53 73       	DB	'Ss'
+  500 E227  33 23       	DB	'3#'
+  501 E229  5E 5D       	DB	'^]'
+  502 E22B  01 0F       	DB	1,0FH		; CLR
+  503 E22D  3A 2A       	DB	':*'
+  504 E22F  F3 F9       	DB	0F3H,0F9H	; F3
+  505 E231  58 78       	DB	'Xx'
+  506 E233  54 74       	DB	'Tt'
+  507 E235  46 66       	DB	'Ff'
+  508 E237  35 25       	DB	'5%'
+  509 E239  50 70       	DB	'Pp'
+  510 E23B  1F 02       	DB	1FH,2		; DEL
+  511 E23D  30 40       	DB	'0',40H
+  512 E23F  F5 FB       	DB	0F5H,0FBH	; F5
+  513 E241  56 76       	DB	'Vv'
+  514 E243  55 75       	DB	'Uu'
+  515 E245  48 68       	DB	'Hh'
+  516 E247  37 27       	DB	'7',27H
+  517 E249  4F 6F       	DB	'Oo'
+  518 E24B  1A 14       	DB	1AH,14H		; INS
+  519 E24D  39 29       	DB	'9)'
+  520 E24F  03 03       	DB	3,3		; BRK
+  521 E251  4E 6E       	DB	'Nn'
+  522 E253  49 69       	DB	'Ii'
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  10
+CAOS31  Z80
+
+  523 E255  4A 6A       	DB	'Jj'
+  524 E257  38 28       	DB	'8('
+  525 E259  20 5B       	DB	' ['		; SPC
+  526 E25B  4B 6B       	DB	'Kk'
+  527 E25D  2C 3C       	DB	',<'
+  528 E25F  13 13       	DB	13H,13H		; STOP
+  529 E261  4D 6D       	DB	'Mm'
+  530 E263  5A 7A       	DB	'Zz'
+  531 E265  47 67       	DB	'Gg'
+  532 E267  36 26       	DB	'6&'
+  533 E269  20 20       	DB	'  '		; freie Taste
+  534 E26B  4C 6C       	DB	'Ll'
+  535 E26D  2E 3E       	DB	'.>'
+  536 E26F  F6 FC       	DB	0F6H,0FCH	; F6
+  537 E271  42 62       	DB	'Bb'
+  538 E273  52 72       	DB	'Rr'
+  539 E275  44 64       	DB	'Dd'
+  540 E277  34 24       	DB	'4$'
+  541 E279  5F 5C       	DB	'_\'
+  542 E27B  2B 3B       	DB	'+;'
+  543 E27D  2F 3F       	DB	'/?'
+  544 E27F  F4 FA       	DB	0F4H,0FAH	; F4
+  545 E281  43 63       	DB	'Cc'
+  546 E283  51 71       	DB	'Qq'
+  547 E285  16 16       	DB	16H,16H		; CAPS
+  548 E287  31 21       	DB	'1!'
+  549 E289  0A 12       	DB	LF,12H		; CUD
+  550 E28B  0B 11       	DB	0BH,11H		; CUU
+  551 E28D  09 18       	DB	09H,18H		; CUR
+  552 E28F  F1 F7       	DB	0F1H,0F7H	; F1
+  553 E291  0D 0D       	DB	CR,CR		; ENTER
+  554                    
+  555 E293  E4CD        ISRTAB:	DW	ISRPA		; PIO A:Kassette
+  556 E295  E199        	DW	ISRPB		; PIO B:Tastatur
+  557 E297  0000        	DW	0		; CTC 0:frei
+  558 E299  E4B9        	DW	ISRC1		; CTC 1:Kassette
+  559 E29B  E4DF        	DW	ISRC2		; CTC 2:Tondauer
+  560 E29D  E189        	DW	ISRC3		; CTC 3:Tastatur
+  561                    
+  562 E29F              KBDZ:	;Abfrage mit Quittung				;**0E**
+  563 E29F  CD E2A8     	CALL	KBDS
+  564 E2A2  D0          	RET	NC
+  565 E2A3  DD CB 08 86 	RES	0,(IX+8)
+  566 E2A7  C9          	RET
+  567                    
+  568 E2A8              KBDS:	;Abfrage ohne Quittung				;**0C**
+  569 E2A8  B7          	OR	A
+  570 E2A9  DD CB 08 46 	BIT	0,(IX+8)	; Code gueltig?
+  571 E2AD  C8          	RET	Z
+  572 E2AE  DD 7E 0D    	LD	A,(IX+13)
+  573 E2B1  37          	SCF			; wenn ja
+  574 E2B2  C9          	RET
+  575                    
+  576 E2B3  C5          INIEA:	PUSH	BC					;**43**
+  577 E2B4  4E          	LD	C,(HL)		; 1.Byte=Adr.
+  578 E2B5  23          	INC	HL
+  579 E2B6  46          	LD	B,(HL)		; 2.Byte=Anz.
+  580 E2B7  23          	INC	HL
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  11
+CAOS31  Z80
+
+  581 E2B8  ED B3       	OTIR
+  582 E2BA  C1          	POP	BC
+  583 E2BB  C9          	RET
+  584                    
+  585 E2BC  CD E2B3     INIME:	CALL	INIEA					;**44**
+  586 E2BF  15          	DEC	D		; D Kanaele
+  587 E2C0  20 FA       	JR	NZ,INIME
+  588 E2C2  C9          	RET
+  589                    
+  590 E2C3              ERAM4:	;RAM loeschen
+  591 E2C3  21 4000     	LD	HL,4000H	; RAM4
+  592 E2C6  44          	LD	B,H
+  593 E2C7  4D          	LD	C,L
+  594 E2C8  7D          ERAM:	LD	A,L
+  595 E2C9  77          ERA4:	LD	(HL),A		; loeschen
+  596 E2CA  ED A1       	CPI			; INC HL, DEC BC
+  597 E2CC  E0          	RET	PO		; fertig
+  598 E2CD  18 FA       	JR	ERA4
+  599                   
+  600 E2CF  7F7F        	DW	7F7FH
+  601 E2D1  53 57 49 54 	DB	'SWITCH',1
+  602 E2D8  3A B781     	LD	A,(ARGN)
+  603 E2DB  53          	LD	D,E
+  604 E2DC  CD E2F4     	CALL	MODU
+  605 E2DF  7D          	LD	A,L		; Platz
+  606 E2E0  CD F2E2     	CALL	AHEX
+  607 E2E3  CD F2C8     	CALL	SPACE
+  608 E2E6  7C          	LD	A,H		; Kennbyte
+  609 E2E7  CD F2E2     	CALL	AHEX
+  610 E2EA  CD F2C8     	CALL	SPACE
+  611 E2ED  7B          	LD	A,E		; Steuerbyte
+  612 E2EE  CD F2E2     	CALL	AHEX
+  613 E2F1  C3 F2D7     	JP	CRLF
+  614                    
+  615 E2F4              MODU:	;Lesen und Schalten				;**26**
+  616 E2F4  FE 02       	CP	2
+  617 E2F6  38 31       	JR	C,MODU5		; nur lesen
+  618 E2F8  7D          	LD	A,L
+  619 E2F9  FE 03       	CP	3
+  620 E2FB  30 26       	JR	NC,MODU4
+  621 E2FD  0E 88       	LD	C,88H		; interne Module
+  622 E2FF  ED 60       	IN	H,(C)
+  623 E301  A7          	AND	A
+  624 E302  20 12       	JR	NZ,MODU2
+  625 E304  CB 42       	BIT	0,D		; fuer RAM0
+  626 E306  CB 8C       	RES	1,H
+  627 E308  28 02       	JR	Z,MODU1
+  628 E30A  CB CC       	SET	1,H
+  629 E30C  CB 4A       MODU1:	BIT	1,D
+  630 E30E  CB 9C       	RES	3,H
+  631 E310  28 0F       	JR	Z,MODU3
+  632 E312  CB DC       	SET	3,H
+  633 E314  18 0B       	JR	MODU3
+  634                    
+  635 E316  3D          MODU2:	DEC	A
+  636 E317  20 24       	JR	NZ,MODU7
+  637 E319  CB 42       	BIT	0,D		; fuer IRM
+  638 E31B  CB 94       	RES	2,H
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  12
+CAOS31  Z80
+
+  639 E31D  28 02       	JR	Z,MODU3
+  640 E31F  CB D4       	SET	2,H
+  641 E321  ED 61       MODU3:	OUT	(C),H		; int. schalten
+  642 E323  7A          MODU4:	LD	A,D
+  643 E324  0E 80       	LD	C,80H
+  644 E326  45          	LD	B,L
+  645 E327  ED 79       	OUT	(C),A		; Senden Steuerbyte
+  646 E329  26 00       MODU5:	LD	H,0
+  647 E32B  E5          	PUSH	HL
+  648 E32C  F5          	PUSH	AF
+  649 E32D  01 B800     	LD	BC,0B800H
+  650 E330  09          	ADD	HL,BC
+  651 E331  F1          	POP	AF
+  652 E332  38 01       	JR	C,MODU6		; nur lesen
+  653 E334  77          	LD	(HL),A		; eintragen
+  654 E335  5E          MODU6:	LD	E,(HL)		; Rueckgabe STB
+  655 E336  E1          	POP	HL		; (fuer Kommando)
+  656 E337  0E 80       	LD	C,80H
+  657 E339  45          	LD	B,L
+  658 E33A  ED 60       	IN	H,(C)		; Modultyp lesen
+  659 E33C  C9          	RET
+  660                    
+  661 E33D  CB 42       MODU7:	BIT	0,D		; fuer BASIC-ROM
+  662 E33F  CB BC       	RES	7,H
+  663 E341  28 DE       	JR	Z,MODU3
+  664 E343  CB FC       	SET	7,H
+  665 E345  18 DA       	JR	MODU3
+  666                   
+  667 E347  7F7F        	DW	7F7FH
+  668 E349  4A 55 4D 50 	DB	'JUMP',1
+  669 E34E  7D          	LD	A,L
+  670 E34F  47          JUMP:	LD	B,A					;**27**
+  671 E350  0E 80       	LD	C,80H
+  672 E352  ED 78       	IN	A,(C)
+  673 E354  3C          	INC	A		; Kennbyte FF?
+  674 E355  CA F17C     	JP	Z,LOOP2		; ja-Fehler
+  675 E358  3E FF       	LD	A,0FFH
+  676 E35A  ED 79       	OUT	(C),A		; Ausgabe FF
+  677 E35C  26 00       	LD	H,0
+  678 E35E  11 B800     	LD	DE,0B800H
+  679 E361  19          	ADD	HL,DE		; Fehler: L wird bei Aufruf UP27 nicht definiert!
+  680 E362  77          	LD	(HL),A		; Eintrag
+  681 E363  DB 88       	IN	A,88H
+  682 E365  E6 7E       	AND	7EH
+  683 E367  C3 B7B4     	JP	BJUMP		; in IRM
+  684                    
+  685                    
+  686                   ; TAPE-Treiber
+  687                    
+  688 E36A              ISRO:	;Init Bandausgabe				;**08**
+  689 E36A  2E 60       	LD	L,60H		; Motor, LED ein
+  690 E36C  CD E3E6     	CALL	ISRI1
+  691 E36F  DD 36 02 00 	LD	(IX+2),0	; 1. Block
+  692 E373  01 2000     	LD	BC,2000H	; Vortonlaenge
+  693                   	;
+  694 E376              MBO:	;Ausgabe 1 Block				;**01**
+  695 E376  DD 34 02    	INC	(IX+2)
+  696 E379  F3          	DI
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  13
+CAOS31  Z80
+
+  697 E37A  AF          	XOR	A
+  698 E37B  DD 77 01    	LD	(IX+1),A	; Pruefsumme
+  699 E37E  3E 87       	LD	A,87H		; EI,ZG16,Res
+  700 E380  D3 8D       	OUT	(8DH),A
+  701 E382  3E 2F       	LD	A,2FH		; Vorton
+  702 E384  D3 8D       	OUT	(8DH),A
+  703 E386  FB          	EI
+  704 E387  57          	LD	D,A		; D=2Fh
+  705 E388  CD E3D4     MBO1:	CALL	HBITOT
+  706 E38B  ED A1       	CPI
+  707 E38D  EA E388     	JP	PE,MBO1		; BC mal
+  708 E390  CD E3CC     	CALL	ZTON		; Trennzeichen
+  709 E393  DD 7E 02    	LD	A,(IX+2)
+  710 E396  CD E3BB     	CALL	BYTOT		; Blocknummer
+  711 E399  DD 6E 05    	LD	L,(IX+5)
+  712 E39C  DD 66 06    	LD	H,(IX+6)
+  713 E39F  06 80       	LD	B,80H
+  714 E3A1  7E          BLKOT:	LD	A,(HL)
+  715 E3A2  CD E3BB     	CALL	BYTOT		; Datenbyte
+  716 E3A5  DD 7E 01    	LD	A,(IX+1)
+  717 E3A8  86          	ADD	(HL)		; Pruefsumme
+  718 E3A9  DD 77 01    	LD	(IX+1),A	; berechnen
+  719 E3AC  23          	INC	HL
+  720 E3AD  10 F2       	DJNZ	BLKOT
+  721 E3AF  CD E3BB     	CALL	BYTOT		; und ausgeben
+  722 E3B2  7A          	LD	A,D
+  723 E3B3  CD E3DB     	CALL	BITO1		; noch ein Knacks
+  724 E3B6  3E 03       	LD	A,3
+  725 E3B8  D3 8D       	OUT	(8DH),A		; CTC stoppen
+  726 E3BA  C9          	RET
+  727                   
+  728 E3BB              BYTOT:	;Ausgabe eines Bytes
+  729 E3BB  C5          	PUSH	BC
+  730 E3BC  4F          	LD	C,A
+  731 E3BD  06 08       	LD	B,8
+  732 E3BF  CB 09       BYTOUT:	RRC	C		; mit Bit 0
+  733 E3C1  F5          	PUSH	AF		; beginnend
+  734 E3C2  DC E3D4     	CALL	C,HBITOT
+  735 E3C5  F1          	POP	AF
+  736 E3C6  D4 E3D0     	CALL	NC,LBITOT
+  737 E3C9  10 F4       	DJNZ	BYTOUT		; 8*
+  738 E3CB  C1          	POP	BC
+  739 E3CC  1E 5D       ZTON:	LD	E,5DH		; ZK Trennz.
+  740 E3CE  18 06       	JR	BITOUT
+  741                    
+  742 E3D0  1E 17       LBITOT:	LD	E,17H		; ZK High-Bit
+  743 E3D2  18 02       	JR	BITOUT
+  744                    
+  745 E3D4  1E 2F       HBITOT:	LD	E,2FH		; ZK Low-Bit
+  746 E3D6  7A          BITOUT:	LD	A,D
+  747 E3D7  CD E3DB     	CALL	BITO1		; aufrufen und
+  748 E3DA  7A          	LD	A,D		; reinlaufen
+  749 E3DB  DD 77 00    BITO1:	LD	(IX),A
+  750 E3DE  DD 7E 00    BITO2:	LD	A,(IX)		; Warten auf
+  751 E3E1  B7          	OR	A		; Interrupt
+  752 E3E2  20 FA       	JR	NZ,BITO2
+  753 E3E4  53          	LD	D,E
+  754 E3E5  C9          	RET
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  14
+CAOS31  Z80
+
+  755                    
+  756 E3E6  F3          ISRI1:	DI
+  757 E3E7  DB 88       	IN	A,88H
+  758 E3E9  B5          	OR	L		; schalten
+  759 E3EA  D3 88       	OUT	(88H),A
+  760 E3EC  FB          	EI
+  761 E3ED  2A B7A4     	LD	HL,(WEND)
+  762 E3F0  22 B7CF     	LD	(ZWEND),HL
+  763 E3F3  C3 F849     	JP	PAGE
+  764                    
+  765 E3F6              CSRO:	;Abschluss Bandausgabe				;**09**
+  766 E3F6  DD 36 02 FE 	LD	(IX+2),0FEH
+  767 E3FA  CD E376     	CALL	MBO
+  768 E3FD  21 B700     CSROI:	LD	HL,CASS		; Kassettenpuffer
+  769 E400  01 007E     	LD	BC,7EH
+  770 E403  CD E2C8     	CALL	ERAM		; loeschen
+  771 E406  2A B7CF     	LD	HL,(ZWEND)
+  772 E409  22 B7A4     	LD	(WEND),HL
+  773 E40C  DB 88       	IN	A,(88H)
+  774 E40E  E6 9F       	AND	9FH		; Motor, LED aus
+  775 E410  D3 88       	OUT	(88H),A
+  776 E412  C3 F398     	JP	INIT		; Ports init
+  777                    
+  778 E415              ISRI:	;Init. Bandeingabe				;**0A**
+  779 E415  2E 40       	LD	L,40H		; Motor ein
+  780 E417  CD E3E6     	CALL	ISRI1
+  781 E41A  CD E43F     	CALL	MBI0		; Block lesen
+  782 E41D  D8          	RET	C		; Fehler
+  783 E41E  11 E4B5     	LD	DE,COM
+  784 E421  DD 66 06    	LD	H,(IX+6)
+  785 E424  DD 7E 05    	LD	A,(IX+5)
+  786 E427  C6 08       	ADD	8
+  787 E429  6F          	LD	L,A
+  788 E42A  06 04       	LD	B,4
+  789 E42C  1A          ISRI2:	LD	A,(DE)
+  790 E42D  96          	SUB	(HL)
+  791 E42E  A7          	AND	A
+  792 E42F  23          	INC	HL
+  793 E430  13          	INC	DE
+  794 E431  C0          	RET	NZ
+  795 E432  10 F8       	DJNZ	ISRI2
+  796 E434  DD CB 07 FE 	SET	7,(IX+7)	; COM-File
+  797 E438  C9          	RET			; geschuetzt
+  798                   
+  799 E439              MBI:	;Einlesen 1 Block				;**05**
+  800 E439  DD CB 07 7E 	BIT	7,(IX+7)
+  801 E43D  37          	SCF			; kein COM-File!
+  802 E43E  C0          	RET	NZ
+  803 E43F  3E 05       MBI0:	LD	A,5		; DI,ZG16
+  804 E441  D3 8E       	OUT	(8EH),A		; CTC K2
+  805 E443  3E 83       	LD	A,83H		; EI
+  806 E445  D3 8A       	OUT	(8AH),A		; an PIO A
+  807 E447  E5          	PUSH	HL
+  808 E448  D5          	PUSH	DE
+  809 E449  3E A3       	LD	A,0A3H		; ZK
+  810 E44B  D3 8E       	OUT	(8EH),A
+  811 E44D  FB          	EI
+  812 E44E  06 16       MBI1:	LD	B,16H
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  15
+CAOS31  Z80
+
+  813 E450  AF          	XOR	A
+  814 E451  DD 77 01    	LD	(IX+1),A	; Pruefsumme=0
+  815 E454  CD E4F8     MBI2:	CALL	STOP1
+  816 E457  38 F5       	JR	C,MBI1
+  817 E459  FE BA       	CP	0BAH
+  818 E45B  CD E4A8     	CALL	LEDOO
+  819 E45E  38 EE       	JR	C,MBI1		; 10h korrekte
+  820 E460  10 F2       	DJNZ	MBI2		; Schwingungen
+  821 E462  06 02       MBI3:	LD	B,2		; erkennen
+  822 E464  AF          MBI4:	XOR	A
+  823 E465  4F          	LD	C,A
+  824 E466  DD 77 00    	LD	(IX),A
+  825 E469  CD E507     	CALL	STOP21		; 2 halbe Trenn-
+  826 E46C  FE 5D       	CP	5DH		; zeichen er-
+  827 E46E  30 F2       	JR	NC,MBI3		; kennen
+  828 E470  10 F2       	DJNZ	MBI4
+  829 E472  CD E50F     	CALL	BYTIN		; Blocknummer
+  830 E475  DC E4A8     	CALL	C,LEDOO
+  831 E478  DD 77 02    	LD	(IX+2),A
+  832 E47B  06 80       	LD	B,80H
+  833 E47D  DD 6E 05    	LD	L,(IX+5)
+  834 E480  DD 66 06    	LD	H,(IX+6)
+  835 E483  CD E50F     BLKIN:	CALL	BYTIN		; Datenbyte
+  836 E486  DC E4A8     	CALL	C,LEDOO
+  837 E489  77          	LD	(HL),A
+  838 E48A  DD 7E 01    	LD	A,(IX+1)
+  839 E48D  86          	ADD	A,(HL)		; aufsummieren
+  840 E48E  DD 77 01    	LD	(IX+1),A
+  841 E491  23          	INC	HL
+  842 E492  10 EF       	DJNZ	BLKIN
+  843 E494  CD E50F     	CALL	BYTIN		; Pruefsumme
+  844 E497  DC E4A8     	CALL	C,LEDOO
+  845 E49A  47          	LD	B,A
+  846 E49B  DD 7E 01    	LD	A,(IX+1)
+  847 E49E  B8          	CP	B		; gleich?
+  848 E49F  D1          	POP	DE
+  849 E4A0  E1          	POP	HL
+  850 E4A1  3E 03       	LD	A,3		; DI an PIO-A
+  851 E4A3  D3 8A       	OUT	(8AH),A
+  852 E4A5  28 01       	JR	Z,LEDOO
+  853 E4A7  37          	SCF			; Stoerung
+  854 E4A8  F5          LEDOO:	PUSH	AF
+  855 E4A9  DB 88       	IN	A,(88H)
+  856 E4AB  CB EF       	SET	5,A		; LED ein
+  857 E4AD  30 02       	JR	NC,MBI5
+  858 E4AF  CB AF       	RES	5,A		; LED aus
+  859 E4B1  D3 88       MBI5:	OUT	(88H),A
+  860 E4B3  F1          	POP	AF
+  861 E4B4  C9          	RET
+  862                   
+  863 E4B5  43 4F 4D 01 COM:	DB	'COM',1
+  864                   
+  865 E4B9              ISRC1:	;ISR CTC Kanal 1 (Kassette-Out)
+  866 E4B9  F5          	PUSH	AF
+  867 E4BA  3E 03       	LD	A,3		; DI,ZG16,Res
+  868 E4BC  D3 8D       	OUT	(8DH),A
+  869 E4BE  3E 87       	LD	A,87H		; EI,ZG16,Res
+  870 E4C0  D3 8D       	OUT	(8DH),A
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  16
+CAOS31  Z80
+
+  871 E4C2  DD 7E 00    	LD	A,(IX)		; Uebergabezelle
+  872 E4C5  D3 8D       	OUT	(8DH),A		; ZK
+  873 E4C7  AF          	XOR	A
+  874 E4C8  DD 77 00    	LD	(IX),A		; Quittierung
+  875 E4CB  18 0E       	JR	ISR2E
+  876                    
+  877 E4CD              ISRPA:	;ISR PIO Kanal A (Kassette-In)
+  878 E4CD  F5          	PUSH	AF
+  879 E4CE  DB 8E       	IN	A,8EH
+  880 E4D0  DD 77 00    	LD	(IX),A		; Uebergabezelle
+  881 E4D3  3E 07       	LD	A,7
+  882 E4D5  D3 8E       	OUT	(8EH),A
+  883 E4D7  3E A3       	LD	A,0A3H
+  884 E4D9  D3 8E       ISR1E:	OUT	(8EH),A
+  885 E4DB  F1          ISR2E:	POP	AF
+  886 E4DC  FB          	EI
+  887 E4DD  ED 4D       	RETI
+  888                    
+  889 E4DF              ISRC2:	;ISR CTC Kanal 2 (Tondauer)
+  890 E4DF  F5          	PUSH	AF
+  891 E4E0  3E 03       	LD	A,3		; Ton aus
+  892 E4E2  D3 8C       	OUT	(8CH),A		; CTC0
+  893 E4E4  D3 8D       	OUT	(8DH),A		; CTC1
+  894 E4E6  DB 89       	IN	A,(89H)
+  895 E4E8  CB FF       	SET	7,A		; Blinken ein
+  896 E4EA  D3 89       	OUT	(89H),A
+  897 E4EC  3E 47       	LD	A,47H		; CTC2 auf
+  898 E4EE  D3 8E       	OUT	(8EH),A		; Blinken stellen
+  899 E4F0  3E 20       	LD	A,20H		; ZK
+  900 E4F2  DD CB 08 8E 	RES	1,(IX+8)	; Ton ist aus
+  901 E4F6  18 E1       	JR	ISR1E
+  902                    
+  903 E4F8  AF          STOP1:	XOR	A		; 1 Bit einlesen
+  904 E4F9  DD 77 00    	LD	(IX),A
+  905 E4FC  DD 7E 00    STOP11:	LD	A,(IX)		; Warten auf
+  906 E4FF  B7          	OR	A		; Interrupt
+  907 E500  28 FA       	JR	Z,STOP11
+  908 E502  4F          	LD	C,A
+  909 E503  AF          	XOR	A
+  910 E504  DD 77 00    	LD	(IX),A
+  911 E507  DD 7E 00    STOP21:	LD	A,(IX)
+  912 E50A  B7          	OR	A
+  913 E50B  28 FA       	JR	Z,STOP21
+  914 E50D  81          	ADD	A,C		; beide 'Zeiten' addieren
+  915 E50E  C9          	RET
+  916                    
+  917 E50F              BYTIN:	;Einlesen eines Bytes
+  918 E50F  16 08       	LD	D,8		; 8 Bit
+  919 E511  AF          	XOR	A
+  920 E512  5F          	LD	E,A
+  921 E513  CD E4F8     TRN1:	CALL	STOP1		; Bit einlesen
+  922 E516  3F          	CCF
+  923 E517  30 04       	JR	NC,TRN2
+  924 E519  FE BA       	CP	0BAH		; zu intolerant
+  925 E51B  D8          	RET	C
+  926 E51C  37          	SCF
+  927 E51D  CB 1B       TRN2:	RR	E		; Bit einschieben
+  928 E51F  15          	DEC	D
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  17
+CAOS31  Z80
+
+  929 E520  20 F1       	JR	NZ,TRN1		; 8*
+  930 E522  CD E4F8     	CALL	STOP1		; Trennzeichen
+  931 E525  7B          	LD	A,E		; mit CY-
+  932 E526  C9          	RET			; Rueckmeldung
+  933                    
+  934 E527  CD F44C     TON:	CALL	LARG					;**35**
+  935 E52A  DD CB 08 4E TON1:	BIT	1,(IX+8)	; alten Ton
+  936 E52E  20 FA       	JR	NZ,TON1		; abwarten
+  937 E530  7D          	LD	A,L		; Tonhoehe 1
+  938 E531  A7          	AND	A
+  939 E532  3E 03       	LD	A,3		; CTC Stop
+  940 E534  28 0B       	JR	Z,TON3		; kein Ton1
+  941 E536  3E 07       	LD	A,7		; CTC Zeitgeber
+  942 E538  CB 44       	BIT	0,H		; Vorteiler 1?
+  943 E53A  28 02       	JR	Z,TON2		; VT16
+  944 E53C  F6 20       	OR	20H		; VT256
+  945 E53E  D3 8C       TON2:	OUT	(8CH),A		; CTC Steuerwort
+  946 E540  7D          	LD	A,L		; ZK1
+  947 E541  D3 8C       TON3:	OUT	(8CH),A
+  948 E543  7B          	LD	A,E		; Tonhoehe 2
+  949 E544  A7          	AND	A
+  950 E545  3E 03       	LD	A,3		; CTC Stop
+  951 E547  28 0B       	JR	Z,TON5		; kein Ton2
+  952 E549  3E 07       	LD	A,7		; CTC Zeitgeber
+  953 E54B  CB 42       	BIT	0,D		; Vorteiler 2?
+  954 E54D  28 02       	JR	Z,TON4		; VT16
+  955 E54F  F6 20       	OR	20H		; VT256
+  956 E551  D3 8D       TON4:	OUT	(8DH),A		; CTC Steuerwort
+  957 E553  7B          	LD	A,E		; ZK2
+  958 E554  D3 8D       TON5:	OUT	(8DH),A
+  959 E556  79          	LD	A,C		; Lautstaerke
+  960 E557  EE 1F       	XOR	1FH		; da nullaktiv
+  961 E559  E6 1F       	AND	1FH		; maskieren
+  962 E55B  CB FF       	SET	7,A		; Blinken ein
+  963 E55D  4F          	LD	C,A
+  964 E55E  78          	LD	A,B
+  965 E55F  A7          	AND	A
+  966 E560  28 0D       	JR	Z,TON6		; Dauerton
+  967 E562  CB B9       	RES	7,C		; Blinken aus
+  968 E564  DD CB 08 CE 	SET	1,(IX+8)	; neuer Ton
+  969 E568  3E C7       	LD	A,0C7H		; EI, Zaehler 50Hz
+  970 E56A  D3 8E       	OUT	(8EH),A		; CTC2
+  971 E56C  78          	LD	A,B		; Dauer
+  972 E56D  D3 8E       	OUT	(8EH),A
+  973 E56F  06 60       TON6:	LD	B,60H		; Bits 5 und 6
+  974 E571  DB 89       TONB:	IN	A,89H
+  975 E573  A0          	AND	B		; maskieren
+  976 E574  B1          	OR	C
+  977 E575  D3 89       	OUT	(89H),A		; Ltst. ausgeben
+  978 E577  C9          	RET
+  979                    
+  980 E578  7E          ZKOUT:	LD	A,(HL)					;**45**
+  981 E579  23          	INC	HL
+  982 E57A  A7          	AND	A
+  983 E57B  C8          	RET	Z
+  984 E57C  CD F1EF     	CALL	OCHR
+  985 E57F  18 F7       	JR	ZKOUT
+  986                   ;
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  18
+CAOS31  Z80
+
+  987                   ; BASIC-Token	(Bit 7 im 1. Byte gesetzt!)
+  988                   ;
+  989 E581              TOKTAB:	TOKEN	INKEY$		; D5
+    1 E581  C9          	  DB	'I' + Y
+    1 E582  4E          	  DB	'N' + Y
+    1 E583  4B          	  DB	'K' + Y
+    1 E584  45          	  DB	'E' + Y
+    1 E585  59          	  DB	'Y' + Y
+    1 E586  24          	  DB	'$' + Y
+  990                   	TOKEN	JOYST		; D6
+    1 E587  CA          	  DB	'J' + Y
+    1 E588  4F          	  DB	'O' + Y
+    1 E589  59          	  DB	'Y' + Y
+    1 E58A  53          	  DB	'S' + Y
+    1 E58B  54          	  DB	'T' + Y
+  991                   	TOKEN	STRING$		; D7
+    1 E58C  D3          	  DB	'S' + Y
+    1 E58D  54          	  DB	'T' + Y
+    1 E58E  52          	  DB	'R' + Y
+    1 E58F  49          	  DB	'I' + Y
+    1 E590  4E          	  DB	'N' + Y
+    1 E591  47          	  DB	'G' + Y
+    1 E592  24          	  DB	'$' + Y
+  992                   	TOKEN	INSTR		; D8
+    1 E593  C9          	  DB	'I' + Y
+    1 E594  4E          	  DB	'N' + Y
+    1 E595  53          	  DB	'S' + Y
+    1 E596  54          	  DB	'T' + Y
+    1 E597  52          	  DB	'R' + Y
+  993                   	TOKEN	RENUMBER	; D9
+    1 E598  D2          	  DB	'R' + Y
+    1 E599  45          	  DB	'E' + Y
+    1 E59A  4E          	  DB	'N' + Y
+    1 E59B  55          	  DB	'U' + Y
+    1 E59C  4D          	  DB	'M' + Y
+    1 E59D  42          	  DB	'B' + Y
+    1 E59E  45          	  DB	'E' + Y
+    1 E59F  52          	  DB	'R' + Y
+  994                   	TOKEN	DELETE		; DA
+    1 E5A0  C4          	  DB	'D' + Y
+    1 E5A1  45          	  DB	'E' + Y
+    1 E5A2  4C          	  DB	'L' + Y
+    1 E5A3  45          	  DB	'E' + Y
+    1 E5A4  54          	  DB	'T' + Y
+    1 E5A5  45          	  DB	'E' + Y
+  995                   	TOKEN	PAUSE		; DB
+    1 E5A6  D0          	  DB	'P' + Y
+    1 E5A7  41          	  DB	'A' + Y
+    1 E5A8  55          	  DB	'U' + Y
+    1 E5A9  53          	  DB	'S' + Y
+    1 E5AA  45          	  DB	'E' + Y
+  996                   	TOKEN	BEEP		; DC
+    1 E5AB  C2          	  DB	'B' + Y
+    1 E5AC  45          	  DB	'E' + Y
+    1 E5AD  45          	  DB	'E' + Y
+    1 E5AE  50          	  DB	'P' + Y
+  997                   	TOKEN	WINDOW		; DD
+    1 E5AF  D7          	  DB	'W' + Y
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  19
+CAOS31  Z80
+
+    1 E5B0  49          	  DB	'I' + Y
+    1 E5B1  4E          	  DB	'N' + Y
+    1 E5B2  44          	  DB	'D' + Y
+    1 E5B3  4F          	  DB	'O' + Y
+    1 E5B4  57          	  DB	'W' + Y
+  998                   	TOKEN	BORDER		; DE
+    1 E5B5  C2          	  DB	'B' + Y
+    1 E5B6  4F          	  DB	'O' + Y
+    1 E5B7  52          	  DB	'R' + Y
+    1 E5B8  44          	  DB	'D' + Y
+    1 E5B9  45          	  DB	'E' + Y
+    1 E5BA  52          	  DB	'R' + Y
+  999                   	TOKEN	INK		; DF
+    1 E5BB  C9          	  DB	'I' + Y
+    1 E5BC  4E          	  DB	'N' + Y
+    1 E5BD  4B          	  DB	'K' + Y
+ 1000                   	TOKEN	PAPER		; E0
+    1 E5BE  D0          	  DB	'P' + Y
+    1 E5BF  41          	  DB	'A' + Y
+    1 E5C0  50          	  DB	'P' + Y
+    1 E5C1  45          	  DB	'E' + Y
+    1 E5C2  52          	  DB	'R' + Y
+ 1001                   	TOKEN	AT		; E1
+    1 E5C3  C1          	  DB	'A' + Y
+    1 E5C4  54          	  DB	'T' + Y
+ 1002                   	TOKEN	COLOR		; E2
+    1 E5C5  C3          	  DB	'C' + Y
+    1 E5C6  4F          	  DB	'O' + Y
+    1 E5C7  4C          	  DB	'L' + Y
+    1 E5C8  4F          	  DB	'O' + Y
+    1 E5C9  52          	  DB	'R' + Y
+ 1003                   	TOKEN	SOUND		; E3
+    1 E5CA  D3          	  DB	'S' + Y
+    1 E5CB  4F          	  DB	'O' + Y
+    1 E5CC  55          	  DB	'U' + Y
+    1 E5CD  4E          	  DB	'N' + Y
+    1 E5CE  44          	  DB	'D' + Y
+ 1004                   	TOKEN	PSET		; E4
+    1 E5CF  D0          	  DB	'P' + Y
+    1 E5D0  53          	  DB	'S' + Y
+    1 E5D1  45          	  DB	'E' + Y
+    1 E5D2  54          	  DB	'T' + Y
+ 1005                   	TOKEN	PRESET		; E5
+    1 E5D3  D0          	  DB	'P' + Y
+    1 E5D4  52          	  DB	'R' + Y
+    1 E5D5  45          	  DB	'E' + Y
+    1 E5D6  53          	  DB	'S' + Y
+    1 E5D7  45          	  DB	'E' + Y
+    1 E5D8  54          	  DB	'T' + Y
+ 1006                   	TOKEN	BLOAD		; E6
+    1 E5D9  C2          	  DB	'B' + Y
+    1 E5DA  4C          	  DB	'L' + Y
+    1 E5DB  4F          	  DB	'O' + Y
+    1 E5DC  41          	  DB	'A' + Y
+    1 E5DD  44          	  DB	'D' + Y
+ 1007                   	TOKEN	VPEEK		; E7
+    1 E5DE  D6          	  DB	'V' + Y
+    1 E5DF  50          	  DB	'P' + Y
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  20
+CAOS31  Z80
+
+    1 E5E0  45          	  DB	'E' + Y
+    1 E5E1  45          	  DB	'E' + Y
+    1 E5E2  4B          	  DB	'K' + Y
+ 1008                   	TOKEN	VPOKE		; E8
+    1 E5E3  D6          	  DB	'V' + Y
+    1 E5E4  50          	  DB	'P' + Y
+    1 E5E5  4F          	  DB	'O' + Y
+    1 E5E6  4B          	  DB	'K' + Y
+    1 E5E7  45          	  DB	'E' + Y
+ 1009                   	TOKEN	LOCATE		; E9
+    1 E5E8  CC          	  DB	'L' + Y
+    1 E5E9  4F          	  DB	'O' + Y
+    1 E5EA  43          	  DB	'C' + Y
+    1 E5EB  41          	  DB	'A' + Y
+    1 E5EC  54          	  DB	'T' + Y
+    1 E5ED  45          	  DB	'E' + Y
+ 1010                   	TOKEN	KEYLIST		; EA
+    1 E5EE  CB          	  DB	'K' + Y
+    1 E5EF  45          	  DB	'E' + Y
+    1 E5F0  59          	  DB	'Y' + Y
+    1 E5F1  4C          	  DB	'L' + Y
+    1 E5F2  49          	  DB	'I' + Y
+    1 E5F3  53          	  DB	'S' + Y
+    1 E5F4  54          	  DB	'T' + Y
+ 1011                   	TOKEN	KEY		; EB
+    1 E5F5  CB          	  DB	'K' + Y
+    1 E5F6  45          	  DB	'E' + Y
+    1 E5F7  59          	  DB	'Y' + Y
+ 1012                   	TOKEN	SWITCH		; EC
+    1 E5F8  D3          	  DB	'S' + Y
+    1 E5F9  57          	  DB	'W' + Y
+    1 E5FA  49          	  DB	'I' + Y
+    1 E5FB  54          	  DB	'T' + Y
+    1 E5FC  43          	  DB	'C' + Y
+    1 E5FD  48          	  DB	'H' + Y
+ 1013                   	TOKEN	PTEST		; ED
+    1 E5FE  D0          	  DB	'P' + Y
+    1 E5FF  54          	  DB	'T' + Y
+    1 E600  45          	  DB	'E' + Y
+    1 E601  53          	  DB	'S' + Y
+    1 E602  54          	  DB	'T' + Y
+ 1014                   	TOKEN	CLOSE		; EE
+    1 E603  C3          	  DB	'C' + Y
+    1 E604  4C          	  DB	'L' + Y
+    1 E605  4F          	  DB	'O' + Y
+    1 E606  53          	  DB	'S' + Y
+    1 E607  45          	  DB	'E' + Y
+ 1015                   	TOKEN	OPEN		; EF
+    1 E608  CF          	  DB	'O' + Y
+    1 E609  50          	  DB	'P' + Y
+    1 E60A  45          	  DB	'E' + Y
+    1 E60B  4E          	  DB	'N' + Y
+ 1016                   	TOKEN	RANDOMIZE	; F0
+    1 E60C  D2          	  DB	'R' + Y
+    1 E60D  41          	  DB	'A' + Y
+    1 E60E  4E          	  DB	'N' + Y
+    1 E60F  44          	  DB	'D' + Y
+    1 E610  4F          	  DB	'O' + Y
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  21
+CAOS31  Z80
+
+    1 E611  4D          	  DB	'M' + Y
+    1 E612  49          	  DB	'I' + Y
+    1 E613  5A          	  DB	'Z' + Y
+    1 E614  45          	  DB	'E' + Y
+ 1017                   	TOKEN	VGET$		; F1
+    1 E615  D6          	  DB	'V' + Y
+    1 E616  47          	  DB	'G' + Y
+    1 E617  45          	  DB	'E' + Y
+    1 E618  54          	  DB	'T' + Y
+    1 E619  24          	  DB	'$' + Y
+ 1018                   	TOKEN	LINE		; F2
+    1 E61A  CC          	  DB	'L' + Y
+    1 E61B  49          	  DB	'I' + Y
+    1 E61C  4E          	  DB	'N' + Y
+    1 E61D  45          	  DB	'E' + Y
+ 1019                   	TOKEN	CIRCLE		; F3
+    1 E61E  C3          	  DB	'C' + Y
+    1 E61F  49          	  DB	'I' + Y
+    1 E620  52          	  DB	'R' + Y
+    1 E621  43          	  DB	'C' + Y
+    1 E622  4C          	  DB	'L' + Y
+    1 E623  45          	  DB	'E' + Y
+ 1020                   	TOKEN	CSRLIN		; F4
+    1 E624  C3          	  DB	'C' + Y
+    1 E625  53          	  DB	'S' + Y
+    1 E626  52          	  DB	'R' + Y
+    1 E627  4C          	  DB	'L' + Y
+    1 E628  49          	  DB	'I' + Y
+    1 E629  4E          	  DB	'N' + Y
+ 1021 E62A  80          	DB	80H		; Ende-Kennung
+ 1022                    
+ 1023 E62B              TOKJP:	;Sprungtabelle fuer BASIC-Token
+ 1024 E62B  EB97        	DW	INKEY
+ 1025 E62D  02FD        	DW	02FDH		; JOYST
+ 1026 E62F  E720        	DW	STRING
+ 1027 E631  EC3E        	DW	INSTR
+ 1028 E633  E77F        	DW	RENUM
+ 1029 E635  E95F        	DW	DELETE
+ 1030 E637  E984        	DW	PAUSE
+ 1031 E639  E9B8        	DW	BBEEP
+ 1032 E63B  E9CD        	DW	WINDOW
+ 1033 E63D  EAA3        	DW	BORDER
+ 1034 E63F  EB14        	DW	INK
+ 1035 E641  EB2E        	DW	PAPER
+ 1036 E643  C348        	DW	0C348H		; AT
+ 1037 E645  EB4A        	DW	BCOLOR
+ 1038 E647  EBB2        	DW	SOUND
+ 1039 E649  EBF5        	DW	PSET
+ 1040 E64B  EC26        	DW	PRESET
+ 1041 E64D  EA57        	DW	BLOAD
+ 1042 E64F  C348        	DW	0C348H		; VPEEK
+ 1043 E651  EA86        	DW	VPOKE
+ 1044 E653  EB63        	DW	LOCATE
+ 1045 E655  ECC3        	DW	KEYLIST
+ 1046 E657  ECB4        	DW	BKEY
+ 1047 E659  ECC7        	DW	SWITCH
+ 1048 E65B  C348        	DW	0C348H		; PTEST
+ 1049 E65D  ED13        	DW	CLOSE
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  22
+CAOS31  Z80
+
+ 1050 E65F  ED54        	DW	OPEN
+ 1051 E661  ED4E        	DW	RANDOM
+ 1052 E663  C348        	DW	0C348H		; VGET
+ 1053 E665  ED89        	DW	BLINE
+ 1054 E667  ED8E        	DW	CIRCLE
+ 1055                   
+ 1056 E669              BEXP1:	;BASIC-Exp 1
+ 1057 E669  78          	LD	A,B
+ 1058 E66A  D6 09       	SUB	9
+ 1059 E66C  38 4F       	JR	C,SNERR1
+ 1060 E66E  FE 1B       	CP	27
+ 1061 E670  30 4B       	JR	NC,SNERR1	; >26
+ 1062 E672  07          	RLCA			; *2
+ 1063 E673  4F          	LD	C,A
+ 1064 E674  06 00       	LD	B,0
+ 1065 E676  EB          	EX	DE,HL
+ 1066 E677  21 E633     	LD	HL,TOKJP+8
+ 1067 E67A  C3 C8B7     	JP	0C8B7H		; Ruecksprung
+ 1068                    
+ 1069 E67D              BEXP2:	;BASIC-Exp 2
+ 1070 E67D  7E          	LD	A,(HL)
+ 1071 E67E  FE DF       	CP	0DFH
+ 1072 E680  D8          	RET	C		; <DFH
+ 1073 E681  FE E3       	CP	0E3H
+ 1074 E683  D0          	RET	NC		; >E2H
+ 1075 E684  FE E1       	CP	0E1H		; AT?
+ 1076 E686  CA EAB1     	JP	Z,PRAT
+ 1077 E689  3A 03FD     	LD	A,(3FDH)
+ 1078 E68C  A7          	AND	A		; PRINT-Erw.?
+ 1079 E68D  20 2E       	JR	NZ,SNERR1
+ 1080 E68F  3C          	INC	A
+ 1081 E690  32 03FD     	LD	(3FDH),A
+ 1082 E693  E5          PREX1:	PUSH	HL
+ 1083 E694  21 B7A3     	LD	HL,COLOR
+ 1084 E697  CD ECB0     	CALL	IRMRD
+ 1085 E69A  E1          	POP	HL
+ 1086 E69B  32 037E     	LD	(37EH),A	; Farbe merken
+ 1087 E69E  7E          	LD	A,(HL)
+ 1088 E69F  FE DF       	CP	0DFH		; INK?
+ 1089 E6A1  28 1D       	JR	Z,PRINK
+ 1090 E6A3  FE E2       	CP	0E2H		; COLOR?
+ 1091 E6A5  CA E6B5     	JP	Z,PRCOL
+ 1092 E6A8  CD C8BD     	CALL	0C8BDH
+ 1093 E6AB  CD EB2E     	CALL	PAPER
+ 1094 E6AE  7E          PREX2:	LD	A,(HL)
+ 1095 E6AF  FE 3B       	CP	';'
+ 1096 E6B1  28 3D       	JR	Z,PREX5
+ 1097 E6B3  18 08       	JR	SNERR1
+ 1098                    
+ 1099 E6B5  CD C8BD     PRCOL:	CALL	0C8BDH
+ 1100 E6B8  CD EB4A     	CALL	BCOLOR
+ 1101 E6BB  18 F1       	JR	PREX2
+ 1102                    
+ 1103 E6BD  C3 C348     SNERR1:	JP	0C348H		; SN-ERROR
+ 1104                    
+ 1105 E6C0  CD C8BD     PRINK:	CALL	0C8BDH
+ 1106 E6C3  CD EB14     	CALL	INK
+ 1107 E6C6  7E          	LD	A,(HL)
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  23
+CAOS31  Z80
+
+ 1108 E6C7  FE 3B       	CP	';'
+ 1109 E6C9  28 25       	JR	Z,PREX5
+ 1110 E6CB  CD C8CC     	CALL	0C8CCH		; Komma?
+ 1111 E6CE  2C          	DB	','
+ 1112 E6CF  FE E0       	CP	0E0H		; PAPER?
+ 1113 E6D1  20 EA       	JR	NZ,SNERR1
+ 1114 E6D3  CD C8BD     	CALL	0C8BDH
+ 1115 E6D6  CD EB2E     	CALL	PAPER
+ 1116 E6D9  CD C8CC     	CALL	0C8CCH
+ 1117 E6DC  3B          	DB	';'
+ 1118 E6DD  CD CB03     PREX3:	CALL	0CB03H
+ 1119 E6E0  3A 037E     	LD	A,(37EH)	; Farbe
+ 1120 E6E3  E5          	PUSH	HL
+ 1121 E6E4  21 B7A3     	LD	HL,COLOR
+ 1122 E6E7  CD ECAC     	CALL	IRMWR		; eintragen
+ 1123 E6EA  E1          	POP	HL
+ 1124 E6EB  C1          	POP	BC
+ 1125 E6EC  C9          	RET
+ 1126                   
+ 1127 E6ED  C5          PREX4:	PUSH	BC
+ 1128 E6EE  18 A3       	JR	PREX1
+ 1129                   
+ 1130 E6F0  CD C8BD     PREX5:	CALL	0C8BDH
+ 1131 E6F3  18 E8       	JR	PREX3
+ 1132                    
+ 1133 E6F5              BEXP3:	;BASIC-Exp 3
+ 1134 E6F5  79          	LD	A,C
+ 1135 E6F6  FE 62       	CP	62H
+ 1136 E6F8  CA EA65     	JP	Z,VPEEK
+ 1137 E6FB  FE 6E       	CP	6EH
+ 1138 E6FD  CA ECDE     	JP	Z,PTEST
+ 1139 E700  FE 7C       	CP	7CH
+ 1140 E702  CA EDBC     	JP	Z,CSRLN
+ 1141 E705  FE 76       	CP	76H
+ 1142 E707  CA EDDF     	JP	Z,VGET
+ 1143 E70A  D6 3E       	SUB	3EH
+ 1144 E70C  38 AF       	JR	C,SNERR1
+ 1145 E70E  FE 07       	CP	7
+ 1146 E710  30 AB       	JR	NC,SNERR1
+ 1147 E712  EB          	EX	DE,HL
+ 1148 E713  01 E62B     	LD	BC,TOKJP	; Tokentabelle
+ 1149 E716  E1          	POP	HL
+ 1150 E717  6F          	LD	L,A
+ 1151 E718  09          	ADD	HL,BC
+ 1152 E719  4E          	LD	C,(HL)
+ 1153 E71A  23          	INC	HL
+ 1154 E71B  66          	LD	H,(HL)
+ 1155 E71C  69          	LD	L,C
+ 1156 E71D  E5          	PUSH	HL		; Routine
+ 1157 E71E  EB          	EX	DE,HL		; anspringen
+ 1158 E71F  C9          	RET
+ 1159                    
+ 1160 E720              STRING:	;String vervielfaeltigen
+ 1161 E720  CD C8CC     	CALL	0C8CCH
+ 1162 E723  28          	DB	'('		; Klammer auf?
+ 1163 E724  CD D421     	CALL	0D421H
+ 1164 E727  F5          	PUSH	AF
+ 1165 E728  CD C8D6     	CALL	0C8D6H		; Komma?
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  24
+CAOS31  Z80
+
+ 1166 E72B  CD CD3A     	CALL	0CD3AH
+ 1167 E72E  CD C8DB     	CALL	0C8DBH		; Klammer zu?
+ 1168 E731  F1          	POP	AF
+ 1169 E732  E5          	PUSH	HL
+ 1170 E733  F5          	PUSH	AF
+ 1171 E734  CD D330     	CALL	0D330H
+ 1172 E737  23          	INC	HL
+ 1173 E738  23          	INC	HL
+ 1174 E739  5E          	LD	E,(HL)
+ 1175 E73A  23          	INC	HL
+ 1176 E73B  56          	LD	D,(HL)
+ 1177 E73C  C1          	POP	BC
+ 1178 E73D  C5          	PUSH	BC
+ 1179 E73E  F5          	PUSH	AF
+ 1180 E73F  D5          	PUSH	DE
+ 1181 E740  4F          	LD	C,A
+ 1182 E741  AF          	XOR	A
+ 1183 E742  B9          	CP	C
+ 1184 E743  28 0C       	JR	Z,STR2
+ 1185 E745  B8          	CP	B
+ 1186 E746  28 09       	JR	Z,STR2
+ 1187 E748  79          	LD	A,C
+ 1188 E749  05          	DEC	B
+ 1189 E74A  28 05       	JR	Z,STR2
+ 1190 E74C  81          STR1:	ADD	C
+ 1191 E74D  38 2B       	JR	C,STR5
+ 1192 E74F  10 FB       	DJNZ	STR1
+ 1193 E751  47          STR2:	LD	B,A
+ 1194 E752  0E 00       	LD	C,0
+ 1195 E754  C5          	PUSH	BC
+ 1196 E755  CD D1E1     	CALL	0D1E1H		; Str.-Arithm.
+ 1197 E758  C1          	POP	BC
+ 1198 E759  C1          	POP	BC
+ 1199 E75A  C5          	PUSH	BC
+ 1200 E75B  CD D17E     	CALL	0D17EH
+ 1201 E75E  E1          	POP	HL
+ 1202 E75F  E3          	EX	(SP),HL
+ 1203 E760  7C          	LD	A,H
+ 1204 E761  E1          	POP	HL
+ 1205 E762  E3          	EX	(SP),HL
+ 1206 E763  6F          	LD	L,A
+ 1207 E764  24          	INC	H
+ 1208 E765  25          STR3:	DEC	H
+ 1209 E766  E5          	PUSH	HL
+ 1210 E767  C5          	PUSH	BC
+ 1211 E768  28 07       	JR	Z,STR4
+ 1212 E76A  CD D2F2     	CALL	0D2F2H
+ 1213 E76D  C1          	POP	BC
+ 1214 E76E  E1          	POP	HL
+ 1215 E76F  18 F4       	JR	STR3
+ 1216 E771  C1          STR4:	POP	BC
+ 1217 E772  E1          	POP	HL
+ 1218 E773  D1          	POP	DE
+ 1219 E774  CD D302     	CALL	0D302H
+ 1220 E777  C3 D1A9     	JP	0D1A9H
+ 1221 E77A  1E 1C       STR5:	LD	E,1CH		; ST-
+ 1222 E77C  C3 C356     	JP	0C356H		; ERROR
+ 1223                   
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  25
+CAOS31  Z80
+
+ 1224 E77F              RENUM:	;neu nummerieren
+ 1225 E77F  E5          	PUSH	HL
+ 1226 E780  21 000A     	LD	HL,10
+ 1227 E783  22 0354     	LD	(354H),HL	; DISTAN
+ 1228 E786  2A 035F     	LD	HL,(35FH)	; Start
+ 1229 E789  F5          	PUSH	AF
+ 1230 E78A  E5          	PUSH	HL
+ 1231 E78B  23          	INC	HL
+ 1232 E78C  23          	INC	HL
+ 1233 E78D  7E          	LD	A,(HL)
+ 1234 E78E  23          	INC	HL
+ 1235 E78F  66          	LD	H,(HL)
+ 1236 E790  6F          	LD	L,A
+ 1237 E791  22 034E     	LD	(34EH),HL	; ZL-Nr
+ 1238 E794  22 0352     	LD	(352H),HL	; NANF
+ 1239 E797  ED 5B 03D7  	LD	DE,(3D7H)	; Ende
+ 1240 E79B  1B          	DEC	DE
+ 1241 E79C  1B          	DEC	DE
+ 1242 E79D  E1          REN1:	POP	HL
+ 1243 E79E  E5          	PUSH	HL
+ 1244 E79F  7E          	LD	A,(HL)
+ 1245 E7A0  23          	INC	HL
+ 1246 E7A1  66          	LD	H,(HL)
+ 1247 E7A2  6F          	LD	L,A
+ 1248 E7A3  CD C689     	CALL	0C689H
+ 1249 E7A6  E3          	EX	(SP),HL
+ 1250 E7A7  20 F4       	JR	NZ,REN1
+ 1251 E7A9  D1          	POP	DE
+ 1252 E7AA  23          	INC	HL
+ 1253 E7AB  23          	INC	HL
+ 1254 E7AC  7E          	LD	A,(HL)
+ 1255 E7AD  23          	INC	HL
+ 1256 E7AE  66          	LD	H,(HL)
+ 1257 E7AF  6F          	LD	L,A
+ 1258 E7B0  22 0350     	LD	(350H),HL	; ZL-Abst
+ 1259 E7B3  06 04       	LD	B,4
+ 1260 E7B5  F1          	POP	AF
+ 1261 E7B6  21 034E     	LD	HL,34EH
+ 1262 E7B9  E3          	EX	(SP),HL
+ 1263 E7BA  28 20       REN2:	JR	Z,REN5
+ 1264 E7BC  CD C986     	CALL	0C986H
+ 1265 E7BF  F5          	PUSH	AF
+ 1266 E7C0  7A          	LD	A,D
+ 1267 E7C1  B3          	OR	E
+ 1268 E7C2  CA C967     REN3:	JP	Z,0C967H	; FC-ERROR
+ 1269 E7C5  F1          	POP	AF
+ 1270 E7C6  E3          	EX	(SP),HL
+ 1271 E7C7  73          	LD	(HL),E
+ 1272 E7C8  23          	INC	HL
+ 1273 E7C9  72          	LD	(HL),D
+ 1274 E7CA  23          	INC	HL
+ 1275 E7CB  28 0F       	JR	Z,REN5
+ 1276 E7CD  F5          	PUSH	AF
+ 1277 E7CE  05          	DEC	B
+ 1278 E7CF  28 07       	JR	Z,REN4
+ 1279 E7D1  F1          	POP	AF
+ 1280 E7D2  E3          	EX	(SP),HL
+ 1281 E7D3  CD C8D6     	CALL	0C8D6H		; Komma?
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  26
+CAOS31  Z80
+
+ 1282 E7D6  18 E2       	JR	REN2
+ 1283                   	;
+ 1284 E7D8  F1          REN4:	POP	AF
+ 1285 E7D9  C2 EA83     	JP	NZ,SNERR2
+ 1286 E7DC  2A 0350     REN5:	LD	HL,(350H)
+ 1287 E7DF  ED 5B 034E  	LD	DE,(34EH)
+ 1288 E7E3  CD C689     	CALL	0C689H
+ 1289 E7E6  DA C967     REN6:	JP	C,0C967H
+ 1290 E7E9  2A 035F     	LD	HL,(35FH)
+ 1291 E7EC  CD C4BE     REN7:	CALL	0C4BEH
+ 1292 E7EF  38 04       	JR	C,REN8
+ 1293 E7F1  28 CF       	JR	Z,REN3
+ 1294 E7F3  18 F7       	JR	REN7
+ 1295                   	;
+ 1296 E7F5  E1          REN8:	POP	HL
+ 1297 E7F6  C5          	PUSH	BC
+ 1298 E7F7  ED 5B 0350  	LD	DE,(350H)
+ 1299 E7FB  21 0000     	LD	HL,0
+ 1300 E7FE  22 0350     	LD	(350H),HL
+ 1301 E801  60          REN9:	LD	H,B
+ 1302 E802  69          	LD	L,C
+ 1303 E803  4E          	LD	C,(HL)
+ 1304 E804  23          	INC	HL
+ 1305 E805  46          	LD	B,(HL)
+ 1306 E806  78          	LD	A,B
+ 1307 E807  B1          	OR	C
+ 1308 E808  28 B8       	JR	Z,REN3
+ 1309 E80A  23          	INC	HL
+ 1310 E80B  7E          	LD	A,(HL)
+ 1311 E80C  23          	INC	HL
+ 1312 E80D  66          	LD	H,(HL)
+ 1313 E80E  6F          	LD	L,A
+ 1314 E80F  CD C689     	CALL	0C689H
+ 1315 E812  2A 0350     	LD	HL,(350H)
+ 1316 E815  23          	INC	HL
+ 1317 E816  22 0350     	LD	(350H),HL
+ 1318 E819  20 E6       	JR	NZ,REN9
+ 1319 E81B  23          	INC	HL
+ 1320 E81C  23          	INC	HL
+ 1321 E81D  29          	ADD	HL,HL
+ 1322 E81E  23          	INC	HL
+ 1323 E81F  ED 5B 03D7  	LD	DE,(3D7H)
+ 1324 E823  19          	ADD	HL,DE
+ 1325 E824  38 C0       	JR	C,REN6
+ 1326 E826  CD C327     	CALL	0C327H		; genug RAM?
+ 1327 E829  22 03D7     	LD	(3D7H),HL
+ 1328 E82C  AF          	XOR	A
+ 1329 E82D  2B          	DEC	HL
+ 1330 E82E  77          	LD	(HL),A
+ 1331 E82F  2B          	DEC	HL
+ 1332 E830  77          	LD	(HL),A
+ 1333 E831  1B          	DEC	DE
+ 1334 E832  1B          	DEC	DE
+ 1335 E833  EB          	EX	DE,HL
+ 1336 E834  73          	LD	(HL),E
+ 1337 E835  23          	INC	HL
+ 1338 E836  72          	LD	(HL),D
+ 1339 E837  23          	INC	HL
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  27
+CAOS31  Z80
+
+ 1340 E838  3D          	DEC	A
+ 1341 E839  77          	LD	(HL),A
+ 1342 E83A  23          	INC	HL
+ 1343 E83B  77          	LD	(HL),A
+ 1344 E83C  23          	INC	HL
+ 1345 E83D  EB          	EX	DE,HL
+ 1346 E83E  2A 0352     	LD	HL,(352H)
+ 1347 E841  22 034E     	LD	(34EH),HL
+ 1348 E844  E1          REN10:	POP	HL
+ 1349 E845  4E          	LD	C,(HL)
+ 1350 E846  23          	INC	HL
+ 1351 E847  46          	LD	B,(HL)
+ 1352 E848  23          	INC	HL
+ 1353 E849  C5          	PUSH	BC
+ 1354 E84A  01 034E     	LD	BC,34EH
+ 1355 E84D  7E          	LD	A,(HL)
+ 1356 E84E  12          	LD	(DE),A
+ 1357 E84F  0A          	LD	A,(BC)
+ 1358 E850  77          	LD	(HL),A
+ 1359 E851  23          	INC	HL
+ 1360 E852  13          	INC	DE
+ 1361 E853  03          	INC	BC
+ 1362 E854  7E          	LD	A,(HL)
+ 1363 E855  12          	LD	(DE),A
+ 1364 E856  0A          	LD	A,(BC)
+ 1365 E857  77          	LD	(HL),A
+ 1366 E858  13          	INC	DE
+ 1367 E859  2A 034E     	LD	HL,(34EH)
+ 1368 E85C  ED 4B 0354  	LD	BC,(354H)
+ 1369 E860  09          	ADD	HL,BC
+ 1370 E861  22 034E     	LD	(34EH),HL
+ 1371 E864  2A 0350     	LD	HL,(350H)
+ 1372 E867  2B          	DEC	HL
+ 1373 E868  7C          	LD	A,H
+ 1374 E869  B5          	OR	L
+ 1375 E86A  22 0350     	LD	(350H),HL
+ 1376 E86D  20 D5       	JR	NZ,REN10
+ 1377 E86F  12          	LD	(DE),A
+ 1378 E870  E1          	POP	HL
+ 1379 E871  2A 035F     	LD	HL,(35FH)
+ 1380 E874  E5          	PUSH	HL
+ 1381 E875  E1          REN11:	POP	HL
+ 1382 E876  4E          	LD	C,(HL)
+ 1383 E877  23          	INC	HL
+ 1384 E878  46          	LD	B,(HL)
+ 1385 E879  23          	INC	HL
+ 1386 E87A  C5          	PUSH	BC
+ 1387 E87B  7E          	LD	A,(HL)
+ 1388 E87C  23          	INC	HL
+ 1389 E87D  A6          	AND	(HL)
+ 1390 E87E  3C          	INC	A
+ 1391 E87F  28 26       	JR	Z,REN15
+ 1392 E881  23          REN12:	INC	HL
+ 1393 E882  7E          REN13:	LD	A,(HL)
+ 1394 E883  B7          	OR	A
+ 1395 E884  28 EF       	JR	Z,REN11
+ 1396 E886  FE 88       	CP	88H		; GOTO
+ 1397 E888  28 2A       	JR	Z,REN16
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  28
+CAOS31  Z80
+
+ 1398 E88A  FE 8C       	CP	8CH		; GOSUB
+ 1399 E88C  28 26       	JR	Z,REN16
+ 1400 E88E  FE 8B       	CP	8BH		; RESTORE
+ 1401 E890  28 08       	JR	Z,REN14
+ 1402 E892  FE D4       	CP	0D4H		; ELSE
+ 1403 E894  28 04       	JR	Z,REN14
+ 1404 E896  FE A9       	CP	0A9H		; THEN
+ 1405 E898  20 E7       	JR	NZ,REN12
+ 1406 E89A  CD C987     REN14:	CALL	0C987H
+ 1407 E89D  7B          	LD	A,E
+ 1408 E89E  B2          	OR	D
+ 1409 E89F  C4 E8C8     	CALL	NZ,RENUP1
+ 1410 E8A2  C4 E8FA     	CALL	NZ,RENUP2
+ 1411 E8A5  18 DB       	JR	REN13
+ 1412                   	;
+ 1413 E8A7  2B          REN15:	DEC	HL
+ 1414 E8A8  22 03D7     	LD	(3D7H),HL
+ 1415 E8AB  2B          	DEC	HL
+ 1416 E8AC  77          	LD	(HL),A
+ 1417 E8AD  2B          	DEC	HL
+ 1418 E8AE  77          	LD	(HL),A
+ 1419 E8AF  E1          	POP	HL
+ 1420 E8B0  E1          	POP	HL
+ 1421 E8B1  C3 C48A     	JP	0C48AH
+ 1422                   	;
+ 1423 E8B4  CD C987     REN16:	CALL	0C987H
+ 1424 E8B7  7B          	LD	A,E
+ 1425 E8B8  B2          	OR	D
+ 1426 E8B9  28 C7       	JR	Z,REN13
+ 1427 E8BB  CD E8C8     	CALL	RENUP1
+ 1428 E8BE  C4 E8FA     	CALL	NZ,RENUP2
+ 1429 E8C1  7E          	LD	A,(HL)
+ 1430 E8C2  FE 2C       	CP	','
+ 1431 E8C4  20 BC       	JR	NZ,REN13
+ 1432 E8C6  18 EC       	JR	REN16
+ 1433                    
+ 1434 E8C8  E5          RENUP1:	PUSH	HL
+ 1435 E8C9  D5          	PUSH	DE
+ 1436 E8CA  11 FFFF     	LD	DE,-1
+ 1437 E8CD  CD C4BB     	CALL	0C4BBH		; naechste Zeile
+ 1438 E8D0  D1          	POP	DE
+ 1439 E8D1  03          	INC	BC
+ 1440 E8D2  03          	INC	BC
+ 1441 E8D3  03          	INC	BC
+ 1442 E8D4  03          	INC	BC
+ 1443 E8D5  60          	LD	H,B
+ 1444 E8D6  69          	LD	L,C
+ 1445 E8D7  ED 4B 0352  	LD	BC,(352H)
+ 1446 E8DB  7E          RUP11:	LD	A,(HL)
+ 1447 E8DC  23          	INC	HL
+ 1448 E8DD  E5          	PUSH	HL
+ 1449 E8DE  B6          	OR	(HL)
+ 1450 E8DF  28 16       	JR	Z,RUP13
+ 1451 E8E1  7E          	LD	A,(HL)
+ 1452 E8E2  2B          	DEC	HL
+ 1453 E8E3  6E          	LD	L,(HL)
+ 1454 E8E4  67          	LD	H,A
+ 1455 E8E5  CD C689     	CALL	0C689H
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  29
+CAOS31  Z80
+
+ 1456 E8E8  28 0A       	JR	Z,RUP12
+ 1457 E8EA  2A 0354     	LD	HL,(354H)
+ 1458 E8ED  09          	ADD	HL,BC
+ 1459 E8EE  44          	LD	B,H
+ 1460 E8EF  4D          	LD	C,L
+ 1461 E8F0  E1          	POP	HL
+ 1462 E8F1  23          	INC	HL
+ 1463 E8F2  18 E7       	JR	RUP11
+ 1464                   	;
+ 1465 E8F4  3E FF       RUP12:	LD	A,0FFH
+ 1466 E8F6  B7          	OR	A
+ 1467 E8F7  E1          RUP13:	POP	HL
+ 1468 E8F8  E1          	POP	HL
+ 1469 E8F9  C9          	RET
+ 1470                   
+ 1471 E8FA  C5          RENUP2:	PUSH	BC
+ 1472 E8FB  EB          	EX	DE,HL
+ 1473 E8FC  2A 03D7     	LD	HL,(3D7H)
+ 1474 E8FF  ED 52       	SBC	HL,DE
+ 1475 E901  E5          	PUSH	HL
+ 1476 E902  C1          RUP21:	POP	BC
+ 1477 E903  62          	LD	H,D
+ 1478 E904  6B          	LD	L,E
+ 1479 E905  1B          	DEC	DE
+ 1480 E906  1A          	LD	A,(DE)
+ 1481 E907  FE 2C       	CP	','
+ 1482 E909  28 0B       	JR	Z,RUP22
+ 1483 E90B  FE 3A       	CP	':'
+ 1484 E90D  30 07       	JR	NC,RUP22
+ 1485 E90F  C5          	PUSH	BC
+ 1486 E910  D5          	PUSH	DE
+ 1487 E911  ED B0       	LDIR
+ 1488 E913  D1          	POP	DE
+ 1489 E914  18 EC       	JR	RUP21
+ 1490                   	;
+ 1491 E916  EB          RUP22:	EX	DE,HL
+ 1492 E917  D1          	POP	DE
+ 1493 E918  E5          	PUSH	HL
+ 1494 E919  C5          	PUSH	BC
+ 1495 E91A  AF          	XOR	A
+ 1496 E91B  06 98       	LD	B,98H
+ 1497 E91D  CD D6AE     	CALL	0D6AEH
+ 1498 E920  CD D834     	CALL	0D834H
+ 1499 E923  C1          	POP	BC
+ 1500 E924  D1          	POP	DE
+ 1501 E925  23          	INC	HL
+ 1502 E926  13          	INC	DE
+ 1503 E927  7E          RUP23:	LD	A,(HL)
+ 1504 E928  B7          	OR	A
+ 1505 E929  28 0F       	JR	Z,RUP24
+ 1506 E92B  C5          	PUSH	BC
+ 1507 E92C  E5          	PUSH	HL
+ 1508 E92D  EB          	EX	DE,HL
+ 1509 E92E  09          	ADD	HL,BC
+ 1510 E92F  54          	LD	D,H
+ 1511 E930  5D          	LD	E,L
+ 1512 E931  2B          	DEC	HL
+ 1513 E932  ED B8       	LDDR
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  30
+CAOS31  Z80
+
+ 1514 E934  E1          	POP	HL
+ 1515 E935  ED A0       	LDI
+ 1516 E937  C1          	POP	BC
+ 1517 E938  18 ED       	JR	RUP23
+ 1518                   	;
+ 1519 E93A  D5          RUP24:	PUSH	DE
+ 1520 E93B  ED 5B 035F  	LD	DE,(35FH)
+ 1521 E93F  CD C493     	CALL	0C493H
+ 1522 E942  23          RUP25:	INC	HL
+ 1523 E943  7E          	LD	A,(HL)
+ 1524 E944  23          	INC	HL
+ 1525 E945  B6          	OR	(HL)
+ 1526 E946  20 FA       	JR	NZ,RUP25
+ 1527 E948  EB          	EX	DE,HL
+ 1528 E949  73          	LD	(HL),E
+ 1529 E94A  23          	INC	HL
+ 1530 E94B  72          	LD	(HL),D
+ 1531 E94C  13          	INC	DE
+ 1532 E94D  13          	INC	DE
+ 1533 E94E  ED 53 03D7  	LD	(3D7H),DE
+ 1534 E952  E1          	POP	HL
+ 1535 E953  54          	LD	D,H
+ 1536 E954  5D          	LD	E,L
+ 1537 E955  7E          RUP26:	LD	A,(HL)
+ 1538 E956  B7          	OR	A
+ 1539 E957  23          	INC	HL
+ 1540 E958  20 FB       	JR	NZ,RUP26
+ 1541 E95A  C1          	POP	BC
+ 1542 E95B  E3          	EX	(SP),HL
+ 1543 E95C  C5          	PUSH	BC
+ 1544 E95D  EB          	EX	DE,HL
+ 1545 E95E  C9          	RET
+ 1546                    
+ 1547 E95F              DELETE:	;Zeile(n) loeschen
+ 1548 E95F  C8          	RET	Z
+ 1549 E960  CD C986     	CALL	0C986H
+ 1550 E963  CA C442     	JP	Z,0C442H
+ 1551 E966  CD C8D6     	CALL	0C8D6H
+ 1552 E969  D5          	PUSH	DE
+ 1553 E96A  CD C986     	CALL	0C986H
+ 1554 E96D  E1          	POP	HL
+ 1555 E96E  C0          	RET	NZ
+ 1556 E96F  EB          	EX	DE,HL
+ 1557 E970  E5          	PUSH	HL
+ 1558 E971  CD C4BB     	CALL	0C4BBH		; naechste Zeile
+ 1559 E974  D2 C44D     	JP	NC,0C44DH	; UL-ERROR
+ 1560 E977  D1          	POP	DE
+ 1561 E978  F5          	PUSH	AF
+ 1562 E979  C5          	PUSH	BC
+ 1563 E97A  CD C4BE     	CALL	0C4BEH
+ 1564 E97D  D2 C44D     	JP	NC,0C44DH	; UL-ERROR
+ 1565 E980  C1          	POP	BC
+ 1566 E981  C3 C450     	JP	0C450H		; einsortieren
+ 1567                    
+ 1568 E984              PAUSE:	;Programm unterbrechen
+ 1569 E984  CD C8BE     	CALL	0C8BEH
+ 1570 E987  20 0F       	JR	NZ,PAUS2
+ 1571 E989  CD E2A8     PAUS1:	CALL	KBDS
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  31
+CAOS31  Z80
+
+ 1572 E98C  30 FB       	JR	NC,PAUS1
+ 1573 E98E  FE 03       	CP	3		; BRK?
+ 1574 E990  C8          	RET	Z
+ 1575 E991  FE 0A       	CP	LF		; CUU?
+ 1576 E993  20 F4       	JR	NZ,PAUS1
+ 1577 E995  C3 DDE4     	JP	0DDE4H		; Eingabe ASCII
+ 1578                   	;
+ 1579 E998  CD D421     PAUS2:	CALL	0D421H
+ 1580 E99B  4F          	LD	C,A
+ 1581 E99C  3E 10       PAUS3:	LD	A,10H		; 96 sek.
+ 1582 E99E  1E 14       	LD	E,14H		; WAIT
+ 1583 E9A0  CD F015     	CALL	0F015H		; PV5
+ 1584 E9A3  C5          	PUSH	BC
+ 1585 E9A4  CD E2A8     	CALL	KBDS
+ 1586 E9A7  C1          	POP	BC
+ 1587 E9A8  30 0A       	JR	NC,PAUS4
+ 1588 E9AA  FE 03       	CP	3		; BRK?
+ 1589 E9AC  C8          	RET	Z
+ 1590 E9AD  FE 0A       	CP	LF		; CUU?
+ 1591 E9AF  20 03       	JR	NZ,PAUS4
+ 1592 E9B1  C3 DDE4     	JP	0DDE4H		; Eingabe ASCII
+ 1593                   	;
+ 1594 E9B4  0D          PAUS4:	DEC	C
+ 1595 E9B5  20 E5       	JR	NZ,PAUS3
+ 1596 E9B7  C9          	RET
+ 1597                    
+ 1598 E9B8              BBEEP:	;Signalton
+ 1599 E9B8  06 01       	LD	B,1		; ohne Angabe 1x
+ 1600 E9BA  CD C8BE     	CALL	0C8BEH
+ 1601 E9BD  28 04       	JR	Z,BBP1
+ 1602 E9BF  CD D421     	CALL	0D421H
+ 1603 E9C2  47          	LD	B,A		; Anzahl
+ 1604 E9C3  3E 07       BBP1:	LD	A,7		; Beep
+ 1605 E9C5  1E 00       	LD	E,0		; CRT
+ 1606 E9C7  CD F015     	CALL	0F015H		; PV5
+ 1607 E9CA  10 F7       	DJNZ	BBP1
+ 1608 E9CC  C9          	RET
+ 1609                    
+ 1610 E9CD              WINDOW:	;Fenster einstellen
+ 1611 E9CD  CD C8BE     	CALL	0C8BEH
+ 1612 E9D0  28 65       	JR	Z,WINDOW1
+ 1613 E9D2  E5          	PUSH	HL
+ 1614 E9D3  CD D421     	CALL	0D421H
+ 1615 E9D6  E3          	EX	(SP),HL		; in
+ 1616 E9D7  21 B9F6     	LD	HL,WNDFN+90	; Fenster 9
+ 1617 E9DA  CD ECAC     	CALL	IRMWR		; erstellen
+ 1618 E9DD  23          	INC	HL
+ 1619 E9DE  E3          	EX	(SP),HL
+ 1620 E9DF  CD C8D6     	CALL	0C8D6H
+ 1621 E9E2  CD D421     	CALL	0D421H
+ 1622 E9E5  E3          	EX	(SP),HL
+ 1623 E9E6  CD ECAC     	CALL	IRMWR
+ 1624 E9E9  23          	INC	HL
+ 1625 E9EA  E3          	EX	(SP),HL
+ 1626 E9EB  CD C8D6     	CALL	0C8D6H
+ 1627 E9EE  CD D421     	CALL	0D421H
+ 1628 E9F1  E3          	EX	(SP),HL
+ 1629 E9F2  CD ECAC     	CALL	IRMWR
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  32
+CAOS31  Z80
+
+ 1630 E9F5  E3          	EX	(SP),HL
+ 1631 E9F6  CD C8D6     	CALL	0C8D6H
+ 1632 E9F9  CD D421     	CALL	0D421H
+ 1633 E9FC  E3          	EX	(SP),HL
+ 1634 E9FD  57          	LD	D,A
+ 1635 E9FE  CD F018     	CALL	0F018H		; IRMON
+ 1636 EA01  FE 28       	CP	28H
+ 1637 EA03  30 4D       	JR	NC,WINERR
+ 1638 EA05  3A B9F8     	LD	A,(WNDFN+92)
+ 1639 EA08  5F          	LD	E,A
+ 1640 EA09  FE 28       	CP	28H
+ 1641 EA0B  30 45       	JR	NC,WINERR
+ 1642 EA0D  7A          	LD	A,D
+ 1643 EA0E  93          	SUB	E
+ 1644 EA0F  38 41       	JR	C,WINERR
+ 1645 EA11  3C          	INC	A
+ 1646 EA12  32 B79E     	LD	(WINLG),A
+ 1647 EA15  7B          	LD	A,E
+ 1648 EA16  32 B79C     	LD	(WINON),A
+ 1649 EA19  3A B9F7     	LD	A,(WNDFN+91)
+ 1650 EA1C  FE 20       	CP	20H
+ 1651 EA1E  30 32       	JR	NC,WINERR
+ 1652 EA20  57          	LD	D,A
+ 1653 EA21  3A B9F6     	LD	A,(WNDFN+90)
+ 1654 EA24  FE 20       	CP	20H
+ 1655 EA26  30 2A       	JR	NC,WINERR
+ 1656 EA28  5F          	LD	E,A
+ 1657 EA29  7A          	LD	A,D
+ 1658 EA2A  93          	SUB	E
+ 1659 EA2B  38 25       	JR	C,WINERR
+ 1660 EA2D  3C          	INC	A
+ 1661 EA2E  32 B79F     	LD	(WINLG+1),A
+ 1662 EA31  7B          	LD	A,E
+ 1663 EA32  32 B79D     	LD	(WINON+1),A
+ 1664 EA35  18 10       	JR	WINDOW2
+ 1665 EA37              WINDOW1:
+ 1666 EA37  E5          	PUSH	HL
+ 1667 EA38  CD F018     	CALL	0F018H		; IRMON
+ 1668 EA3B  21 0100     	LD	HL,100H
+ 1669 EA3E  22 B79C     	LD	(WINON),HL
+ 1670 EA41  21 1E28     	LD	HL,1E28H
+ 1671 EA44  22 B79E     	LD	(WINLG),HL
+ 1672 EA47              WINDOW2:
+ 1673 EA47  21 0000     	LD	HL,0
+ 1674 EA4A  22 B7A0     	LD	(CURSO),HL
+ 1675 EA4D  CD F01B     	CALL	0F01BH		; IRMOF
+ 1676 EA50  E1          	POP	HL
+ 1677 EA51  C9          	RET
+ 1678                   	;
+ 1679 EA52  CD F01B     WINERR:	CALL	0F01BH		; IRMOF
+ 1680 EA55  18 2C       	JR	SNERR2
+ 1681                    
+ 1682 EA57              BLOAD:	;MC-Programm laden
+ 1683 EA57  E5          	PUSH	HL
+ 1684 EA58  21 B781     	LD	HL,ARGN
+ 1685 EA5B  AF          	XOR	A
+ 1686 EA5C  CD ECAC     	CALL	IRMWR		; ARGN=0
+ 1687 EA5F  E1          	POP	HL
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  33
+CAOS31  Z80
+
+ 1688 EA60  1E 10       	LD	E,10H		; LOAD
+ 1689 EA62  C3 F015     	JP	0F015H		; PV5
+ 1690                    
+ 1691 EA65              VPEEK:	;Zeichen aus IRM lesen
+ 1692 EA65  CD CDE1     	CALL	0CDE1H
+ 1693 EA68  E3          	EX	(SP),HL
+ 1694 EA69  11 CDF3     	LD	DE,0CDF3H	; RET-Adr.
+ 1695 EA6C  D5          	PUSH	DE
+ 1696 EA6D  CD C96F     	CALL	0C96FH
+ 1697 EA70  E5          	PUSH	HL
+ 1698 EA71  21 8000     	LD	HL,8000H	; IRM-Offset
+ 1699 EA74  19          	ADD	HL,DE
+ 1700 EA75  38 03       	JR	C,VPK		; Error
+ 1701 EA77  3E BF       	LD	A,0BFH
+ 1702 EA79  BC          	CP	H
+ 1703 EA7A  38 07       VPK:	JR	C,SNERR2
+ 1704 EA7C  CD ECB0     	CALL	IRMRD		; lesen
+ 1705 EA7F  E1          	POP	HL
+ 1706 EA80  C3 D3E9     	JP	0D3E9H
+ 1707                    
+ 1708 EA83  C3 C348     SNERR2:	JP	0C348H		; SN-ERROR
+ 1709                    
+ 1710 EA86              VPOKE:	;Zeichen in IRM schreiben
+ 1711 EA86  CD C96C     	CALL	0C96CH
+ 1712 EA89  D5          	PUSH	DE
+ 1713 EA8A  CD C8D6     	CALL	0C8D6H
+ 1714 EA8D  CD D421     	CALL	0D421H
+ 1715 EA90  E3          	EX	(SP),HL
+ 1716 EA91  11 8000     	LD	DE,8000H	; IRM-Offset
+ 1717 EA94  19          	ADD	HL,DE
+ 1718 EA95  38 E3       	JR	C,VPK		; Error
+ 1719 EA97  57          	LD	D,A
+ 1720 EA98  3E BF       	LD	A,0BFH
+ 1721 EA9A  BC          	CP	H
+ 1722 EA9B  38 DD       	JR	C,VPK		; nur bis BFFFH
+ 1723 EA9D  7A          	LD	A,D
+ 1724 EA9E  CD ECAC     	CALL	IRMWR		; schreiben
+ 1725 EAA1  E1          	POP	HL
+ 1726 EAA2  C9          	RET
+ 1727                    
+ 1728 EAA3              BORDER:	;schaltet Bit 5,6 von PIO-B
+ 1729                   	;(beim KC85/4 RAM8!)
+ 1730 EAA3  CD D421     	CALL	0D421H
+ 1731 EAA6  0F          	RRCA
+ 1732 EAA7  0F          	RRCA
+ 1733 EAA8  0F          	RRCA
+ 1734 EAA9  E6 60       	AND	60H		; Auswahl
+ 1735 EAAB  4F          	LD	C,A
+ 1736 EAAC  06 9F       	LD	B,9FH		; Maske
+ 1737 EAAE  C3 E571     	JP	TONB
+ 1738                    
+ 1739 EAB1              PRAT:	;PRINT AT
+ 1740 EAB1  3A 03FD     	LD	A,(3FDH)
+ 1741 EAB4  CB 4F       	BIT	1,A
+ 1742 EAB6  CB CF       	SET	1,A
+ 1743 EAB8  32 03FD     	LD	(3FDH),A
+ 1744 EABB  20 C6       	JR	NZ,SNERR2
+ 1745 EABD  D5          	PUSH	DE
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  34
+CAOS31  Z80
+
+ 1746 EABE  E5          	PUSH	HL
+ 1747 EABF  CD F018     	CALL	0F018H		; IRMON
+ 1748 EAC2  21 B79C     	LD	HL,WINON
+ 1749 EAC5  22 B9F6     	LD	(WNDFN+90),HL
+ 1750 EAC8  11 B9EC     	LD	DE,WNDFN+80
+ 1751 EACB  01 0006     	LD	BC,6		; Fenster
+ 1752 EACE  ED B0       	LDIR			; retten
+ 1753 EAD0  21 0000     	LD	HL,0		; Fenster gross
+ 1754 EAD3  22 B79C     	LD	(WINON),HL
+ 1755 EAD6  21 2028     	LD	HL,2028H
+ 1756 EAD9  22 B79E     	LD	(WINLG),HL
+ 1757 EADC  CD F01B     	CALL	0F01BH		; IRMOF
+ 1758 EADF  E1          	POP	HL
+ 1759 EAE0  CD EB5C     	CALL	LOCAT
+ 1760 EAE3  CD C8DB     	CALL	0C8DBH
+ 1761 EAE6  CD C8CC     	CALL	0C8CCH
+ 1762 EAE9  3B          	DB	';'
+ 1763 EAEA  7E          	LD	A,(HL)
+ 1764 EAEB  FE DF       	CP	0DFH
+ 1765 EAED  38 1D       	JR	C,PRAT2		; <DFH
+ 1766 EAEF  FE E3       	CP	0E3H
+ 1767 EAF1  30 19       	JR	NC,PRAT2	; >E2H
+ 1768 EAF3  CD E6ED     	CALL	PREX4		; INK,PAPER,COLOR
+ 1769 EAF6  E5          PRAT1:	PUSH	HL
+ 1770 EAF7  CD F018     	CALL	0F018H		; IRMON
+ 1771 EAFA  21 B9EC     	LD	HL,WNDFN+80
+ 1772 EAFD  11 B79C     	LD	DE,WINON
+ 1773 EB00  01 0006     	LD	BC,6		; Fenster
+ 1774 EB03  ED B0       	LDIR			; regenerieren
+ 1775 EB05  CD F01B     	CALL	0F01BH		; IRMOF
+ 1776 EB08  E1          	POP	HL
+ 1777 EB09  D1          	POP	DE
+ 1778 EB0A  C1          	POP	BC
+ 1779 EB0B  C9          	RET
+ 1780 EB0C  CD CB03     PRAT2:	CALL	0CB03H
+ 1781 EB0F  18 E5       	JR	PRAT1
+ 1782                   
+ 1783 EB11  C3 C348     SNERR3:	JP	0C348H		; SN-ERROR
+ 1784                   
+ 1785 EB14              INK:	;Vordergrundfarbe
+ 1786 EB14  CD D421     	CALL	0D421H
+ 1787 EB17  FE 20       	CP	32
+ 1788 EB19  30 F6       	JR	NC,SNERR3
+ 1789 EB1B  CB 27       	SLA	A
+ 1790 EB1D  CB 27       	SLA	A
+ 1791 EB1F  CB 27       	SLA	A
+ 1792 EB21  57          	LD	D,A
+ 1793 EB22  E5          	PUSH	HL
+ 1794 EB23  21 B7A3     	LD	HL,COLOR
+ 1795 EB26  CD ECB0     	CALL	IRMRD
+ 1796 EB29  E1          	POP	HL
+ 1797 EB2A  E6 07       	AND	7
+ 1798 EB2C  18 12       	JR	COL2
+ 1799                    
+ 1800 EB2E              PAPER:	;Hintergrundfarbe
+ 1801 EB2E  CD D421     	CALL	0D421H
+ 1802 EB31  FE 08       	CP	8
+ 1803 EB33  30 DC       	JR	NC,SNERR3
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  35
+CAOS31  Z80
+
+ 1804 EB35  57          	LD	D,A
+ 1805 EB36  E5          	PUSH	HL
+ 1806 EB37  21 B7A3     	LD	HL,COLOR
+ 1807 EB3A  CD ECB0     	CALL	IRMRD
+ 1808 EB3D  E1          	POP	HL
+ 1809 EB3E  E6 F8       	AND	0F8H
+ 1810 EB40  B2          COL2:	OR	D
+ 1811 EB41  E5          	PUSH	HL
+ 1812 EB42  21 B7A3     	LD	HL,COLOR
+ 1813 EB45  CD ECAC     	CALL	IRMWR		; neuer Farbwert
+ 1814 EB48  E1          	POP	HL
+ 1815 EB49  C9          	RET
+ 1816                    
+ 1817 EB4A              BCOLOR:	;Farbe einstellen
+ 1818 EB4A  CD C8BE     	CALL	0C8BEH
+ 1819 EB4D  28 C2       	JR	Z,SNERR3
+ 1820 EB4F  CD EB14     	CALL	INK		; Vordergrund
+ 1821 EB52  CD C8BE     	CALL	0C8BEH
+ 1822 EB55  C8          	RET	Z
+ 1823 EB56  CD C8D6     	CALL	0C8D6H
+ 1824 EB59  18 D3       	JR	PAPER		; Hintergrund
+ 1825 EB5B  C9          	RET			; ???
+ 1826                    
+ 1827 EB5C              LOCAT:	;Cursor positionieren
+ 1828 EB5C  CD C8BD     	CALL	0C8BDH
+ 1829 EB5F  CD C8CC     	CALL	0C8CCH
+ 1830 EB62  28          	DB	'('
+ 1831 EB63  CD D421     LOCATE:	CALL	0D421H
+ 1832 EB66  57          	LD	D,A
+ 1833 EB67  E5          	PUSH	HL
+ 1834 EB68  21 B79F     	LD	HL,WINLG+1
+ 1835 EB6B  CD ECB0     	CALL	IRMRD
+ 1836 EB6E  E1          	POP	HL
+ 1837 EB6F  3D          	DEC	A
+ 1838 EB70  BA          	CP	D
+ 1839 EB71  38 9E       	JR	C,SNERR3
+ 1840 EB73  CD C8D6     	CALL	0C8D6H
+ 1841 EB76  D5          	PUSH	DE
+ 1842 EB77  CD D421     	CALL	0D421H
+ 1843 EB7A  D1          	POP	DE
+ 1844 EB7B  4F          	LD	C,A
+ 1845 EB7C  E5          	PUSH	HL
+ 1846 EB7D  21 B79E     	LD	HL,WINLG
+ 1847 EB80  CD ECB0     	CALL	IRMRD
+ 1848 EB83  E1          	POP	HL
+ 1849 EB84  3D          	DEC	A
+ 1850 EB85  B9          	CP	C
+ 1851 EB86  38 89       	JR	C,SNERR3
+ 1852 EB88  79          	LD	A,C
+ 1853 EB89  E5          	PUSH	HL
+ 1854 EB8A  21 B7A0     	LD	HL,CURSO
+ 1855 EB8D  CD ECAC     	CALL	IRMWR
+ 1856 EB90  7A          	LD	A,D
+ 1857 EB91  23          	INC	HL
+ 1858 EB92  CD ECAC     LOC1:	CALL	IRMWR
+ 1859 EB95  E1          	POP	HL
+ 1860 EB96  C9          	RET
+ 1861                   
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  36
+CAOS31  Z80
+
+ 1862 EB97              INKEY:	; Eingabe ein Zeichen
+ 1863 EB97  E5          	PUSH	HL
+ 1864 EB98  CD E2A8     	CALL	KBDS
+ 1865 EB9B  30 0F       	JR	NC,INKEY3
+ 1866 EB9D  3E 01       	LD	A,1
+ 1867 EB9F  CD D17B     	CALL	0D17BH
+ 1868 EBA2  CD DDE4     	CALL	0DDE4H		; Eingabe ASCII
+ 1869 EBA5  2A 03C2     INKEY1:	LD	HL,(3C2H)
+ 1870 EBA8  77          	LD	(HL),A
+ 1871 EBA9  C3 D1A9     INKEY2:	JP	0D1A9H
+ 1872                   	;
+ 1873 EBAC  AF          INKEY3:	XOR	A
+ 1874 EBAD  CD D17B     	CALL	0D17BH		; STADTB
+ 1875 EBB0  18 F7       	JR	INKEY2
+ 1876                   
+ 1877 EBB2              SOUND:	;Tonausgabe
+ 1878 EBB2  CD D421     	CALL	0D421H
+ 1879 EBB5  E5          	PUSH	HL
+ 1880 EBB6  21 B782     	LD	HL,ARG1
+ 1881 EBB9  06 04       	LD	B,4		; 4 Argumente
+ 1882 EBBB  CD ECAC     SOUND1:	CALL	IRMWR
+ 1883 EBBE  23          	INC	HL
+ 1884 EBBF  E3          	EX	(SP),HL
+ 1885 EBC0  05          	DEC	B
+ 1886 EBC1  28 0B       	JR	Z,SOUND2
+ 1887 EBC3  C5          	PUSH	BC
+ 1888 EBC4  CD C8D6     	CALL	0C8D6H
+ 1889 EBC7  CD D421     	CALL	0D421H
+ 1890 EBCA  C1          	POP	BC
+ 1891 EBCB  E3          	EX	(SP),HL
+ 1892 EBCC  18 ED       	JR	SOUND1
+ 1893 EBCE  CD C8BE     SOUND2:	CALL	0C8BEH
+ 1894 EBD1  28 1C       	JR	Z,SOUND3
+ 1895 EBD3  CD C8D6     	CALL	0C8D6H
+ 1896 EBD6  CD D421     	CALL	0D421H
+ 1897 EBD9  E3          	EX	(SP),HL
+ 1898 EBDA  CD ECAC     	CALL	IRMWR
+ 1899 EBDD  23          	INC	HL
+ 1900 EBDE  E3          	EX	(SP),HL
+ 1901 EBDF  CD C8BE     	CALL	0C8BEH
+ 1902 EBE2  28 0B       	JR	Z,SOUND3
+ 1903 EBE4  CD C8D6     	CALL	0C8D6H
+ 1904 EBE7  CD D421     	CALL	0D421H
+ 1905 EBEA  E3          	EX	(SP),HL
+ 1906 EBEB  CD ECAC     	CALL	IRMWR
+ 1907 EBEE  E3          	EX	(SP),HL
+ 1908 EBEF  1E 35       SOUND3:	LD	E,35H		; TON
+ 1909 EBF1  C1          	POP	BC
+ 1910 EBF2  C3 F015     	JP	0F015H		; PV5
+ 1911                    
+ 1912 EBF5              PSET:	;Punkt setzen
+ 1913 EBF5  06 01       	LD	B,1		; setzen
+ 1914 EBF7  C5          POINT1:	PUSH	BC
+ 1915 EBF8  CD C96C     	CALL	0C96CH
+ 1916 EBFB  E5          	PUSH	HL
+ 1917 EBFC  7B          	LD	A,E
+ 1918 EBFD  21 B7D3     	LD	HL,HOR
+ 1919 EC00  CD ECAC     	CALL	IRMWR
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  37
+CAOS31  Z80
+
+ 1920 EC03  7A          	LD	A,D
+ 1921 EC04  23          	INC	HL
+ 1922 EC05  CD ECAC     	CALL	IRMWR
+ 1923 EC08  E3          	EX	(SP),HL
+ 1924 EC09  CD C8D6     	CALL	0C8D6H
+ 1925 EC0C  CD D421     	CALL	0D421H
+ 1926 EC0F  E3          	EX	(SP),HL
+ 1927 EC10  23          	INC	HL
+ 1928 EC11  CD ECAC     	CALL	IRMWR
+ 1929 EC14  E1          	POP	HL
+ 1930 EC15  CD EC2A     	CALL	GFARB
+ 1931 EC18  1E 30       	LD	E,30H		; PUSE
+ 1932 EC1A  C1          	POP	BC
+ 1933 EC1B  05          	DEC	B
+ 1934 EC1C  28 01       	JR	Z,POINT2
+ 1935 EC1E  1D          	DEC	E		; PUDE
+ 1936 EC1F  CD F015     POINT2:	CALL	0F015H		; PV5
+ 1937 EC22  DA EA83     	JP	C,SNERR2
+ 1938 EC25  C9          	RET
+ 1939                   
+ 1940 EC26              PRESET:	;Punkt loeschen
+ 1941 EC26  06 00       	LD	B,0		; loeschen
+ 1942 EC28  18 CD       	JR	POINT1
+ 1943                   
+ 1944 EC2A              GFARB:	;Grafikfarbe setzen
+ 1945 EC2A  CD C8BE     	CALL	0C8BEH
+ 1946 EC2D  C8          	RET	Z
+ 1947 EC2E  CD C8D6     	CALL	0C8D6H
+ 1948 EC31  CD D421     	CALL	0D421H
+ 1949 EC34  E5          	PUSH	HL
+ 1950 EC35  21 B7D6     	LD	HL,FARB		; Grafik-Farbe
+ 1951 EC38  17          	RLA
+ 1952 EC39  17          	RLA
+ 1953 EC3A  17          	RLA
+ 1954 EC3B  C3 EB92     	JP	LOC1		; in IRM schreib.
+ 1955                    
+ 1956 EC3E              INSTR:	;String1 in String2 suchen
+ 1957 EC3E  CD CD36     	CALL	0CD36H		; Klammer auf?
+ 1958 EC41  CD C8D6     	CALL	0C8D6H
+ 1959 EC44  E5          	PUSH	HL
+ 1960 EC45  CD D330     	CALL	0D330H
+ 1961 EC48  28 38       	JR	Z,INSTR4
+ 1962 EC4A  47          	LD	B,A
+ 1963 EC4B  23          	INC	HL
+ 1964 EC4C  23          	INC	HL
+ 1965 EC4D  5E          	LD	E,(HL)
+ 1966 EC4E  23          	INC	HL
+ 1967 EC4F  56          	LD	D,(HL)
+ 1968 EC50  E1          	POP	HL
+ 1969 EC51  D5          	PUSH	DE
+ 1970 EC52  C5          	PUSH	BC
+ 1971 EC53  CD CD3A     	CALL	0CD3AH
+ 1972 EC56  CD C8DB     	CALL	0C8DBH		; Klammer zu?
+ 1973 EC59  C1          	POP	BC
+ 1974 EC5A  D1          	POP	DE
+ 1975 EC5B  E5          	PUSH	HL
+ 1976 EC5C  D5          	PUSH	DE
+ 1977 EC5D  C5          	PUSH	BC
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  38
+CAOS31  Z80
+
+ 1978 EC5E  CD D330     	CALL	0D330H
+ 1979 EC61  28 1F       	JR	Z,INSTR4
+ 1980 EC63  23          	INC	HL
+ 1981 EC64  23          	INC	HL
+ 1982 EC65  4E          	LD	C,(HL)
+ 1983 EC66  23          	INC	HL
+ 1984 EC67  66          	LD	H,(HL)
+ 1985 EC68  69          	LD	L,C
+ 1986 EC69  C1          	POP	BC
+ 1987 EC6A  4F          	LD	C,A
+ 1988 EC6B  D1          	POP	DE
+ 1989 EC6C  E5          	PUSH	HL
+ 1990 EC6D  C5          INSTR0:	PUSH	BC
+ 1991 EC6E  D5          	PUSH	DE
+ 1992 EC6F  1A          	LD	A,(DE)
+ 1993 EC70  BE          INSTR1:	CP	(HL)
+ 1994 EC71  28 12       	JR	Z,INSTR5
+ 1995 EC73  23          	INC	HL
+ 1996 EC74  0D          	DEC	C
+ 1997 EC75  20 F9       	JR	NZ,INSTR1
+ 1998 EC77  AF          INSTR2:	XOR	A
+ 1999 EC78  E1          	POP	HL
+ 2000 EC79  E1          	POP	HL
+ 2001 EC7A  E1          	POP	HL
+ 2002 EC7B  11 CDF3     INSTR3:	LD	DE,0CDF3H	; RET-Adr.
+ 2003 EC7E  D5          	PUSH	DE
+ 2004 EC7F  C3 D0C0     	JP	0D0C0H
+ 2005                   	;
+ 2006 EC82  C3 C967     INSTR4:	JP	0C967H		; FC-ERROR
+ 2007                   	;
+ 2008 EC85  23          INSTR5:	INC	HL
+ 2009 EC86  E5          	PUSH	HL
+ 2010 EC87  2B          	DEC	HL
+ 2011 EC88  23          INSTR6:	INC	HL
+ 2012 EC89  0D          	DEC	C
+ 2013 EC8A  28 0F       	JR	Z,INSTR7
+ 2014 EC8C  13          	INC	DE
+ 2015 EC8D  05          	DEC	B
+ 2016 EC8E  28 12       	JR	Z,INSTR8
+ 2017 EC90  1A          	LD	A,(DE)
+ 2018 EC91  BE          	CP	(HL)
+ 2019 EC92  28 F4       	JR	Z,INSTR6
+ 2020 EC94  E1          	POP	HL
+ 2021 EC95  D1          	POP	DE
+ 2022 EC96  79          	LD	A,C
+ 2023 EC97  C1          	POP	BC
+ 2024 EC98  4F          	LD	C,A
+ 2025 EC99  18 D2       	JR	INSTR0
+ 2026 EC9B  13          INSTR7:	INC	DE
+ 2027 EC9C  05          	DEC	B
+ 2028 EC9D  E1          	POP	HL
+ 2029 EC9E  20 D7       	JR	NZ,INSTR2
+ 2030 ECA0  18 01       	JR	INSTR9
+ 2031                   	;
+ 2032 ECA2  E1          INSTR8:	POP	HL
+ 2033 ECA3  D1          INSTR9:	POP	DE
+ 2034 ECA4  D1          	POP	DE
+ 2035 ECA5  D1          	POP	DE
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  39
+CAOS31  Z80
+
+ 2036 ECA6  A7          	AND	A
+ 2037 ECA7  ED 52       	SBC	HL,DE
+ 2038 ECA9  7D          	LD	A,L
+ 2039 ECAA  18 CF       	JR	INSTR3
+ 2040                    
+ 2041 ECAC  1E 28       IRMWR:	LD	E,28H		; LDMA
+ 2042 ECAE  18 10       	JR	JPV5
+ 2043                   
+ 2044 ECB0  1E 29       IRMRD:	LD	E,29H		; LDAM
+ 2045 ECB2  18 0C       	JR	JPV5
+ 2046                    
+ 2047 ECB4              BKEY:	;F-Taste belegen
+ 2048 ECB4  CD D421     	CALL	0D421H
+ 2049 ECB7  A7          	AND	A
+ 2050 ECB8  28 56       	JR	Z,SNERR4
+ 2051 ECBA  FE 0D       	CP	0DH		; F1...F12
+ 2052 ECBC  30 52       	JR	NC,SNERR4
+ 2053 ECBE  1E 39       	LD	E,39H		; KEY
+ 2054 ECC0  C3 F015     JPV5:	JP	0F015H		; PV5
+ 2055                   
+ 2056 ECC3              KEYLIST: ;F-Tasten auflisten
+ 2057 ECC3  1E 3A       	LD	E,3AH		; KEYLI
+ 2058 ECC5  18 F9       	JR	JPV5
+ 2059                   
+ 2060 ECC7              SWITCH:	;Module schalten
+ 2061 ECC7  CD D421     	CALL	0D421H
+ 2062 ECCA  F5          	PUSH	AF
+ 2063 ECCB  CD C8D6     	CALL	0C8D6H
+ 2064 ECCE  CD D421     	CALL	0D421H
+ 2065 ECD1  57          	LD	D,A		; Steuerbyte
+ 2066 ECD2  F1          	POP	AF
+ 2067 ECD3  E5          	PUSH	HL
+ 2068 ECD4  6F          	LD	L,A		; Steckplatz
+ 2069 ECD5  3E 02       	LD	A,2		; schalten
+ 2070 ECD7  1E 26       	LD	E,26H		; MODU
+ 2071 ECD9  CD F015     	CALL	0F015H		; PV5
+ 2072 ECDC  E1          	POP	HL
+ 2073 ECDD  C9          	RET
+ 2074                   
+ 2075 ECDE              PTEST:	;Punkt testen
+ 2076 ECDE  CD CDE1     	CALL	0CDE1H
+ 2077 ECE1  E3          	EX	(SP),HL
+ 2078 ECE2  11 CDF3     	LD	DE,0CDF3H	; RET-Adr.
+ 2079 ECE5  D5          	PUSH	DE
+ 2080 ECE6  CD C96F     	CALL	0C96FH
+ 2081 ECE9  E5          	PUSH	HL
+ 2082 ECEA  7B          	LD	A,E		; nur
+ 2083 ECEB  21 B7D3     	LD	HL,HOR		; X-Koordinate
+ 2084 ECEE  CD ECAC     	CALL	IRMWR		; eintragen
+ 2085 ECF1  7A          	LD	A,D
+ 2086 ECF2  23          	INC	HL
+ 2087 ECF3  CD ECAC     	CALL	IRMWR
+ 2088 ECF6  1E 2F       	LD	E,2FH		; PUDE
+ 2089 ECF8  CD F015     	CALL	0F015H		; PV5
+ 2090 ECFB  06 00       	LD	B,0
+ 2091 ECFD  28 0C       	JR	Z,PTST1		; war geloescht
+ 2092 ECFF  23          	INC	HL
+ 2093 ED00  23          	INC	HL
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  40
+CAOS31  Z80
+
+ 2094 ED01  CD ECAC     	CALL	IRMWR
+ 2095 ED04  1E 30       	LD	E,30H		; PUSE
+ 2096 ED06  CD F015     	CALL	0F015H		; PV5
+ 2097 ED09  06 01       	LD	B,1
+ 2098 ED0B  78          PTST1:	LD	A,B		; Rueckgabewert
+ 2099 ED0C  E1          	POP	HL
+ 2100 ED0D  C3 D3E9     	JP	0D3E9H
+ 2101                    
+ 2102 ED10  C3 C348     SNERR4:	JP	0C348H		; SN-ERROR
+ 2103                    
+ 2104 ED13              CLOSE:	;Kanal schliessen
+ 2105 ED13  0E 00       	LD	C,0
+ 2106 ED15  7E          	LD	A,(HL)
+ 2107 ED16  FE 49       	CP	'I'		; Eingabe?
+ 2108 ED18  28 05       	JR	Z,CLOS1
+ 2109 ED1A  0C          	INC	C
+ 2110 ED1B  FE 4F       	CP	'O'		; Ausgabe?
+ 2111 ED1D  20 F1       	JR	NZ,SNERR4
+ 2112 ED1F  C5          CLOS1:	PUSH	BC
+ 2113 ED20  23          	INC	HL
+ 2114 ED21  7E          	LD	A,(HL)
+ 2115 ED22  FE 23       	CP	'#'
+ 2116 ED24  20 EA       CLOS2:	JR	NZ,SNERR4
+ 2117 ED26  23          	INC	HL
+ 2118 ED27  CD D421     	CALL	0D421H
+ 2119 ED2A  E6 03       	AND	3		; 4 Geraete
+ 2120 ED2C  C1          	POP	BC
+ 2121 ED2D  C8          	RET	Z		; Console
+ 2122 ED2E  E5          	PUSH	HL
+ 2123 ED2F  17          	RLA			; *2
+ 2124 ED30  81          	ADD	C		; Ein/Ausgabe
+ 2125 ED31  F5          	PUSH	AF
+ 2126 ED32  3D          	DEC	A
+ 2127 ED33  06 00       	LD	B,0
+ 2128 ED35  37          	SCF
+ 2129 ED36  CB 10       CLOS3:	RL	B		; Bit platzieren
+ 2130 ED38  3D          	DEC	A
+ 2131 ED39  20 FB       	JR	NZ,CLOS3
+ 2132 ED3B  21 0307     	LD	HL,307H		; E/A-Flag
+ 2133 ED3E  7E          	LD	A,(HL)
+ 2134 ED3F  A8          	XOR	B		; negieren
+ 2135 ED40  77          	LD	(HL),A
+ 2136 ED41  F1          	POP	AF
+ 2137 ED42  E1          	POP	HL
+ 2138 ED43  CB F7       	SET	6,A		; close
+ 2139 ED45  D5          	PUSH	DE
+ 2140 ED46  5F          	LD	E,A
+ 2141 ED47  16 03       	LD	D,3
+ 2142 ED49  CD E00E     	CALL	BASIO
+ 2143 ED4C  D1          	POP	DE
+ 2144 ED4D  C9          	RET
+ 2145                   
+ 2146 ED4E              RANDOM:	;Zufallsgenerator
+ 2147 ED4E  ED 5F       	LD	A,R
+ 2148 ED50  32 031D     	LD	(31DH),A
+ 2149 ED53  C9          	RET
+ 2150                   
+ 2151 ED54              OPEN:	;Kanal oeffnen
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  41
+CAOS31  Z80
+
+ 2152 ED54  7E          	LD	A,(HL)
+ 2153 ED55  23          	INC	HL
+ 2154 ED56  FE 49       	CP	'I'		; Eingabe?
+ 2155 ED58  28 19       	JR	Z,OPEN1
+ 2156 ED5A  FE 4F       	CP	'O'		; Ausgabe?
+ 2157 ED5C  20 C6       	JR	NZ,CLOS2
+ 2158 ED5E  CD DE25     	CALL	0DE25H
+ 2159 ED61  CD DDC8     	CALL	0DDC8H
+ 2160 ED64  C8          	RET	Z
+ 2161 ED65  3E D5       	LD	A,0D5H
+ 2162 ED67  CD DCB2     	CALL	0DCB2H
+ 2163 ED6A  21 03EA     	LD	HL,3EAH		; Druckpuffer
+ 2164 ED6D  AF          	XOR	A
+ 2165 ED6E  CD DDD5     	CALL	0DDD5H
+ 2166 ED71  E1          	POP	HL
+ 2167 ED72  C9          	RET
+ 2168                   	;
+ 2169 ED73  CD DE5F     OPEN1:	CALL	0DE5FH		; Eingabe
+ 2170 ED76  3A 0309     	LD	A,(309H)	; IN-Index
+ 2171 ED79  E6 03       	AND	3
+ 2172 ED7B  C8          	RET	Z
+ 2173 ED7C  3E D5       	LD	A,0D5H
+ 2174 ED7E  CD DCB2     	CALL	0DCB2H
+ 2175 ED81  21 03EA     	LD	HL,3EAH		; Druckpuffer
+ 2176 ED84  CD DDE4     	CALL	0DDE4H		; Eingabe ASCII
+ 2177 ED87  E1          	POP	HL
+ 2178 ED88  C9          	RET
+ 2179                   
+ 2180 ED89              BLINE:	;Linie zeichnen
+ 2181 ED89  01 043E     	LD	BC,43EH		; 4 Parameter, LINE
+ 2182 ED8C  18 03       	JR	GRAPH
+ 2183                   
+ 2184 ED8E              CIRCLE:	;Kreis zeichnen
+ 2185 ED8E  01 033F     	LD	BC,33FH		; 3 Parameter, CIRCLE
+ 2186 ED91  C5          GRAPH:	PUSH	BC
+ 2187 ED92  CD C96C     	CALL	0C96CH
+ 2188 ED95  C1          	POP	BC
+ 2189 ED96  C5          	PUSH	BC
+ 2190 ED97  E5          	PUSH	HL
+ 2191 ED98  21 B782     	LD	HL,ARG1
+ 2192 ED9B  7B          GRAPH1:	LD	A,E
+ 2193 ED9C  CD ECAC     	CALL	IRMWR
+ 2194 ED9F  23          	INC	HL
+ 2195 EDA0  7A          	LD	A,D
+ 2196 EDA1  CD ECAC     	CALL	IRMWR
+ 2197 EDA4  23          	INC	HL
+ 2198 EDA5  05          	DEC	B
+ 2199 EDA6  28 0C       	JR	Z,GRAPH2
+ 2200 EDA8  E3          	EX	(SP),HL
+ 2201 EDA9  C5          	PUSH	BC
+ 2202 EDAA  CD C8D6     	CALL	0C8D6H
+ 2203 EDAD  CD C96C     	CALL	0C96CH
+ 2204 EDB0  C1          	POP	BC
+ 2205 EDB1  E3          	EX	(SP),HL
+ 2206 EDB2  18 E7       	JR	GRAPH1
+ 2207 EDB4  E1          GRAPH2:	POP	HL
+ 2208 EDB5  CD EC2A     	CALL	GFARB
+ 2209 EDB8  D1          	POP	DE
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  42
+CAOS31  Z80
+
+ 2210 EDB9  C3 F015     	JP	0F015H		; PV5
+ 2211                   
+ 2212 EDBC              CSRLN:	;akt. Zeile holen
+ 2213 EDBC  CD CDE1     	CALL	0CDE1H
+ 2214 EDBF  E3          	EX	(SP),HL
+ 2215 EDC0  11 CDF3     	LD	DE,0CDF3H	; RET-Adr.
+ 2216 EDC3  D5          	PUSH	DE
+ 2217 EDC4  CD D424     	CALL	0D424H
+ 2218 EDC7  E5          	PUSH	HL
+ 2219 EDC8  A7          	AND	A
+ 2220 EDC9  3E 00       	LD	A,0
+ 2221 EDCB  20 06       	JR	NZ,CSRLN1
+ 2222 EDCD  21 B79D     	LD	HL,WINON+1
+ 2223 EDD0  CD ECB0     	CALL	IRMRD
+ 2224 EDD3  47          CSRLN1:	LD	B,A
+ 2225 EDD4  21 B7A1     	LD	HL,CURSO+1
+ 2226 EDD7  CD ECB0     	CALL	IRMRD
+ 2227 EDDA  80          	ADD	B		; akt. Zeile
+ 2228 EDDB  E1          	POP	HL
+ 2229 EDDC  C3 D3E9     	JP	0D3E9H
+ 2230                   
+ 2231 EDDF              VGET:	;Zeichen von Bildschirm lesen
+ 2232 EDDF  E3          	EX	(SP),HL
+ 2233 EDE0  3E 01       	LD	A,1
+ 2234 EDE2  CD D17B     	CALL	0D17BH
+ 2235 EDE5  CD F018     	CALL	0F018H		; IRMON
+ 2236 EDE8  ED 5B B7A0  	LD	DE,(CURSO)
+ 2237 EDEC  CD E024     	CALL	DABR
+ 2238 EDEF  7E          	LD	A,(HL)
+ 2239 EDF0  CD F01B     	CALL	0F01BH		; IRMOF
+ 2240 EDF3  C3 EBA5     	JP	INKEY1		; als Zeichen zurueckgeben
+ 2241                   
+ 2242 EDF6  FF FF FF FF 	DS	10,0FFH	;frei
+ 2243                   
+ 2244                   ; EE00h Zeichensatz Grossbuchstaben
+ 2245                   
+ 2246 EE00  00 00 00 00 	DB	000H, 000H, 000H, 000H, 000H, 000H, 000H, 000H	; 20h
+ 2247 EE08  00 18 18 18 	DB	000H, 018H, 018H, 018H, 018H, 000H, 018H, 000H	; 21h
+ 2248 EE10  00 66 66 CC 	DB	000H, 066H, 066H, 0CCH, 000H, 000H, 000H, 000H	; 22h
+ 2249 EE18  00 36 7F 36 	DB	000H, 036H, 07FH, 036H, 036H, 07FH, 036H, 000H	; 23h
+ 2250 EE20  18 3E 6C 3E 	DB	018H, 03EH, 06CH, 03EH, 01BH, 01BH, 07EH, 018H	; 24h
+ 2251 EE28  00 63 66 0C 	DB	000H, 063H, 066H, 00CH, 018H, 036H, 066H, 000H	; 25h
+ 2252 EE30  18 24 28 11 	DB	018H, 024H, 028H, 011H, 02AH, 044H, 04AH, 031H	; 26h
+ 2253 EE38  00 18 18 30 	DB	000H, 018H, 018H, 030H, 000H, 000H, 000H, 000H	; 27h
+ 2254 EE40  00 18 30 30 	DB	000H, 018H, 030H, 030H, 030H, 030H, 018H, 000H	; 28h
+ 2255 EE48  00 18 0C 0C 	DB	000H, 018H, 00CH, 00CH, 00CH, 00CH, 018H, 000H	; 29h
+ 2256 EE50  00 00 24 18 	DB	000H, 000H, 024H, 018H, 07EH, 018H, 024H, 000H	; 2Ah
+ 2257 EE58  00 00 18 18 	DB	000H, 000H, 018H, 018H, 07EH, 018H, 018H, 000H	; 2Bh
+ 2258 EE60  00 00 00 00 	DB	000H, 000H, 000H, 000H, 018H, 018H, 030H, 000H	; 2Ch
+ 2259 EE68  00 00 00 00 	DB	000H, 000H, 000H, 000H, 03EH, 000H, 000H, 000H	; 2Dh
+ 2260 EE70  00 00 00 00 	DB	000H, 000H, 000H, 000H, 000H, 018H, 018H, 000H	; 2Eh
+ 2261 EE78  06 0C 18 30 	DB	006H, 00CH, 018H, 030H, 060H, 0C0H, 000H, 000H	; 2Fh
+ 2262                   
+ 2263 EE80  00 3C 6E 6E 	DB	000H, 03CH, 06EH, 06EH, 076H, 076H, 03CH, 000H	; 30h
+ 2264 EE88  00 1C 3C 0C 	DB	000H, 01CH, 03CH, 00CH, 00CH, 00CH, 03EH, 000H	; 31h
+ 2265 EE90  00 3C 66 06 	DB	000H, 03CH, 066H, 006H, 03CH, 060H, 07EH, 000H	; 32h
+ 2266 EE98  00 3C 66 0C 	DB	000H, 03CH, 066H, 00CH, 006H, 066H, 03CH, 000H	; 33h
+ 2267 EEA0  00 3C 6C CC 	DB	000H, 03CH, 06CH, 0CCH, 0FEH, 00CH, 00CH, 000H	; 34h
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  43
+CAOS31  Z80
+
+ 2268 EEA8  00 7E 60 7C 	DB	000H, 07EH, 060H, 07CH, 006H, 066H, 03CH, 000H	; 35h
+ 2269 EEB0  00 3C 60 7C 	DB	000H, 03CH, 060H, 07CH, 066H, 066H, 03CH, 000H	; 36h
+ 2270 EEB8  00 7E 06 0C 	DB	000H, 07EH, 006H, 00CH, 018H, 030H, 060H, 000H	; 37h
+ 2271 EEC0  00 3C 66 3C 	DB	000H, 03CH, 066H, 03CH, 066H, 066H, 03CH, 000H	; 38h
+ 2272 EEC8  00 3C 66 66 	DB	000H, 03CH, 066H, 066H, 03EH, 006H, 03CH, 000H	; 39h
+ 2273 EED0  00 00 18 18 	DB	000H, 000H, 018H, 018H, 000H, 018H, 018H, 000H	; 3Ah
+ 2274 EED8  00 00 18 00 	DB	000H, 000H, 018H, 000H, 018H, 018H, 030H, 000H	; 3Bh
+ 2275 EEE0  00 00 18 30 	DB	000H, 000H, 018H, 030H, 060H, 030H, 018H, 000H	; 3Ch
+ 2276 EEE8  00 00 00 3E 	DB	000H, 000H, 000H, 03EH, 000H, 03EH, 000H, 000H	; 3Dh
+ 2277 EEF0  00 00 30 18 	DB	000H, 000H, 030H, 018H, 00CH, 018H, 030H, 000H	; 3Eh
+ 2278 EEF8  00 3C 66 06 	DB	000H, 03CH, 066H, 006H, 01CH, 018H, 000H, 018H	; 3Fh
+ 2279 EF00  3C 42 81 35 	DB	03CH, 042H, 081H, 035H, 049H, 049H, 049H, 036H	; 40h
+ 2280 EF08  00 3C 66 66 	DB	000H, 03CH, 066H, 066H, 07EH, 066H, 066H, 000H	; 41h
+ 2281 EF10  00 7C 66 7C 	DB	000H, 07CH, 066H, 07CH, 066H, 066H, 07CH, 000H	; 42h
+ 2282 EF18  00 3C 66 60 	DB	000H, 03CH, 066H, 060H, 060H, 066H, 03CH, 000H	; 43h
+ 2283 EF20  00 7C 66 66 	DB	000H, 07CH, 066H, 066H, 066H, 066H, 07CH, 000H	; 44h
+ 2284 EF28  00 7E 60 7C 	DB	000H, 07EH, 060H, 07CH, 060H, 060H, 07EH, 000H	; 45h
+ 2285 EF30  00 7E 60 7C 	DB	000H, 07EH, 060H, 07CH, 060H, 060H, 060H, 000H	; 46h
+ 2286 EF38  00 3C 66 60 	DB	000H, 03CH, 066H, 060H, 06EH, 066H, 03CH, 000H	; 47h
+ 2287 EF40  00 66 66 7E 	DB	000H, 066H, 066H, 07EH, 066H, 066H, 066H, 000H	; 48h
+ 2288 EF48  00 3C 18 18 	DB	000H, 03CH, 018H, 018H, 018H, 018H, 03CH, 000H	; 49h
+ 2289 EF50  00 1E 0C 0C 	DB	000H, 01EH, 00CH, 00CH, 00CH, 06CH, 038H, 000H	; 4Ah
+ 2290 EF58  00 66 6C 78 	DB	000H, 066H, 06CH, 078H, 06CH, 066H, 063H, 000H	; 4Bh
+ 2291 EF60  00 60 60 60 	DB	000H, 060H, 060H, 060H, 060H, 060H, 07EH, 000H	; 4Ch
+ 2292 EF68  00 63 77 6B 	DB	000H, 063H, 077H, 06BH, 063H, 063H, 063H, 000H	; 4Dh
+ 2293 EF70  00 63 73 6B 	DB	000H, 063H, 073H, 06BH, 067H, 063H, 063H, 000H	; 4Eh
+ 2294 EF78  00 3C 66 66 	DB	000H, 03CH, 066H, 066H, 066H, 066H, 03CH, 000H	; 4Fh
+ 2295                   
+ 2296 EF80  00 7C 66 7C 	DB	000H, 07CH, 066H, 07CH, 060H, 060H, 060H, 000H	; 50h
+ 2297 EF88  00 3C 66 66 	DB	000H, 03CH, 066H, 066H, 06EH, 066H, 03AH, 001H	; 51h
+ 2298 EF90  00 7C 66 7C 	DB	000H, 07CH, 066H, 07CH, 06CH, 066H, 063H, 000H	; 52h
+ 2299 EF98  00 3C 60 3C 	DB	000H, 03CH, 060H, 03CH, 006H, 066H, 03CH, 000H	; 53h
+ 2300 EFA0  00 7E 18 18 	DB	000H, 07EH, 018H, 018H, 018H, 018H, 018H, 000H	; 54h
+ 2301 EFA8  00 66 66 66 	DB	000H, 066H, 066H, 066H, 066H, 066H, 03CH, 000H	; 55h
+ 2302 EFB0  00 66 66 66 	DB	000H, 066H, 066H, 066H, 066H, 03CH, 018H, 000H	; 56h
+ 2303 EFB8  00 63 63 6B 	DB	000H, 063H, 063H, 06BH, 06BH, 07FH, 036H, 000H	; 57h
+ 2304 EFC0  00 66 3C 18 	DB	000H, 066H, 03CH, 018H, 018H, 03CH, 066H, 000H	; 58h
+ 2305 EFC8  00 66 3C 18 	DB	000H, 066H, 03CH, 018H, 018H, 018H, 018H, 000H	; 59h
+ 2306 EFD0  00 7E 0C 18 	DB	000H, 07EH, 00CH, 018H, 030H, 060H, 07EH, 000H	; 5Ah
+ 2307 EFD8  FF FF FF FF 	DB	0FFH, 0FFH, 0FFH, 0FFH, 0FFH, 0FFH, 0FFH, 0FFH	; 5Bh
+ 2308 EFE0  00 18 18 18 	DB	000H, 018H, 018H, 018H, 018H, 018H, 018H, 000H	; 5Ch
+ 2309 EFE8  00 7E 06 06 	DB	000H, 07EH, 006H, 006H, 000H, 000H, 000H, 000H	; 5Dh
+ 2310 EFF0  00 00 00 08 	DB	000H, 000H, 000H, 008H, 01CH, 036H, 000H, 000H	; 5Eh
+ 2311 EFF8  00 00 00 00 	DB	000H, 000H, 000H, 000H, 000H, 000H, 000H, 0FFH	; 5Fh
+ 2312                   
+ 2313                   
+ 2314                   ;**	CAOS 3.1 ROM F		**
+ 2315                   ;	ORG	0F000H
+ 2316                   
+ 2317 F000  C3 F0B7     POWER:	JP	PWRON
+ 2318 F003  C3 F047     	JP	PV1		; m. DEFB nr
+ 2319 F006  C3 F063     	JP	PV2		; (ARGC)=nr
+ 2320 F009  C3 F077     	JP	PV3		; E=nr
+ 2321 F00C  C3 F033     	JP	PV4		; E=nr, IRM e/a
+ 2322 F00F  C3 F0AC     	JP	RCALL		; m. DEFW offset
+ 2323 F012  C3 F0E5     	JP	PWR3		; JUMP-Einsprung
+ 2324 F015  C3 F027     	JP	PV5		; E=nr
+ 2325 F018  C3 F07A     	JP	IRMON
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  44
+CAOS31  Z80
+
+ 2326 F01B  C3 F097     	JP	IRMOF
+ 2327 F01E  C5          	PUSH	BC		; PV6, (ARGC)=nr
+ 2328 F01F  CD F07A     	CALL	IRMON
+ 2329 F022  CD F063     	CALL	PV2
+ 2330 F025  18 07       	JR	PV51
+ 2331                   
+ 2332 F027  C5          PV5:	PUSH	BC
+ 2333 F028  CD F07A     	CALL	IRMON
+ 2334 F02B  CD F077     	CALL	PV3
+ 2335 F02E  CD F097     PV51:	CALL	IRMOF
+ 2336 F031  C1          	POP	BC
+ 2337 F032  C9          	RET
+ 2338                   
+ 2339 F033  F5          PV4:	PUSH	AF
+ 2340 F034  DB 88       	IN	A,(88H)
+ 2341 F036  CB D7       	SET	2,A
+ 2342 F038  D3 88       	OUT	(88H),A	;IRM ein
+ 2343 F03A  F1          	POP	AF
+ 2344 F03B  CD F077     	CALL	PV3
+ 2345 F03E  F5          	PUSH	AF
+ 2346 F03F  DB 88       	IN	A,(88H)
+ 2347 F041  CB 97       	RES	2,A
+ 2348 F043  D3 88       	OUT	(88H),A		; IRM aus
+ 2349 F045  F1          	POP	AF
+ 2350 F046  C9          	RET
+ 2351                   
+ 2352 F047  F3          PV1:	DI
+ 2353 F048  E5          	PUSH	HL
+ 2354 F049  E1          	POP	HL
+ 2355 F04A  E1          	POP	HL
+ 2356 F04B  23          	INC	HL		; nr uebergehen
+ 2357 F04C  E5          	PUSH	HL
+ 2358 F04D  2B          	DEC	HL		; (HL)=nr
+ 2359 F04E  3B          	DEC	SP
+ 2360 F04F  3B          	DEC	SP
+ 2361 F050  FB          	EI
+ 2362 F051  F5          	PUSH	AF
+ 2363 F052  D5          	PUSH	DE
+ 2364 F053  5E          	LD	E,(HL)
+ 2365 F054  16 00       PV22:	LD	D,0
+ 2366 F056  2A B7B0     	LD	HL,(SUTAB)
+ 2367 F059  19          	ADD	HL,DE
+ 2368 F05A  19          	ADD	HL,DE		; HL=Pos. in Tab
+ 2369 F05B  5E          	LD	E,(HL)
+ 2370 F05C  23          	INC	HL
+ 2371 F05D  56          	LD	D,(HL)
+ 2372 F05E  EB          	EX	DE,HL
+ 2373 F05F  D1          	POP	DE
+ 2374 F060  F1          	POP	AF
+ 2375 F061  E3          	EX	(SP),HL
+ 2376 F062  C9          	RET			; UP anspringen
+ 2377                    
+ 2378 F063  A7          PV2:	AND	A		; VR: F
+ 2379 F064  E5          PV21:	PUSH	HL
+ 2380 F065  D5          	PUSH	DE
+ 2381 F066  C5          	PUSH	BC
+ 2382 F067  E5          	PUSH	HL
+ 2383 F068  21 F1FE     	LD	HL,POP3		; Returnadresse
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  45
+CAOS31  Z80
+
+ 2384 F06B  E3          	EX	(SP),HL		; kellern
+ 2385 F06C  E5          	PUSH	HL
+ 2386 F06D  F5          	PUSH	AF
+ 2387 F06E  D5          	PUSH	DE
+ 2388 F06F  38 E3       	JR	C,PV22		; falls PV3
+ 2389 F071  3A B780     	LD	A,(ARGC)	; sonst E
+ 2390 F074  5F          	LD	E,A		; beschaffen
+ 2391 F075  18 DD       	JR	PV22
+ 2392                   
+ 2393 F077  37          PV3:	SCF			; VR: F
+ 2394 F078  18 EA       	JR	PV21
+ 2395                   
+ 2396 F07A  C1          IRMON:	POP	BC		; Rueckkehradr.
+ 2397 F07B  FD E5       	PUSH	IY
+ 2398 F07D  FD 21 0000  	LD	IY,0		; SP in IY merken
+ 2399 F081  FD 39       	ADD	IY,SP		;(kein UP veraendert IY!)
+ 2400 F083  F3          	DI
+ 2401 F084  DD 77 0B    	LD	(IX+11),A
+ 2402 F087  DB 88       	IN	A,(88H)
+ 2403 F089  CB D7       	SET	2,A	;IRM ein
+ 2404 F08B  D3 88       	OUT	(88H),A
+ 2405 F08D  ED 7B B7AE  	LD	SP,(SYSP)
+ 2406 F091  FB          	EI
+ 2407 F092  DD 7E 0B    	LD	A,(IX+11)
+ 2408 F095  C5          	PUSH	BC
+ 2409 F096  C9          	RET			; wie JP (BC)
+ 2410                    
+ 2411 F097  C1          IRMOF:	POP	BC		; analog IRMON
+ 2412 F098  DD 77 0B    	LD	(IX+11),A
+ 2413 F09B  DB 88       	IN	A,(88H)
+ 2414 F09D  CB 97       	RES	2,A		; IRM aus
+ 2415 F09F  F3          	DI
+ 2416 F0A0  D3 88       	OUT	(88H),A
+ 2417 F0A2  FD F9       	LD	SP,IY
+ 2418 F0A4  FB          	EI
+ 2419 F0A5  DD 7E 0B    	LD	A,(IX+11)
+ 2420 F0A8  FD E1       	POP	IY
+ 2421 F0AA  C5          	PUSH	BC
+ 2422 F0AB  C9          	RET
+ 2423                   
+ 2424 F0AC  E3          RCALL:	EX	(SP),HL		; VR: DE
+ 2425 F0AD  5E          	LD	E,(HL)
+ 2426 F0AE  23          	INC	HL
+ 2427 F0AF  56          	LD	D,(HL)
+ 2428 F0B0  23          	INC	HL		; DE=offset
+ 2429 F0B1  EB          	EX	DE,HL
+ 2430 F0B2  19          	ADD	HL,DE		; zur Absolut-
+ 2431 F0B3  EB          	EX	DE,HL		; adr. addieren
+ 2432 F0B4  E3          	EX	(SP),HL
+ 2433 F0B5  D5          	PUSH	DE
+ 2434 F0B6  C9          	RET			; wie JP (DE)
+ 2435                   
+ 2436 F0B7              PWRON:	;Einschalt-Init
+ 2437 F0B7  31 01C4     	LD	SP,01C4H
+ 2438 F0BA  AF          	XOR	A
+ 2439 F0BB  6F          	LD	L,A
+ 2440 F0BC  67          	LD	H,A
+ 2441 F0BD  47          	LD	B,A
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  46
+CAOS31  Z80
+
+ 2442 F0BE  4F          	LD	C,A
+ 2443 F0BF  77          PWR1:	LD	(HL),A		; Speicher
+ 2444 F0C0  ED A1       	CPI			; loeschen
+ 2445 F0C2  EA F0BF     	JP	PE,PWR1
+ 2446 F0C5  01 FF80     	LD	BC,0FF80H
+ 2447 F0C8  ED B3       	OTIR			; Module aus
+ 2448 F0CA  06 08       	LD	B,8
+ 2449 F0CC  ED 78       	IN	A,(C)
+ 2450 F0CE  FE F4       	CP	0F4H		; M022 in 08?
+ 2451 F0D0  20 0B       	JR	NZ,PWR2
+ 2452 F0D2  3E 02       	LD	A,2
+ 2453 F0D4  68          	LD	L,B
+ 2454 F0D5  16 43       	LD	D,43H		; als RAM4
+ 2455 F0D7  CD E2F4     	CALL	MODU		; zuschalten
+ 2456 F0DA  CD E2C3     	CALL	ERAM4		; RAM4 loeschen
+ 2457 F0DD  16 03       PWR2:	LD	D,3
+ 2458 F0DF  21 F3B8     	LD	HL,IOTAB	; PIO-A
+ 2459 F0E2  CD E2BC     	CALL	INIME		; 3 Ports init
+ 2460                   
+ 2461                   ; JUMP-Einsprung:
+ 2462 F0E5  F3          PWR3:	DI
+ 2463 F0E6  CD F357     	CALL	SYSI		; IRM, Fenster, 5 Ports init
+ 2464 F0E9  3E 0C       	LD	A,0CH
+ 2465 F0EB  CD F725     	CALL	CRT		; CLS (ges. Bildschirm - im MENU nur Fenster)
+ 2466 F0EE  21 B79D     	LD	HL,WINON+1
+ 2467 F0F1  34          	INC	(HL)		; Fenster begrenzen ab Zeile 1
+ 2468 F0F2  23          	INC	HL
+ 2469 F0F3  23          	INC	HL
+ 2470 F0F4  35          	DEC	(HL)		; bis Zeile 30
+ 2471 F0F5  35          	DEC	(HL)
+ 2472 F0F6  01 0880     	LD	BC,880H		; ROM-Modul mit
+ 2473 F0F9  ED 78       	IN	A,(C)		; Strukturbyte
+ 2474 F0FB  3D          	DEC	A		; 01?
+ 2475 F0FC  20 12       	JR	NZ,MEN0		; nein
+ 2476 F0FE  68          	LD	L,B
+ 2477 F0FF  16 43       	LD	D,43H		; auf 4000H
+ 2478 F101  3E 02       	LD	A,2		; zuschalten
+ 2479 F103  CD E2F4     	CALL	MODU
+ 2480 F106  C3 4000     	JP	4000H		; anspringen
+ 2481                   
+ 2482 F109  7F7F        	DW	7F7FH
+ 2483 F10B  4D 45 4E 55 	DB	'MENU',1
+ 2484 F110  CD F1C6     MEN0:	CALL	OSTR
+ 2485 F113  0C          	DB	0CH		; Bildschirm loeschen
+ 2486 F114  2A 20 48 43 	DB	'* HC-CAOS 3.1 *'
+ 2487 F123  0A 0D 00    	DB	LF,CR,0
+ 2488 F126  21 0000     MEN1:	LD	HL,0
+ 2489 F129  4D          	LD	C,L
+ 2490 F12A  44          	LD	B,H
+ 2491 F12B  CD F1C6     MENU:	CALL	OSTR					;**46**
+ 2492 F12E  0D 02 25 00 	DB	CR,2,'%',0	; Prompt
+ 2493 F132  CD F43E     	CALL	BRKT
+ 2494 F135  38 2A       	JR	C,LOOP1
+ 2495 F137  DD 7E 09    	LD	A,(IX+9)	; Prolog
+ 2496 F13A  ED B1       MEN2:	CPIR
+ 2497 F13C  E2 F161     	JP	PO,LOOP1	; ausgesucht
+ 2498 F13F  ED A1       	CPI			; 2. Mal?
+ 2499 F141  20 F7       	JR	NZ,MEN2
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  47
+CAOS31  Z80
+
+ 2500 F143  7E          MEN3:	LD	A,(HL)
+ 2501 F144  FE 02       	CP	2		; Epilog?
+ 2502 F146  38 0F       	JR	C,MEN4
+ 2503 F148  FE 30       	CP	30H		; <30h?
+ 2504 F14A  38 DF       	JR	C,MENU
+ 2505 F14C  FE 5F       	CP	5FH		; >5Fh, Kleinb. ?
+ 2506 F14E  30 DB       	JR	NC,MENU
+ 2507 F150  CD F1EF     	CALL	OCHR
+ 2508 F153  23          	INC	HL
+ 2509 F154  0B          	DEC	BC
+ 2510 F155  18 EC       	JR	MEN3
+ 2511                   	;
+ 2512 F157  CD F2D7     MEN4:	CALL	CRLF
+ 2513 F15A  18 CF       	JR	MENU
+ 2514                   
+ 2515 F15C  CD F1C6     LOOP:	CALL	OSTR					;**12**
+ 2516 F15F  25 00       	DB	'%',0		; Prompt
+ 2517 F161  CD F2A4     LOOP1:	CALL	INLIN
+ 2518 F164  13          	INC	DE		; Zeichen danach
+ 2519 F165  1A          	LD	A,(DE)
+ 2520 F166  FE 20       	CP	' '
+ 2521 F168  28 F2       	JR	Z,LOOP
+ 2522 F16A  A7          	AND	A
+ 2523 F16B  28 EF       	JR	Z,LOOP
+ 2524 F16D  DD 7E 09    	LD	A,(IX+9)	; Prolog
+ 2525 F170  CD F197     	CALL	MSUCH
+ 2526 F173  30 07       	JR	NC,LOOP2	; nicht gef.
+ 2527 F175  E5          	PUSH	HL
+ 2528 F176  CD F338     	CALL	GARG		; Argumente
+ 2529 F179  30 06       	JR	NC,LOOP3
+ 2530 F17B  E1          	POP	HL
+ 2531 F17C  CD F2CD     LOOP2:	CALL	ERRM
+ 2532 F17F  18 DB       	JR	LOOP
+ 2533                   	;
+ 2534 F181  21 F15C     LOOP3:	LD	HL,LOOP		; Rueckkehradr.
+ 2535 F184  E3          	EX	(SP),HL		; kellern
+ 2536 F185  E5          	PUSH	HL
+ 2537 F186  CD F44C     	CALL	LARG		; Argumente laden
+ 2538 F189  E3          	EX	(SP),HL
+ 2539 F18A  7E          	LD	A,(HL)		; Epilog
+ 2540 F18B  A7          	AND	A
+ 2541 F18C  20 06       	JR	NZ,LOOP4
+ 2542 F18E  DB 88       	IN	A,(88H)
+ 2543 F190  CB 97       	RES	2,A		; IRM off
+ 2544 F192  D3 88       	OUT	(88H),A
+ 2545 F194  23          LOOP4:	INC	HL		; Epilog
+ 2546 F195  E3          	EX	(SP),HL		; uebergehen
+ 2547 F196  C9          	RET
+ 2548                   
+ 2549 F197  01 0000     MSUCH:	LD	BC,0
+ 2550 F19A  21 0000     	LD	HL,0
+ 2551 F19D  F5          ZSUCH:	PUSH	AF					;**1D**
+ 2552 F19E  F1          ZS1:	POP	AF
+ 2553 F19F  F5          	PUSH	AF
+ 2554 F1A0  ED B1       ZS2:	CPIR
+ 2555 F1A2  E2 F1C3     	JP	PO,ZS6		; ausgesucht
+ 2556 F1A5  ED A1       	CPI
+ 2557 F1A7  20 F7       	JR	NZ,ZS2		; falsch
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  48
+CAOS31  Z80
+
+ 2558 F1A9  D5          	PUSH	DE
+ 2559 F1AA  1A          ZS3:	LD	A,(DE)
+ 2560 F1AB  13          	INC	DE
+ 2561 F1AC  FE 21       	CP	'!'		; keine SPC und
+ 2562 F1AE  38 07       	JR	C,ZS4		; Steuerzeichen
+ 2563 F1B0  ED A1       	CPI
+ 2564 F1B2  28 F6       	JR	Z,ZS3
+ 2565 F1B4  D1          	POP	DE
+ 2566 F1B5  18 E7       	JR	ZS1
+ 2567 F1B7  3E 01       ZS4:	LD	A,1
+ 2568 F1B9  BE          	CP	(HL)		; Epilog?
+ 2569 F1BA  30 03       	JR	NC,ZS5
+ 2570 F1BC  D1          	POP	DE
+ 2571 F1BD  18 DF       	JR	ZS1
+ 2572 F1BF  F1          ZS5:	POP	AF
+ 2573 F1C0  F1          	POP	AF
+ 2574 F1C1  37          	SCF			; CY=1
+ 2575 F1C2  C9          	RET
+ 2576 F1C3  F1          ZS6:	POP	AF
+ 2577 F1C4  A7          	AND	A		; CY=0
+ 2578 F1C5  C9          	RET
+ 2579                   
+ 2580 F1C6  E3          OSTR:	EX	(SP),HL					;**23**
+ 2581 F1C7  CD E578     	CALL	ZKOUT
+ 2582 F1CA  E3          	EX	(SP),HL
+ 2583 F1CB  C9          NOT:	RET
+ 2584                   
+ 2585 F1CC  CD F1DC     NORM:	CALL	NIN					;**13**
+ 2586 F1CF  21 FDF8     NOUT:	LD	HL,ZEI0					;**20**
+ 2587 F1D2  E5          SOUT:	PUSH	HL					;**1E**
+ 2588 F1D3  2A B7B9     	LD	HL,(OUTAB)
+ 2589 F1D6  E3          	EX	(SP),HL
+ 2590 F1D7  22 B7B9     	LD	(OUTAB),HL
+ 2591 F1DA  E1          	POP	HL
+ 2592 F1DB  C9          	RET
+ 2593                    
+ 2594 F1DC  21 F931     NIN:	LD	HL,BUPTAB				;**21**
+ 2595 F1DF  E5          SIN:	PUSH	HL					;**1F**
+ 2596 F1E0  2A B7BB     	LD	HL,(INTAB)
+ 2597 F1E3  E3          	EX	(SP),HL
+ 2598 F1E4  22 B7BB     	LD	(INTAB),HL
+ 2599 F1E7  E1          	POP	HL
+ 2600 F1E8  C9          	RET
+ 2601                    
+ 2602 F1E9  E5          INTB:	PUSH	HL					;**16**
+ 2603 F1EA  2A B7BB     	LD	HL,(INTAB)
+ 2604 F1ED  18 04       	JR	INTA1
+ 2605                   	;
+ 2606 F1EF  E5          OCHR:	PUSH	HL					;**24**
+ 2607 F1F0  2A B7B9     	LD	HL,(OUTAB)
+ 2608 F1F3  D5          INTA1:	PUSH	DE		; s.a. PV1
+ 2609 F1F4  C5          	PUSH	BC		; (sehr aehnlich)
+ 2610 F1F5  F5          	PUSH	AF
+ 2611 F1F6  7E          	LD	A,(HL)
+ 2612 F1F7  32 B780     	LD	(ARGC),A
+ 2613 F1FA  F1          	POP	AF
+ 2614 F1FB  CD F063     	CALL	PV2
+ 2615 F1FE  C1          POP3:	POP	BC
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  49
+CAOS31  Z80
+
+ 2616 F1FF  D1          	POP	DE
+ 2617 F200  E1          	POP	HL
+ 2618 F201  C9          	RET
+ 2619                   
+ 2620 F202  3D          WTUP:	DEC	A		; UP fuer WAIT
+ 2621 F203  C8          	RET	Z
+ 2622 F204  F5          	PUSH	AF
+ 2623 F205  F1          	POP	AF
+ 2624 F206  18 FA       	JR	WTUP
+ 2625                   
+ 2626 F208  47          WAIT:	LD	B,A					;**14**
+ 2627 F209  AF          	XOR	A
+ 2628 F20A  CD F202     WAIT1:	CALL	WTUP
+ 2629 F20D  10 FB       	DJNZ	WAIT1
+ 2630 F20F  C9          	RET
+ 2631                    
+ 2632 F210  CD FDB8     KBD:	CALL	CUCP					;**04**
+ 2633 F213  E5          	PUSH	HL
+ 2634 F214  C5          	PUSH	BC
+ 2635 F215  DD CB 08 76 	BIT	6,(IX+8)	; F-Taste aktiv?
+ 2636 F219  20 42       	JR	NZ,KBD6		; ja
+ 2637 F21B  CD E29F     KBD1:	CALL	KBDZ
+ 2638 F21E  30 FB       	JR	NC,KBD1
+ 2639 F220  FE F1       	CP	0F1H		; F-Taste?
+ 2640 F222  38 19       	JR	C,KBD4
+ 2641 F224  DD CB 08 F6 	SET	6,(IX+8)	; ja - merken
+ 2642 F228  D6 F0       	SUB	0F0H
+ 2643 F22A  47          	LD	B,A
+ 2644 F22B  21 B900     	LD	HL,0B900H
+ 2645 F22E  7E          KBD2:	LD	A,(HL)		; Pos. in F-
+ 2646 F22F  A7          	AND	A		; Puffer best.
+ 2647 F230  23          	INC	HL
+ 2648 F231  20 FB       	JR	NZ,KBD2
+ 2649 F233  10 F9       	DJNZ	KBD2
+ 2650 F235  7E          	LD	A,(HL)		; erstes CHR
+ 2651 F236  A7          	AND	A
+ 2652 F237  28 29       	JR	Z,KBD7		; F-Taste frei
+ 2653 F239  23          	INC	HL
+ 2654 F23A  22 B7D1     KBD3:	LD	(FTAST),HL	; Zeiger
+ 2655 F23D  DD CB 08 6E KBD4:	BIT	5,(IX+8)	; Click ein?
+ 2656 F241  28 15       	JR	Z,KBD5
+ 2657 F243  21 0019     	LD	HL,19H
+ 2658 F246  01 000F     	LD	BC,0FH
+ 2659 F249  5C          	LD	E,H
+ 2660 F24A  F5          	PUSH	AF
+ 2661 F24B  CD E52A     	CALL	TON1		; Tastenclick
+ 2662 F24E  3E 0F       	LD	A,0FH
+ 2663 F250  CD F208     	CALL	WAIT
+ 2664 F253  3E 03       	LD	A,3
+ 2665 F255  D3 8C       	OUT	(8CH),A		; Ton aus
+ 2666 F257  F1          	POP	AF
+ 2667 F258  C1          KBD5:	POP	BC
+ 2668 F259  E1          	POP	HL
+ 2669 F25A  C3 FDB8     	JP	CUCP
+ 2670                   	;
+ 2671 F25D  CD F43E     KBD6:	CALL	BRKT		; Abbruch?
+ 2672 F260  30 06       	JR	NC,KBD8
+ 2673 F262  DD CB 08 B6 KBD7:	RES	6,(IX+8)	; F-Taste inaktiv
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  50
+CAOS31  Z80
+
+ 2674 F266  18 B3       	JR	KBD1
+ 2675                   	;
+ 2676 F268  2A B7D1     KBD8:	LD	HL,(FTAST)	; Zeiger auf
+ 2677 F26B  7E          	LD	A,(HL)		; naechstes CHR
+ 2678 F26C  23          	INC	HL
+ 2679 F26D  A7          	AND	A	;Ende?
+ 2680 F26E  20 CA       	JR	NZ,KBD3
+ 2681 F270  18 F0       	JR	KBD7
+ 2682                   
+ 2683 F272              KCTAB:	;IRM-Defaulttabelle
+ 2684 F272  F1CB        	DW	NOT		; Hardcopy
+ 2685 F274  00          	DB	0		; WINNR
+ 2686 F275  0000        	DW	0		; WINON
+ 2687 F277  2028        	DW	2028H		; WINLG
+ 2688 F279  0000        	DW	0		; CURSO
+ 2689 F27B  00          	DB	0		; STBT
+ 2690 F27C  39          	DB	39H		; COLOR
+ 2691 F27D  F77D        	DW	SCRLPG		; WEND
+ 2692 F27F  EE00        	DW	0EE00H		; CCTL0
+ 2693 F281  FE00        	DW	0FE00H		; 1
+ 2694 F283  EE00        	DW	0EE00H		; 2
+ 2695 F285  FE00        	DW	0FE00H		; 3
+ 2696 F287  01C4        	DW	01C4H		; SYSP
+ 2697 F289  F5D4        	DW	SUTB		; SUTAB
+ 2698 F28B  F8BE        	DW	CRTTAB		; CTAB
+ 2699 F28D  D3 88       	OUT	(88H),A		; BJUMP
+ 2700 F28F  C3 F012     	JP	0F012H
+ 2701 F292  FDF8        	DW	ZEI0		; OUTAB
+ 2702 F294  FDFC        	DW	ZEI4		; INTAB
+ 2703 F296  C3 F1CB     	JP	NOT		; UOUT1
+ 2704 F299  C3 F1CB     	JP	NOT		; UIN1
+ 2705 F29C  C3 F1CB     	JP	NOT		; UOUT2
+ 2706 F29F  C3 F1CB     	JP	NOT		; UIN2
+ 2707 F2A2  DC82        	DW	0DC82H		; IOERR (BASIC)
+ 2708                   
+ 2709 F2A4  E5          INLIN:	PUSH	HL					;**17**
+ 2710 F2A5  CD F1E9     INLI1:	CALL	INTB
+ 2711 F2A8  CD F1EF     	CALL	OCHR
+ 2712 F2AB  FE 0D       	CP	CR		; Enter?
+ 2713 F2AD  20 F6       	JR	NZ,INLI1
+ 2714 F2AF  CD F2D7     	CALL	CRLF
+ 2715 F2B2  ED 5B B7A0  	LD	DE,(CURSO)
+ 2716 F2B6  CD E024     	CALL	DABR
+ 2717 F2B9  11 FFD8     	LD	DE,-40
+ 2718 F2BC  19          	ADD	HL,DE
+ 2719 F2BD  EB          	EX	DE,HL
+ 2720 F2BE  E1          	POP	HL
+ 2721 F2BF  C9          	RET
+ 2722                    
+ 2723 F2C0  7C          HLHX:	LD	A,H					;**1A**
+ 2724 F2C1  CD F2E2     	CALL	AHEX
+ 2725 F2C4  7D          	LD	A,L
+ 2726 F2C5  CD F2E2     	CALL	AHEX
+ 2727 F2C8  3E 20       SPACE:	LD	A,' '		; Leerzeichen		;**2B**
+ 2728 F2CA  C3 F1EF     SPAC0:	JP	OCHR
+ 2729                    
+ 2730 F2CD  CD F1C6     ERRM:	CALL	OSTR					;**19**
+ 2731 F2D0  45 52 52 4F 	DB	'ERROR',7,0
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  51
+CAOS31  Z80
+
+ 2732                   	;
+ 2733 F2D7  CD F1C6     CRLF:	CALL	OSTR					;**2C**
+ 2734 F2DA  0D 0A 00    	DB	CR,LF,0
+ 2735 F2DD  C9          	RET
+ 2736                   
+ 2737 F2DE  3E 10       HOME:	LD	A,10H					;**2D**
+ 2738 F2E0  18 E8       	JR	SPAC0
+ 2739                   
+ 2740 F2E2  F5          AHEX:	PUSH	AF					;**1C**
+ 2741 F2E3  1F          	RRA			; Tetradentausch
+ 2742 F2E4  1F          	RRA
+ 2743 F2E5  1F          	RRA
+ 2744 F2E6  1F          	RRA
+ 2745 F2E7  CD F2EB     	CALL	AHEX0		; erst rufen,
+ 2746 F2EA  F1          	POP	AF		; dann reinlaufen
+ 2747 F2EB  E6 0F       AHEX0:	AND	0FH		; Maske
+ 2748 F2ED  C6 30       	ADD	A,30H
+ 2749 F2EF  FE 3A       	CP	3AH
+ 2750 F2F1  38 D7       	JR	C,SPAC0		; 0..9
+ 2751 F2F3  C6 07       	ADD	7
+ 2752 F2F5  18 D3       	JR	SPAC0		; A..F
+ 2753                   
+ 2754 F2F7  CD F2FA     HLDE:	CALL	HLDE1					;**1B**
+ 2755 F2FA  CD F2C0     HLDE1:	CALL	HLHX
+ 2756 F2FD  EB          	EX	DE,HL
+ 2757 F2FE  C9          	RET
+ 2758                   
+ 2759 F2FF  1A          RHEX:	LD	A,(DE)					;**18**
+ 2760 F300  FE 20       	CP	' '		; Trennzeichen
+ 2761 F302  13          	INC	DE		; uebergehen
+ 2762 F303  28 FA       	JR	Z,RHEX
+ 2763 F305  1B          	DEC	DE
+ 2764 F306  21 0000     	LD	HL,0
+ 2765 F309  22 B797     	LD	(NUMVX),HL
+ 2766 F30C  AF          	XOR	A
+ 2767 F30D  21 B796     	LD	HL,NUMNX
+ 2768 F310  77          	LD	(HL),A
+ 2769 F311  1A          RH1:	LD	A,(DE)
+ 2770 F312  B7          	OR	A		; Ende-Dummy?
+ 2771 F313  C8          	RET	Z
+ 2772 F314  FE 20       	CP	' '		; Ende-Space?
+ 2773 F316  C8          	RET	Z
+ 2774 F317  D6 30       	SUB	'0'
+ 2775 F319  D8          	RET	C
+ 2776 F31A  FE 0A       	CP	10
+ 2777 F31C  38 0B       	JR	C,RH2
+ 2778 F31E  D6 07       	SUB	7
+ 2779 F320  FE 0A       	CP	10
+ 2780 F322  D8          	RET	C
+ 2781 F323  FE 10       	CP	10H
+ 2782 F325  38 02       	JR	C,RH2
+ 2783 F327  37          	SCF
+ 2784 F328  C9          	RET
+ 2785                   	;
+ 2786 F329  13          RH2:	INC	DE
+ 2787 F32A  34          	INC	(HL)		; NUMNX erhoehen
+ 2788 F32B  23          	INC	HL
+ 2789 F32C  ED 6F       	RLD			; Tetrade
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  52
+CAOS31  Z80
+
+ 2790 F32E  23          	INC	HL		; durchschieben
+ 2791 F32F  ED 6F       	RLD
+ 2792 F331  2B          	DEC	HL
+ 2793 F332  2B          	DEC	HL		; RLD setzt auch
+ 2794 F333  28 DC       	JR	Z,RH1		; Z-Flag!
+ 2795 F335  1B          	DEC	DE
+ 2796 F336  37          	SCF
+ 2797 F337  C9          	RET
+ 2798                   
+ 2799 F338              GARG:	;bis 10 Arg. erfassen			;**22**
+ 2800 F338  01 B781     	LD	BC,0B781H
+ 2801 F33B  AF          	XOR	A
+ 2802 F33C  02          	LD	(BC),A		; (ARGN)=0
+ 2803 F33D  CD F2FF     GARG1:	CALL	RHEX
+ 2804 F340  D8          	RET	C		; Fehler
+ 2805 F341  7E          	LD	A,(HL)
+ 2806 F342  B7          	OR	A
+ 2807 F343  C8          	RET	Z		; Ende-Dummy
+ 2808 F344  23          	INC	HL
+ 2809 F345  03          	INC	BC
+ 2810 F346  7E          	LD	A,(HL)		; L(NUMVX)
+ 2811 F347  02          	LD	(BC),A		; L(Argument)
+ 2812 F348  23          	INC	HL
+ 2813 F349  03          	INC	BC
+ 2814 F34A  7E          	LD	A,(HL)		; H(NUMVX)
+ 2815 F34B  02          	LD	(BC),A		; H(Argument)
+ 2816 F34C  21 B781     	LD	HL,ARGN
+ 2817 F34F  34          	INC	(HL)
+ 2818 F350  7E          	LD	A,(HL)
+ 2819 F351  FE 0B       	CP	11		; 10 Argumente?
+ 2820 F353  38 E8       	JR	C,GARG1
+ 2821 F355  37          	SCF			; zu viele
+ 2822 F356  C9          	RET
+ 2823                   
+ 2824 F357  11 B799     SYSI:	LD	DE,HCADR
+ 2825 F35A  21 F272     	LD	HL,KCTAB
+ 2826 F35D  01 0032     	LD	BC,32H
+ 2827 F360  ED B0       	LDIR			; IRM init
+ 2828 F362  AF          	XOR	A
+ 2829 F363  CD FC6A     	CALL	WINAK		; Fenster 0 init.
+ 2830 F366  21 B99C     	LD	HL,WNDFN
+ 2831 F369  11 B9A6     	LD	DE,WNDFN+10
+ 2832 F36C  01 005A     	LD	BC,90
+ 2833 F36F  ED B0       	LDIR			; Fenster 1..9
+ 2834 F371  3E 01       	LD	A,1
+ 2835                   	;
+ 2836 F373  21 E293     SIXD:	LD	HL,ISRTAB				;**31**
+ 2837 F376  32 B7D7     	LD	(MIXIT),A
+ 2838 F379  1E E4       	LD	E,0E4H
+ 2839 F37B  57          	LD	D,A
+ 2840 F37C  7B          	LD	A,E
+ 2841 F37D  01 000C     	LD	BC,12		; Interrupttab.
+ 2842 F380  ED B0       	LDIR			; kopieren
+ 2843 F382  C6 0C       	ADD	12
+ 2844 F384  5F          	LD	E,A
+ 2845 F385  D5          	PUSH	DE		; IX-Arbeitsbereich
+ 2846 F386  DD E1       	POP	IX
+ 2847 F388  DD 36 08 88 	LD	(IX+8),88H
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  53
+CAOS31  Z80
+
+ 2848 F38C  DD 36 09 7F 	LD	(IX+9),7FH	; CAOS-Prologbyte
+ 2849 F390  DD 36 0E 13 	LD	(IX+14),LOW(KTAB)
+ 2850 F394  DD 36 0F E2 	LD	(IX+15),HIGH(KTAB)
+ 2851 F398  F3          INIT:	DI
+ 2852 F399  F5          	PUSH	AF
+ 2853 F39A  D5          	PUSH	DE
+ 2854 F39B  E5          	PUSH	HL
+ 2855 F39C  ED 5E       	IM	2
+ 2856 F39E  3A B7D7     	LD	A,(MIXIT)
+ 2857 F3A1  ED 47       	LD	I,A
+ 2858 F3A3  16 05       	LD	D,5
+ 2859 F3A5  21 F3C3     	LD	HL,IOTAB2
+ 2860 F3A8  CD E2BC     	CALL	INIME		; Kanaele init.
+ 2861 F3AB  E1          	POP	HL
+ 2862 F3AC  D1          	POP	DE
+ 2863 F3AD  F1          	POP	AF
+ 2864 F3AE  FB          	EI
+ 2865 F3AF  DD 36 05 00 KPUFF:	LD	(IX+5),LOW(CASS)
+ 2866 F3B3  DD 36 06 B7 	LD	(IX+6),HIGH(CASS)
+ 2867 F3B7  C9          	RET
+ 2868                   
+ 2869 F3B8  8A          IOTAB:	DB	8AH	; PIO-A-Steuerw.
+ 2870 F3B9  02          	 DB	2
+ 2871 F3BA  E4          	  DB	0E4H	; Int-Vektor
+ 2872 F3BB  4F          	  DB	4FH	; Byte-IN
+ 2873 F3BC  88          	DB	88H	; PIO-A-Daten
+ 2874 F3BD  01          	 DB	1
+ 2875 F3BE  9F          	  DB	9FH	; IRM ein...
+ 2876 F3BF  8A          	DB	8AH	; PIO-A-Steuerw.
+ 2877 F3C0  02          	 DB	2
+ 2878 F3C1  0F          	  DB	0FH	; Byte-OUT
+ 2879 F3C2  03          	  DB	3	; DI
+ 2880                   
+ 2881 F3C3  8B          IOTAB2:	DB	8BH	; PIO-B-Steuerw.
+ 2882 F3C4  03          	 DB	3
+ 2883 F3C5  0F          	  DB	0FH	; Byte-OUT
+ 2884 F3C6  83          	  DB	83H	; EI
+ 2885 F3C7  E6          	  DB	0E6H	; Int-Vektor
+ 2886 F3C8  89          	DB	89H	; PIO-B-Daten
+ 2887 F3C9  01          	 DB	1
+ 2888 F3CA  9F          	  DB	9FH	; Daten
+ 2889 F3CB  8C          	DB	8CH	; CTC0
+ 2890 F3CC  01          	 DB	1
+ 2891 F3CD  E8          	  DB	0E8H	; Int-Vektor
+ 2892 F3CE  8E          	DB	8EH	; CTC2 (blinken)
+ 2893 F3CF  02          	 DB	2
+ 2894 F3D0  47          	  DB	47H	; DI,Zaehler,RES
+ 2895 F3D1  14          	  DB	14H	; Zeitkonstante
+ 2896 F3D2  8A          	DB	8AH	; PIO-A-Daten
+ 2897 F3D3  01          	 DB	1
+ 2898 F3D4  E4          	  DB	0E4H	; Int-Vektor
+ 2899                   ;
+ 2900 F3D5  7F7F        	DW	7F7FH
+ 2901 F3D7  53 41 56 45 	DB	'SAVE',1
+ 2902 F3DC  CD F1C6     	CALL	OSTR
+ 2903 F3DF  4E 41 4D 45 	DB	'NAME :',0
+ 2904 F3E6  CD F2A4     	CALL	INLIN
+ 2905 F3E9  21 0006     	LD	HL,6		; 'NAME :'
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  54
+CAOS31  Z80
+
+ 2906 F3EC  19          	ADD	HL,DE		; uebergehen
+ 2907                   	;
+ 2908 F3ED  11 B700     SAVE:	LD	DE,CASS					;**36**
+ 2909 F3F0  01 000B     	LD	BC,11
+ 2910 F3F3  ED B0       	LDIR			; Name -> Puffer
+ 2911 F3F5  EB          	EX	DE,HL
+ 2912 F3F6  36 00       	LD	(HL),0		; Abschluss-Null
+ 2913 F3F8  21 B781     	LD	HL,ARGN
+ 2914 F3FB  7E          	LD	A,(HL)
+ 2915 F3FC  FE 02       	CP	2		; mind 2 Arg.!
+ 2916 F3FE  D8          	RET	C
+ 2917 F3FF  11 B710     	LD	DE,CASS+10H
+ 2918 F402  0E 15       	LD	C,15H		; alle Argumente
+ 2919 F404  ED B0       	LDIR			; nach Puffer
+ 2920 F406  CD E36A     	CALL	ISRO
+ 2921 F409  2A B782     	LD	HL,(ARG1)
+ 2922 F40C  DD 75 05    SAV1:	LD	(IX+5),L
+ 2923 F40F  DD 74 06    	LD	(IX+6),H
+ 2924 F412  DD 7E 02    	LD	A,(IX+2)
+ 2925 F415  CD F2E2     	CALL	AHEX		; Blocknummer
+ 2926 F418  CD F1C6     	CALL	OSTR
+ 2927 F41B  20 20 00    	DB	'  ',0
+ 2928 F41E  CD F43E     	CALL	BRKT
+ 2929 F421  01 00A0     	LD	BC,0A0H
+ 2930 F424  38 12       	JR	C,SAV2
+ 2931 F426  11 0080     	LD	DE,80H
+ 2932 F429  19          	ADD	HL,DE
+ 2933 F42A  ED 5B B784  	LD	DE,(ARG2)
+ 2934 F42E  A7          	AND	A
+ 2935 F42F  ED 52       	SBC	HL,DE		; Ende erreicht?
+ 2936 F431  30 05       	JR	NC,SAV2
+ 2937 F433  CD E376     	CALL	MBO
+ 2938 F436  18 D4       	JR	SAV1
+ 2939                   	;
+ 2940 F438  CD F2D7     SAV2:	CALL	CRLF
+ 2941 F43B  C3 E3F6     	JP	CSRO
+ 2942                   
+ 2943 F43E  CD E2A8     BRKT:	CALL	KBDS					;**2A**
+ 2944 F441  D0          	RET	NC
+ 2945 F442  FE 03       	CP	3		; Break?
+ 2946 F444  37          	SCF
+ 2947 F445  C8          	RET	Z
+ 2948 F446  A7          	AND	A
+ 2949 F447  C9          	RET
+ 2950                   
+ 2951 F448  DD 36 09 7F 	LD	(IX+9),7FH	; wofuer ???
+ 2952 F44C  ED 4B B786  LARG:	LD	BC,(ARG3)				;**15**
+ 2953 F450  ED 5B B784  	LD	DE,(ARG2)
+ 2954 F454  2A B782     	LD	HL,(ARG1)
+ 2955 F457  3A B781     	LD	A,(ARGN)
+ 2956 F45A  C9          	RET
+ 2957                   
+ 2958 F45B  7F7F        	DW	7F7FH
+ 2959 F45D  56 45 52 49 	DB	'VERIFY',1
+ 2960 F464  DD CB 07 86 VERIF:	RES	0,(IX+7)				;**11**
+ 2961 F468  18 0B       	JR	LOAD0
+ 2962                   
+ 2963 F46A  7F7F        	DW	7F7FH
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  55
+CAOS31  Z80
+
+ 2964 F46C  4C 4F 41 44 	DB	'LOAD',1
+ 2965 F471  DD CB 07 C6 LOAD:	SET	0,(IX+7)				;**10**
+ 2966 F475  CD E415     LOAD0:	CALL	ISRI
+ 2967 F478  DD 7E 02    LOAD1:	LD	A,(IX+2)
+ 2968 F47B  30 0F       	JR	NC,LOAD3
+ 2969 F47D  CD F2E2     LOAD2:	CALL	AHEX
+ 2970 F480  CD F1C6     	CALL	OSTR
+ 2971 F483  2A 0D 0A 00 	DB	'*',CR,LF,0
+ 2972 F487  CD E43F     	CALL	MBI0
+ 2973 F48A  18 EC       	JR	LOAD1
+ 2974                   	;
+ 2975 F48C  FE 02       LOAD3:	CP	2		; Block 0 oder 1?
+ 2976 F48E  30 ED       	JR	NC,LOAD2
+ 2977 F490  3C          	INC	A
+ 2978 F491  5F          	LD	E,A
+ 2979 F492  21 B700     	LD	HL,CASS
+ 2980 F495  06 0B       	LD	B,11
+ 2981 F497  7E          LOAD4:	LD	A,(HL)		; Name anzeigen
+ 2982 F498  23          	INC	HL
+ 2983 F499  CD F725     	CALL	CRT
+ 2984 F49C  10 F9       	DJNZ	LOAD4
+ 2985 F49E  DD 73 03    	LD	(IX+3),E	; erwarteter Block
+ 2986 F4A1  3A B710     	LD	A,(CASS+10H)
+ 2987 F4A4  DD CB 07 46 	BIT	0,(IX+7)
+ 2988 F4A8  28 44       	JR	Z,LOAD6		; wenn VERIFY
+ 2989 F4AA  DD 77 04    	LD	(IX+4),A	; Anzahl Arg.
+ 2990 F4AD  FE 02       	CP	2
+ 2991 F4AF  38 69       	JR	C,NOMC		; zu wenig Arg.
+ 2992 F4B1  FE 0B       	CP	11
+ 2993 F4B3  30 65       	JR	NC,NOMC		; zu viel Arg.
+ 2994 F4B5  ED 5B B713  	LD	DE,(CASS+13H)
+ 2995 F4B9  2A B711     	LD	HL,(CASS+11H)
+ 2996 F4BC  3A B781     	LD	A,(ARGN)
+ 2997 F4BF  A7          	AND	A		; Ladeoffset?
+ 2998 F4C0  28 17       	JR	Z,LOAD5
+ 2999 F4C2  ED 4B B782  	LD	BC,(ARG1)
+ 3000 F4C6  09          	ADD	HL,BC		; AAdr, EAdr
+ 3001 F4C7  EB          	EX	DE,HL		; umrechnen
+ 3002 F4C8  09          	ADD	HL,BC
+ 3003 F4C9  EB          	EX	DE,HL
+ 3004 F4CA  DD CB 04 56 	BIT	2,(IX+4)	; 4..7 Args?
+ 3005 F4CE  20 09       	JR	NZ,LOAD5
+ 3006 F4D0  E5          	PUSH	HL
+ 3007 F4D1  2A B715     	LD	HL,(CASS+15H)
+ 3008 F4D4  09          	ADD	HL,BC		; SAdr umrechnen
+ 3009 F4D5  22 B715     	LD	(CASS+15H),HL
+ 3010 F4D8  E1          	POP	HL
+ 3011 F4D9  E5          LOAD5:	PUSH	HL
+ 3012 F4DA  D5          	PUSH	DE
+ 3013 F4DB  21 B711     	LD	HL,CASS+11H
+ 3014 F4DE  11 B782     	LD	DE,ARG1
+ 3015 F4E1  01 0014     	LD	BC,20		; alle Argumente
+ 3016 F4E4  ED B0       	LDIR			; zurueck kopieren
+ 3017 F4E6  D1          	POP	DE
+ 3018 F4E7  E1          	POP	HL
+ 3019 F4E8  CD F2C8     	CALL	SPACE
+ 3020 F4EB  CD F2F7     	CALL	HLDE		; AAdr, Eadr
+ 3021 F4EE  CD F2D7     LOAD6:	CALL	CRLF
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  56
+CAOS31  Z80
+
+ 3022                   	;Load-Hauptschleife
+ 3023 F4F1  CD F43E     LOAD7:	CALL	BRKT
+ 3024 F4F4  DD CB 07 7E 	BIT	7,(IX+7)	; COM-File?
+ 3025 F4F8  28 03       	JR	Z,LOAD8
+ 3026 F4FA  DA F000     	JP	C,POWER		; BRK -> POWER
+ 3027 F4FD  38 24       LOAD8:	JR	C,CLJP		; BRK -> Abbruch
+ 3028 F4FF  CD E43F     	CALL	MBI0
+ 3029 F502  DD 7E 02    	LD	A,(IX+2)	; Blocknr.
+ 3030 F505  F5          	PUSH	AF
+ 3031 F506  DD BE 03    	CP	(IX+3)
+ 3032 F509  28 1E       	JR	Z,LOAD9		; erwarteter Block
+ 3033 F50B  3C          	INC	A
+ 3034 F50C  28 1B       	JR	Z,LOAD9		; letzter Block
+ 3035 F50E  F1          	POP	AF
+ 3036 F50F  CD F2E2     	CALL	AHEX		; Blocknummer
+ 3037 F512  CD F1C6     	CALL	OSTR
+ 3038 F515  2A 20 00    	DB	'* ',0
+ 3039 F518  18 D7       	JR	LOAD7
+ 3040                   	;
+ 3041 F51A  CD F1C6     NOMC:	CALL	OSTR
+ 3042 F51D  3F 3F 3F 19 	DB	'???',19H,LF,0
+ 3043 F523  DD 36 04 02 CLJP:	LD	(IX+4),2	; kein Start!
+ 3044 F527  18 6C       	JR	CSRI
+ 3045                   	;
+ 3046 F529  F1          LOAD9:	POP	AF
+ 3047 F52A  38 2D       	JR	C,LOAD14	; Fehler
+ 3048 F52C  F5          	PUSH	AF
+ 3049 F52D  CD F2E2     	CALL	AHEX
+ 3050 F530  CD F1C6     	CALL	OSTR
+ 3051 F533  3E 20 00    	DB	'> ',0
+ 3052 F536  F1          	POP	AF
+ 3053 F537  DD CB 07 46 LOAD10:	BIT	0,(IX+7)
+ 3054 F53B  28 55       	JR	Z,LOAD15	; wenn VERIFY
+ 3055 F53D  D5          	PUSH	DE
+ 3056 F53E  EB          	EX	DE,HL
+ 3057 F53F  ED 52       	SBC	HL,DE
+ 3058 F541  01 0081     	LD	BC,81H
+ 3059 F544  ED 42       	SBC	HL,BC
+ 3060 F546  09          	ADD	HL,BC
+ 3061 F547  0B          	DEC	BC
+ 3062 F548  30 01       	JR	NC,LOAD11
+ 3063 F54A  4D          	LD	C,L
+ 3064 F54B  21 B700     LOAD11:	LD	HL,CASS		; MC in Speicher
+ 3065 F54E  ED B0       	LDIR			; kopieren
+ 3066 F550  EB          	EX	DE,HL
+ 3067 F551  D1          	POP	DE
+ 3068 F552  38 41       	JR	C,CSRI		; fertig!
+ 3069 F554  DD 34 03    LOAD12:	INC	(IX+3)		; naechster Block
+ 3070 F557  18 98       LOAD13:	JR	LOAD7
+ 3071                   	;
+ 3072 F559  DD CB 07 7E LOAD14:	BIT	7,(IX+7)
+ 3073 F55D  20 92       	JR	NZ,LOAD7	; COM-File!
+ 3074 F55F  CD F2E2     	CALL	AHEX		; Blocknummer
+ 3075 F562  CD F1C6     	CALL	OSTR		; fehlerhaft
+ 3076 F565  20 3F 19 0A 	DB	' ?',19H,LF,0
+ 3077 F56A  DD CB 07 46 	BIT	0,(IX+7)
+ 3078 F56E  28 81       	JR	Z,LOAD7		; wenn VERIFY
+ 3079 F570  CD F1C6     	CALL	OSTR
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  57
+CAOS31  Z80
+
+ 3080 F573  52 45 50 45 	DB	'REPEAT (N)?',LF,CR,0
+ 3081 F581  DD CB 08 B6 	RES	6,(IX+8)
+ 3082 F585  CD F210     	CALL	KBD
+ 3083 F588  FE 4E       	CP	'N'
+ 3084 F58A  20 CB       	JR	NZ,LOAD13
+ 3085 F58C  DD 36 04 02 	LD	(IX+4),2	; kein Start
+ 3086 F590  18 A5       	JR	LOAD10
+ 3087                   	;
+ 3088 F592  3C          LOAD15:	INC	A
+ 3089 F593  20 BF       	JR	NZ,LOAD12
+ 3090 F595  CD E3FD     CSRI:	CALL	CSROI		; Abschluss
+ 3091 F598  CD F2D7     	CALL	CRLF
+ 3092 F59B  DD CB 07 46 	BIT	0,(IX+7)
+ 3093 F59F  C8          	RET	Z		; VERIFY
+ 3094 F5A0  DD 7E 04    	LD	A,(IX+4)
+ 3095 F5A3  32 B781     	LD	(ARGN),A
+ 3096 F5A6  FE 03       	CP	3		; Autostart?
+ 3097 F5A8  DD 36 04 02 	LD	(IX+4),2
+ 3098 F5AC  D8          	RET	C		; nein
+ 3099 F5AD  2A B786     	LD	HL,(ARG3)
+ 3100 F5B0  E9          	JP	(HL)		; Start
+ 3101                   
+ 3102 F5B1  7F7F        	DW	7F7FH
+ 3103 F5B3  43 4F 4C 4F 	DB	'COLOR',1
+ 3104 F5B9  3E 1F       COLR:	LD	A,1FH
+ 3105 F5BB  A5          	AND	L
+ 3106 F5BC  17          	RLA
+ 3107 F5BD  17          	RLA
+ 3108 F5BE  17          	RLA
+ 3109 F5BF  6F          	LD	L,A
+ 3110 F5C0  3A B781     	LD	A,(ARGN)
+ 3111 F5C3  FE 02       	CP	2
+ 3112 F5C5  30 0A       	JR	NC,COLR2
+ 3113 F5C7  3A B7A3     	LD	A,(COLOR)
+ 3114 F5CA  E6 07       COLR1:	AND	7
+ 3115 F5CC  B5          	OR	L
+ 3116 F5CD  32 B7A3     	LD	(COLOR),A
+ 3117 F5D0  C9          	RET
+ 3118                   	;
+ 3119 F5D1  7B          COLR2:	LD	A,E
+ 3120 F5D2  18 F6       	JR	COLR1
+ 3121                   
+ 3122 F5D4              SUTB:	;Unterprogrammtabelle
+ 3123 F5D4  F725        	DW	CRT	;00
+ 3124 F5D6  E376        	DW	MBO	;01
+ 3125 F5D8  B7BD        	DW	UOUT1	;02
+ 3126 F5DA  B7C3        	DW	UOUT2	;03
+ 3127 F5DC  F210        	DW	KBD	;04
+ 3128 F5DE  E439        	DW	MBI	;05
+ 3129 F5E0  B7C0        	DW	UIN1	;06
+ 3130 F5E2  B7C6        	DW	UIN2	;07
+ 3131 F5E4  E36A        	DW	ISRO	;08
+ 3132 F5E6  E3F6        	DW	CSRO	;09
+ 3133 F5E8  E415        	DW	ISRI	;0A
+ 3134 F5EA  F595        	DW	CSRI	;0B
+ 3135 F5EC  E2A8        	DW	KBDS	;0C
+ 3136 F5EE  E000        	DW	BYE	;0D
+ 3137 F5F0  E29F        	DW	KBDZ	;0E
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  58
+CAOS31  Z80
+
+ 3138 F5F2  F5B9        	DW	COLR	;0F
+ 3139 F5F4  F471        	DW	LOAD	;10
+ 3140 F5F6  F464        	DW	VERIF	;11
+ 3141 F5F8  F15C        	DW	LOOP	;12
+ 3142 F5FA  F1CC        	DW	NORM	;13
+ 3143 F5FC  F208        	DW	WAIT	;14
+ 3144 F5FE  F44C        	DW	LARG	;15
+ 3145 F600  F1E9        	DW	INTB	;16
+ 3146 F602  F2A4        	DW	INLIN	;17
+ 3147 F604  F2FF        	DW	RHEX	;18
+ 3148 F606  F2CD        	DW	ERRM	;19
+ 3149 F608  F2C0        	DW	HLHX	;1A
+ 3150 F60A  F2F7        	DW	HLDE	;1B
+ 3151 F60C  F2E2        	DW	AHEX	;1C
+ 3152 F60E  F19D        	DW	ZSUCH	;1D
+ 3153 F610  F1D2        	DW	SOUT	;1E
+ 3154 F612  F1DF        	DW	SIN	;1F
+ 3155 F614  F1CF        	DW	NOUT	;20
+ 3156 F616  F1DC        	DW	NIN	;21
+ 3157 F618  F338        	DW	GARG	;22
+ 3158 F61A  F1C6        	DW	OSTR	;23
+ 3159 F61C  F1EF        	DW	OCHR	;24
+ 3160 F61E  FDB8        	DW	CUCP	;25
+ 3161 F620  E2F4        	DW	MODU	;26
+ 3162 F622  E34F        	DW	JUMP	;27
+ 3163 F624  F662        	DW	LDMA	;28
+ 3164 F626  F664        	DW	LDAM	;29
+ 3165 F628  F43E        	DW	BRKT	;2A
+ 3166 F62A  F2C8        	DW	SPACE	;2B
+ 3167 F62C  F2D7        	DW	CRLF	;2C
+ 3168 F62E  F2DE        	DW	HOME	;2D
+ 3169 F630  F672        	DW	MODI	;2E
+ 3170 F632  E13A        	DW	PUDE	;2F
+ 3171 F634  E13D        	DW	PUSE	;30
+ 3172 F636  F373        	DW	SIXD	;31
+ 3173 F638  E024        	DW	DABR	;32
+ 3174 F63A  F719        	DW	TCIF	;33
+ 3175 F63C  E0BF        	DW	PADR	;34
+ 3176 F63E  E527        	DW	TON	;35
+ 3177 F640  F3ED        	DW	SAVE	;36
+ 3178 F642  F9D2        	DW	MBIN	;37
+ 3179 F644  F956        	DW	MBOUT	;38
+ 3180 F646  FBBF        	DW	KEY	;39
+ 3181 F648  FB98        	DW	KEYLI	;3A
+ 3182 F64A  FB05        	DW	DISP	;3B
+ 3183 F64C  FC1C        	DW	WININ	;3C
+ 3184 F64E  FC6A        	DW	WINAK	;3D
+ 3185 F650  FC82        	DW	LINE	;3E
+ 3186 F652  FD06        	DW	CIRCL	;3F
+ 3187 F654  FD75        	DW	SQR	;40
+ 3188 F656  FD83        	DW	MULT	;41
+ 3189 F658  FB69        	DW	CSTBT	;42
+ 3190 F65A  E2B3        	DW	INIEA	;43
+ 3191 F65C  E2BC        	DW	INIME	;44
+ 3192 F65E  E578        	DW	ZKOUT	;45
+ 3193 F660  F12B        	DW	MENU	;46
+ 3194                   
+ 3195 F662  77          LDMA:	LD	(HL),A					;**28**
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  59
+CAOS31  Z80
+
+ 3196 F663  C9          	RET
+ 3197                   
+ 3198 F664  7E          LDAM:	LD	A,(HL)					;**29**
+ 3199 F665  C9          	RET
+ 3200                   
+ 3201 F666  7F7F        	DW	7F7FH
+ 3202 F668  4D 4F 44 49 	DB	'MODIFY',1
+ 3203 F66F  CD F44C     MODI0:	CALL	LARG
+ 3204 F672  3E BF       MODI:	LD	A,0BFH					;**2E**
+ 3205 F674  BC          	CP	H
+ 3206 F675  D8          	RET	C		; ab C000h gesp.
+ 3207 F676  22 B782     	LD	(ARG1),HL
+ 3208 F679  CD F2C0     	CALL	HLHX		; Adresse
+ 3209 F67C  7E          	LD	A,(HL)
+ 3210 F67D  CD F2E2     	CALL	AHEX		; Datenbyte
+ 3211 F680  CD F1C6     	CALL	OSTR
+ 3212 F683  20 08 08 08 	DB	' ',8,8,8,0
+ 3213 F688  CD F2A4     MODI1:	CALL	INLIN
+ 3214 F68B  CD F2FF     	CALL	RHEX		; Adresse
+ 3215 F68E  38 4E       	JR	C,MODI9		; Fehler
+ 3216 F690  7E          	LD	A,(HL)
+ 3217 F691  B7          	OR	A
+ 3218 F692  28 4A       	JR	Z,MODI9		; kein Zeichen
+ 3219 F694  23          	INC	HL
+ 3220 F695  D5          	PUSH	DE
+ 3221 F696  5E          	LD	E,(HL)
+ 3222 F697  23          	INC	HL
+ 3223 F698  56          	LD	D,(HL)
+ 3224 F699  EB          	EX	DE,HL		; HL=Adresse
+ 3225 F69A  D1          	POP	DE
+ 3226 F69B  06 00       	LD	B,0
+ 3227 F69D  E5          MODI2:	PUSH	HL
+ 3228 F69E  CD F2FF     	CALL	RHEX		; Datenbyte
+ 3229 F6A1  7E          	LD	A,(HL)
+ 3230 F6A2  B7          	OR	A
+ 3231 F6A3  28 07       	JR	Z,MODI4		; kein Zeichen
+ 3232 F6A5  23          	INC	HL
+ 3233 F6A6  7E          	LD	A,(HL)
+ 3234 F6A7  E1          	POP	HL
+ 3235 F6A8  77          MODI3:	LD	(HL),A		; eintragen
+ 3236 F6A9  04          	INC	B
+ 3237 F6AA  23          	INC	HL
+ 3238 F6AB  E5          	PUSH	HL
+ 3239 F6AC  E1          MODI4:	POP	HL
+ 3240 F6AD  1A          	LD	A,(DE)
+ 3241 F6AE  FE 2E       	CP	'.'		; Abschluss?
+ 3242 F6B0  C8          	RET	Z
+ 3243 F6B1  FE 2C       	CP	','		; 1 Zeichen
+ 3244 F6B3  20 05       	JR	NZ,MODI5
+ 3245 F6B5  13          	INC	DE
+ 3246 F6B6  1A          	LD	A,(DE)		; vom Video-RAM
+ 3247 F6B7  13          	INC	DE
+ 3248 F6B8  18 EE       	JR	MODI3		; eintragen
+ 3249                   	;
+ 3250 F6BA  78          MODI5:	LD	A,B
+ 3251 F6BB  B7          	OR	A
+ 3252 F6BC  20 01       	JR	NZ,MODI6
+ 3253 F6BE  23          	INC	HL
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  60
+CAOS31  Z80
+
+ 3254 F6BF  1A          MODI6:	LD	A,(DE)
+ 3255 F6C0  FE 3A       	CP	':'		; Rueckschritt?
+ 3256 F6C2  20 04       	JR	NZ,MODI7
+ 3257 F6C4  2B          	DEC	HL
+ 3258 F6C5  2B          	DEC	HL
+ 3259 F6C6  18 AA       	JR	MODI
+ 3260                   	;
+ 3261 F6C8  FE 2F       MODI7:	CP	'/'		; neue Adresse?
+ 3262 F6CA  20 0B       	JR	NZ,MODI8
+ 3263 F6CC  13          	INC	DE
+ 3264 F6CD  CD F2FF     	CALL	RHEX		; Adresse
+ 3265 F6D0  38 0C       	JR	C,MODI9		; Fehler
+ 3266 F6D2  2A B797     	LD	HL,(NUMVX)
+ 3267 F6D5  18 9B       	JR	MODI
+ 3268                   	;
+ 3269 F6D7  B7          MODI8:	OR	A		; Ende-Dummy?
+ 3270 F6D8  28 98       	JR	Z,MODI
+ 3271 F6DA  FE 20       	CP	' '
+ 3272 F6DC  28 BF       	JR	Z,MODI2		; noch ein Byte
+ 3273 F6DE  CD F2CD     MODI9:	CALL	ERRM
+ 3274 F6E1  18 8C       	JR	MODI0
+ 3275                   
+ 3276 F6E3              JPTAB:	;Sprungtabelle fuer CRT-Routinen
+ 3277 F6E3  F7F4        	DW	CLR	;01
+ 3278 F6E5  F8B7        	DW	CAPS	;16
+ 3279 F6E7  F8AE        	DW	CLICK	;14
+ 3280 F6E9  FDDE        	DW	BEEP	;07
+ 3281 F6EB  F779        	DW	HCOPY	;0F
+ 3282 F6ED  F839        	DW	CBL	;0D
+ 3283 F6EF  F827        	DW	CLS	;0C
+ 3284 F6F1  F7FF        	DW	CUL	;08
+ 3285 F6F3  F84E        	DW	DEL	;1F
+ 3286 F6F5  F76F        	DW	CUD	;0A
+ 3287 F6F7  F879        	DW	INS	;1A
+ 3288 F6F9  F839        	DW	CBL	;19
+ 3289 F6FB  F811        	DW	CLLN	;02
+ 3290 F6FD  F83C        	DW	CUU	;0B
+ 3291 F6FF  F767        	DW	CUR	;09
+ 3292 F701  F837        	DW	HOMEPG	;10
+ 3293 F703  F842        	DW	SCROL	;12
+ 3294 F705  F849        	DW	PAGE	;11
+ 3295                    
+ 3296 F707              CCTAB:	;CCTL-Tabelle
+ 3297                   	;Aufbau: Zeichen, Offset, CCTL
+ 3298 F707  E0 C0 AC    	DB	0E0H,0C0H,LOW(CCTL3)
+ 3299 F70A  A0 A0 AA    	DB	0A0H,0A0H,LOW(CCTL2)
+ 3300 F70D  80 80 AC    	DB	080H,080H,LOW(CCTL3)
+ 3301 F710  60 40 A8    	DB	060H,040H,LOW(CCTL1)
+ 3302 F713  20 20 A6    	DB	020H,020H,LOW(CCTL0)
+ 3303 F716  00 00 A8    	DB	000H,000H,LOW(CCTL1)
+ 3304                   
+ 3305 F719              TCIF:	;Test Cursor im Fenster	 **33**
+ 3306 F719  3A B79E     	LD	A,(WINLG)
+ 3307 F71C  3D          	DEC	A
+ 3308 F71D  93          	SUB	E		; Cursor-Spalte
+ 3309 F71E  D8          	RET	C
+ 3310 F71F  3A B79F     	LD	A,(WINLG+1)
+ 3311 F722  3D          	DEC	A
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  61
+CAOS31  Z80
+
+ 3312 F723  92          	SUB	D		; Cursor-Zeile
+ 3313 F724  C9          	RET
+ 3314                   
+ 3315 F725  E5          CRT:	PUSH	HL					;**00**
+ 3316 F726  D5          	PUSH	DE
+ 3317 F727  C5          	PUSH	BC
+ 3318 F728  F5          	PUSH	AF
+ 3319 F729  F5          	PUSH	AF
+ 3320 F72A  3A B7A2     	LD	A,(STBT)
+ 3321 F72D  ED 5B B7A0  	LD	DE,(CURSO)
+ 3322 F731  6F          	LD	L,A
+ 3323 F732  F1          	POP	AF
+ 3324 F733  FE 20       	CP	20H		; Steuerfunktion?
+ 3325 F735  30 1C       	JR	NC,CRT1
+ 3326 F737  CB 5D       	BIT	3,L		; darstellen?
+ 3327 F739  20 18       	JR	NZ,CRT1
+ 3328 F73B  2A B7B2     	LD	HL,(CTAB)
+ 3329 F73E  01 0012     	LD	BC,18
+ 3330 F741  ED B1       	CPIR			; Funktion def.?
+ 3331 F743  20 15       	JR	NZ,CRT3		; nein
+ 3332 F745  21 F6E3     	LD	HL,JPTAB
+ 3333 F748  09          	ADD	HL,BC
+ 3334 F749  09          	ADD	HL,BC
+ 3335 F74A  4E          	LD	C,(HL)
+ 3336 F74B  23          	INC	HL
+ 3337 F74C  66          	LD	H,(HL)
+ 3338 F74D  69          	LD	L,C		; HL=Sprungadr.
+ 3339 F74E  CD F778     	CALL	JPHL
+ 3340 F751  18 03       	JR	CRT2
+ 3341                   	;
+ 3342 F753  CD F75E     CRT1:	CALL	PCHR
+ 3343 F756  ED 53 B7A0  CRT2:	LD	(CURSO),DE
+ 3344 F75A  F1          CRT3:	POP	AF
+ 3345 F75B  C3 F1FE     	JP	POP3
+ 3346                   	;
+ 3347 F75E  F5          PCHR:	PUSH	AF
+ 3348 F75F  CD E024     	CALL	DABR
+ 3349 F762  F1          	POP	AF
+ 3350 F763  77          	LD	(HL),A		; ASCII eintragen
+ 3351 F764  CD E055     	CALL	WPIX		; darstellen
+ 3352 F767  1C          CUR:	INC	E
+ 3353 F768  3A B79E     	LD	A,(WINLG)
+ 3354 F76B  BB          	CP	E
+ 3355 F76C  C0          	RET	NZ
+ 3356 F76D  1E 00       	LD	E,0
+ 3357 F76F  14          CUD:	INC	D
+ 3358 F770  3A B79F     	LD	A,(WINLG+1)
+ 3359 F773  BA          	CP	D
+ 3360 F774  C0          	RET	NZ
+ 3361 F775  2A B7A4     	LD	HL,(WEND)
+ 3362 F778  E9          JPHL:	JP	(HL)		; PAGE o. SCROLL
+ 3363                   
+ 3364 F779  2A B799     HCOPY:	LD	HL,(HCADR)	; ShCLR
+ 3365 F77C  E9          	JP	(HL)
+ 3366                   
+ 3367 F77D  11 0000     SCRLPG:	LD	DE,0		; Cursor li/oben
+ 3368 F780  CD E024     	CALL	DABR
+ 3369 F783  14          	INC	D
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  62
+CAOS31  Z80
+
+ 3370 F784  E5          	PUSH	HL
+ 3371 F785  CD E024     	CALL	DABR		; naechste Zeile
+ 3372 F788  D1          	POP	DE
+ 3373 F789  38 62       	JR	C,SCRL9
+ 3374 F78B  3A B79E     	LD	A,(WINLG) 	; Spalten
+ 3375 F78E  4F          	LD	C,A
+ 3376 F78F  3A B79F     	LD	A,(WINLG+1)	; Zeilen
+ 3377 F792  3D          	DEC	A
+ 3378 F793  06 00       	LD	B,0
+ 3379 F795  E5          SCRL1:	PUSH	HL
+ 3380 F796  C5          	PUSH	BC
+ 3381 F797  ED B0       	LDIR			; im VRAM eine
+ 3382 F799  C1          	POP	BC		; Zeile rollen
+ 3383 F79A  D1          	POP	DE
+ 3384 F79B  21 0028     	LD	HL,40		; 1 Zeile tiefer
+ 3385 F79E  19          	ADD	HL,DE
+ 3386 F79F  3D          	DEC	A
+ 3387 F7A0  20 F3       	JR	NZ,SCRL1
+ 3388 F7A2  3A B79D     	LD	A,(WINON+1)
+ 3389 F7A5  07          	RLCA
+ 3390 F7A6  07          	RLCA
+ 3391 F7A7  07          	RLCA
+ 3392 F7A8  67          	LD	H,A		; Zeile*8
+ 3393 F7A9  3A B79F     	LD	A,(WINLG+1)
+ 3394 F7AC  3D          	DEC	A
+ 3395 F7AD  07          	RLCA
+ 3396 F7AE  07          	RLCA
+ 3397 F7AF  07          	RLCA			; Laenge*8
+ 3398 F7B0  F5          	PUSH	AF
+ 3399 F7B1  3A B79C     	LD	A,(WINON)	; Spalte
+ 3400 F7B4  FE 20       	CP	32
+ 3401 F7B6  4F          	LD	C,A
+ 3402 F7B7  3A B79E     	LD	A,(WINLG)	; Breite
+ 3403 F7BA  30 0D       	JR	NC,SCRL2	; rechter Teil
+ 3404 F7BC  81          	ADD	C
+ 3405 F7BD  FE 20       	CP	32
+ 3406 F7BF  38 0F       	JR	C,SCRL3
+ 3407 F7C1  06 20       	LD	B,32
+ 3408 F7C3  90          	SUB	B
+ 3409 F7C4  51          	LD	D,C
+ 3410 F7C5  4F          	LD	C,A
+ 3411 F7C6  78          	LD	A,B
+ 3412 F7C7  18 0B       	JR	SCRL4
+ 3413 F7C9  41          SCRL2:	LD	B,C
+ 3414 F7CA  4F          	LD	C,A
+ 3415 F7CB  11 0000     	LD	DE,0
+ 3416 F7CE  18 06       	JR	SCRL5
+ 3417                   	;
+ 3418 F7D0  51          SCRL3:	LD	D,C
+ 3419 F7D1  01 0000     	LD	BC,0
+ 3420 F7D4  92          SCRL4:	SUB	D
+ 3421 F7D5  5F          	LD	E,A
+ 3422 F7D6  F1          SCRL5:	POP	AF
+ 3423 F7D7  F5          SCRL6:	PUSH	AF
+ 3424 F7D8  7B          	LD	A,E
+ 3425 F7D9  A7          	AND	A
+ 3426 F7DA  28 04       	JR	Z,SCRL7
+ 3427 F7DC  6A          	LD	L,D
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  63
+CAOS31  Z80
+
+ 3428 F7DD  CD FD94     	CALL	SCRLUP
+ 3429 F7E0  79          SCRL7:	LD	A,C
+ 3430 F7E1  A7          	AND	A
+ 3431 F7E2  28 04       	JR	Z,SCRL8
+ 3432 F7E4  68          	LD	L,B
+ 3433 F7E5  CD FD94     	CALL	SCRLUP
+ 3434 F7E8  24          SCRL8:	INC	H
+ 3435 F7E9  F1          	POP	AF
+ 3436 F7EA  3D          	DEC	A
+ 3437 F7EB  20 EA       	JR	NZ,SCRL6
+ 3438 F7ED  3A B79F     SCRL9:	LD	A,(WINLG+1)
+ 3439 F7F0  3D          	DEC	A
+ 3440 F7F1  57          	LD	D,A
+ 3441 F7F2  18 1D       	JR	CLLN
+ 3442                   
+ 3443 F7F4  D5          CLR:	PUSH	DE
+ 3444 F7F5  CD E024     	CALL	DABR
+ 3445 F7F8  3E 20       	LD	A,' '		; Leerzeichen
+ 3446 F7FA  77          	LD	(HL),A
+ 3447 F7FB  CD E055     	CALL	WPIX
+ 3448 F7FE  D1          	POP	DE
+ 3449 F7FF  7B          CUL:	LD	A,E		; Cursor links
+ 3450 F800  D6 01       	SUB	1
+ 3451 F802  38 02       	JR	C,CUL1
+ 3452 F804  5F          	LD	E,A
+ 3453 F805  C9          	RET
+ 3454 F806  7A          CUL1:	LD	A,D		; Zeile hoch
+ 3455 F807  D6 01       	SUB	1
+ 3456 F809  D8          	RET	C
+ 3457 F80A  57          	LD	D,A
+ 3458 F80B  3A B79E     	LD	A,(WINLG)
+ 3459 F80E  3D          	DEC	A
+ 3460 F80F  5F          	LD	E,A
+ 3461 F810  C9          	RET
+ 3462                   
+ 3463 F811  1E 00       CLLN:	LD	E,0		; ShDEL
+ 3464 F813  D5          	PUSH	DE
+ 3465 F814  CD E024     	CALL	DABR
+ 3466 F817  3A B79E     	LD	A,(WINLG)
+ 3467 F81A  47          	LD	B,A		; Spalten
+ 3468 F81B  36 00       CLLN1:	LD	(HL),0		; VRAM loeschen
+ 3469 F81D  3E 20       	LD	A,' '
+ 3470 F81F  CD E055     	CALL	WPIX		; Space anzeigen
+ 3471 F822  23          	INC	HL
+ 3472 F823  10 F6       	DJNZ	CLLN1
+ 3473 F825  D1          	POP	DE
+ 3474 F826  C9          	RET
+ 3475                   
+ 3476 F827  16 00       CLS:	LD	D,0		; ShHOME
+ 3477 F829  3A B79F     	LD	A,(WINLG+1)
+ 3478 F82C  F5          CLS1:	PUSH	AF
+ 3479 F82D  D5          	PUSH	DE
+ 3480 F82E  CD F811     	CALL	CLLN		; Zeile fuer
+ 3481 F831  D1          	POP	DE		; Zeile loeschen
+ 3482 F832  F1          	POP	AF
+ 3483 F833  14          	INC	D
+ 3484 F834  3D          	DEC	A
+ 3485 F835  20 F5       	JR	NZ,CLS1
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  64
+CAOS31  Z80
+
+ 3486 F837  16 00       HOMEPG:	LD	D,0
+ 3487 F839  1E 00       CBL:	LD	E,0
+ 3488 F83B  C9          	RET
+ 3489                   
+ 3490 F83C  7A          CUU:	LD	A,D
+ 3491 F83D  D6 01       	SUB	1
+ 3492 F83F  D8          	RET	C
+ 3493 F840  57          	LD	D,A
+ 3494 F841  C9          	RET
+ 3495                   
+ 3496 F842  21 F77D     SCROL:	LD	HL,SCRLPG	; ShCUD
+ 3497 F845  22 B7A4     WADR:	LD	(WEND),HL
+ 3498 F848  C9          	RET
+ 3499                   
+ 3500 F849  21 F837     PAGE:	LD	HL,HOMEPG	; ShCUU
+ 3501 F84C  18 F7       	JR	WADR
+ 3502                   
+ 3503 F84E  CD E024     DEL:	CALL	DABR
+ 3504 F851  7E          	LD	A,(HL)
+ 3505 F852  A7          	AND	A		; Ende?
+ 3506 F853  C8          	RET	Z
+ 3507 F854  D5          	PUSH	DE		; Cursor
+ 3508 F855  E5          	PUSH	HL		; VRAM
+ 3509 F856  1C          DEL1:	INC	E		; naechste Spalte
+ 3510 F857  CD E024     	CALL	DABR		; raus?
+ 3511 F85A  30 08       	JR	NC,DEL2		; nein
+ 3512 F85C  1E 00       	LD	E,0		; Spalte 0 in
+ 3513 F85E  14          	INC	D		; neuer Zeile
+ 3514 F85F  CD E024     	CALL	DABR		; raus?
+ 3515 F862  38 0B       	JR	C,DEL3		; ja, Ende
+ 3516 F864  7E          DEL2:	LD	A,(HL)
+ 3517 F865  A7          	AND	A		; Ende?
+ 3518 F866  28 07       	JR	Z,DEL3
+ 3519 F868  E3          	EX	(SP),HL
+ 3520 F869  77          	LD	(HL),A		; eintragen
+ 3521 F86A  CD E055     	CALL	WPIX		; zeichnen
+ 3522 F86D  18 E7       	JR	DEL1		; von vorn
+ 3523                   	;
+ 3524 F86F  E1          DEL3:	POP	HL
+ 3525 F870  36 00       	LD	(HL),0		; letztes CHR
+ 3526 F872  3E 20       	LD	A,' '		; loeschen
+ 3527 F874  CD E055     	CALL	WPIX
+ 3528 F877  D1          	POP	DE
+ 3529 F878  C9          	RET
+ 3530                   
+ 3531 F879  D5          INS:	PUSH	DE		; Cursor
+ 3532 F87A  3E 20       	LD	A,' '
+ 3533 F87C  CD E024     	CALL	DABR
+ 3534 F87F  46          INS1:	LD	B,(HL)		; altes
+ 3535 F880  77          	LD	(HL),A		; neues Zeichen
+ 3536 F881  CD E055     	CALL	WPIX		; zeichnen
+ 3537 F884  78          	LD	A,B
+ 3538 F885  A7          	AND	A		; Dummy?
+ 3539 F886  28 10       	JR	Z,INS2
+ 3540 F888  1C          	INC	E		; CUR
+ 3541 F889  CD E024     	CALL	DABR		; raus?
+ 3542 F88C  30 F1       	JR	NC,INS1		; nein
+ 3543 F88E  1E 00       	LD	E,0		; Spalte 0 in
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  65
+CAOS31  Z80
+
+ 3544 F890  14          	INC	D		; neuer Zeile
+ 3545 F891  CD E024     	CALL	DABR		; raus?
+ 3546 F894  30 E9       	JR	NC,INS1		; nein
+ 3547 F896  D1          	POP	DE
+ 3548 F897  C9          	RET
+ 3549                   	;
+ 3550 F898  E5          INS2:	PUSH	HL
+ 3551 F899  1C          	INC	E		; CUR
+ 3552 F89A  CD E024     	CALL	DABR		; raus?
+ 3553 F89D  30 08       	JR	NC,INS3		; nein
+ 3554 F89F  1E 00       	LD	E,0
+ 3555 F8A1  14          	INC	D
+ 3556 F8A2  CD E024     	CALL	DABR
+ 3557 F8A5  38 C8       	JR	C,DEL3
+ 3558 F8A7  7E          INS3:	LD	A,(HL)
+ 3559 F8A8  A7          	AND	A
+ 3560 F8A9  20 C4       	JR	NZ,DEL3
+ 3561 F8AB  E1          	POP	HL
+ 3562 F8AC  D1          	POP	DE
+ 3563 F8AD  C9          	RET
+ 3564                   
+ 3565 F8AE  DD 7E 08    CLICK:	LD	A,(IX+8)	; ShINS
+ 3566 F8B1  EE 20       	XOR	20H
+ 3567 F8B3  DD 77 08    XOR8:	LD	(IX+8),A
+ 3568 F8B6  C9          	RET
+ 3569                   
+ 3570 F8B7  DD 7E 08    CAPS:	LD	A,(IX+8)
+ 3571 F8BA  EE 80       	XOR	80H
+ 3572 F8BC  18 F5       	JR	XOR8
+ 3573                   
+ 3574 F8BE              CRTTAB:	;Bildschirmsteuercodes
+ 3575 F8BE  11          	DB	11H	; PAGE
+ 3576 F8BF  12          	DB	12H	; SCROL
+ 3577 F8C0  10          	DB	10H	; HOME
+ 3578 F8C1  09          	DB	09H	; CUR
+ 3579 F8C2  0B          	DB	0BH	; CUU
+ 3580 F8C3  02          	DB	02H	; CLLN
+ 3581 F8C4  19          	DB	19H	; CBL
+ 3582 F8C5  1A          	DB	1AH	; INS
+ 3583 F8C6  0A          	DB	0AH	; CUD
+ 3584 F8C7  1F          	DB	1FH	; DEL
+ 3585 F8C8  08          	DB	08H	; CUL
+ 3586 F8C9  0C          	DB	0CH	; CLS
+ 3587 F8CA  0D          	DB	0DH	; ENTER
+ 3588 F8CB  0F          	DB	0FH	; HCOPY
+ 3589 F8CC  07          	DB	07H	; BEEP
+ 3590 F8CD  14          	DB	14H	; CLICK
+ 3591 F8CE  16          	DB	16H	; SHLOK
+ 3592 F8CF  01          	DB	01H	; CLR
+ 3593                   
+ 3594 F8D0              FADR:	;Berechnet Farbadresse
+ 3595                   	;PE:	HL=VRAM-Adresse
+ 3596                   	;PA:	HL=Farbadresse
+ 3597 F8D0  01 4E00     	LD	BC,-VRAM
+ 3598 F8D3  09          	ADD	HL,BC
+ 3599 F8D4  06 00       	LD	B,0
+ 3600 F8D6  11 0028     	LD	DE,40		; Zeilenbreite
+ 3601 F8D9  04          FADR1:	INC	B
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  66
+CAOS31  Z80
+
+ 3602 F8DA  AF          	XOR	A
+ 3603 F8DB  ED 52       	SBC	HL,DE
+ 3604 F8DD  30 FA       	JR	NC,FADR1
+ 3605 F8DF  19          	ADD	HL,DE
+ 3606 F8E0  80          	ADD	A,B
+ 3607 F8E1  3D          	DEC	A
+ 3608 F8E2  17          	RLA
+ 3609 F8E3  17          	RLA
+ 3610 F8E4  17          	RLA
+ 3611 F8E5  67          	LD	H,A
+ 3612 F8E6  C9          	RET
+ 3613                   
+ 3614 F8E7              BASPV:	;BASIC-I/O-Verteiler
+ 3615 F8E7  E5          	PUSH	HL
+ 3616 F8E8  C5          	PUSH	BC
+ 3617 F8E9  CD F07A     	CALL	IRMON
+ 3618 F8EC  CB 6B       	BIT	5,E
+ 3619 F8EE  D5          	PUSH	DE
+ 3620 F8EF  20 53       	JR	NZ,BASBYE
+ 3621 F8F1  23          	INC	HL
+ 3622 F8F2  23          	INC	HL
+ 3623 F8F3  CB 7B       	BIT	7,E
+ 3624 F8F5  20 42       	JR	NZ,BSA2
+ 3625 F8F7  E5          	PUSH	HL
+ 3626 F8F8  7B          	LD	A,E
+ 3627 F8F9  E6 07       	AND	7
+ 3628 F8FB  21 F931     	LD	HL,BUPTAB
+ 3629 F8FE  85          	ADD	A,L
+ 3630 F8FF  6F          	LD	L,A
+ 3631 F900  7A          	LD	A,D
+ 3632 F901  53          	LD	D,E
+ 3633 F902  5E          	LD	E,(HL)		; UP-Nummer
+ 3634 F903  E1          	POP	HL
+ 3635 F904  CD F077     	CALL	PV3		; Aufruf
+ 3636 F907  D1          	POP	DE
+ 3637 F908  57          	LD	D,A
+ 3638 F909  7B          	LD	A,E
+ 3639 F90A  E6 4F       	AND	4FH
+ 3640 F90C  EE 43       	XOR	43H
+ 3641 F90E  20 18       	JR	NZ,BSA1
+ 3642 F910  CD F1C6     	CALL	OSTR
+ 3643 F913  56 45 52 49 	DB	'VERIFY ?(Y):',0
+ 3644 F920  CD F210     	CALL	KBD
+ 3645 F923  FE 59       	CP	'Y'
+ 3646 F925  CC F464     	CALL	Z,VERIF
+ 3647 F928  7A          BSA1:	LD	A,D
+ 3648 F929  CB 9B       	RES	3,E
+ 3649 F92B  CD F097     	CALL	IRMOF
+ 3650 F92E  C1          	POP	BC
+ 3651 F92F  E1          	POP	HL
+ 3652 F930  C9          	RET
+ 3653                   
+ 3654 F931              BUPTAB:	;H-Teil konstant!
+ 3655 F931  16          	DB	16H	;INTB	#0
+ 3656 F932  24          	DB	24H	;OCHR
+ 3657 F933  37          	DB	37H	;MBIN	#1
+ 3658 F934  38          	DB	38H	;MBOUT
+ 3659 F935  06          	DB	06H	;USIN1	#2
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  67
+CAOS31  Z80
+
+ 3660 F936  02          	DB	02H	;UOT1
+ 3661 F937  07          	DB	07H	;USIN2	#3
+ 3662 F938  03          	DB	03H	;UOUT2
+ 3663                   
+ 3664 F939  CD E2A8     BSA2:	CALL	KBDS
+ 3665 F93C  D1          	POP	DE
+ 3666 F93D  57          	LD	D,A
+ 3667 F93E  30 E8       	JR	NC,BSA1
+ 3668 F940  CB BB       	RES	7,E
+ 3669 F942  18 E4       	JR	BSA1
+ 3670                   
+ 3671 F944  3A 035E     BASBYE:	LD	A,(35EH)
+ 3672 F947  A7          	AND	A
+ 3673 F948  28 09       	JR	Z,BASB1
+ 3674 F94A  CD F097     	CALL	IRMOF
+ 3675 F94D  CD C641     	CALL	0C641H		; NEW
+ 3676 F950  CD F07A     	CALL	IRMON
+ 3677 F953  C3 F15C     BASB1:	JP	LOOP
+ 3678                   
+ 3679 F956              MBOUT:	;Byteweise MB-Ausgabe				;**38**
+ 3680 F956  5A          	LD	E,D		; Steuerbyte
+ 3681 F957  57          	LD	D,A		; Datenbyte
+ 3682 F958  D5          	PUSH	DE
+ 3683 F959  C5          	PUSH	BC
+ 3684 F95A  CB 5B       	BIT	3,E
+ 3685 F95C  28 29       	JR	Z,NOINIT
+ 3686 F95E  DD CB 07 CE 	SET	1,(IX+7)	; Init merken
+ 3687 F962  3E D5       	LD	A,'U'+80H
+ 3688 F964  BE          	CP	(HL)
+ 3689 F965  D5          	PUSH	DE
+ 3690 F966  11 00A0     	LD	DE,0A0H		; Vortonlaenge
+ 3691 F969  20 03       	JR	NZ,NOHIU	; bei 'U'
+ 3692 F96B  11 0400     	LD	DE,400H		; gedehnt
+ 3693 F96E  ED 53 B7DA  NOHIU:	LD	(VORTN),DE
+ 3694 F972  11 B700     	LD	DE,CASS
+ 3695 F975  01 000B     	LD	BC,11
+ 3696 F978  ED B0       	LDIR			; Name
+ 3697 F97A  EB          	EX	DE,HL
+ 3698 F97B  D1          	POP	DE
+ 3699 F97C  72          	LD	(HL),D		; 1. Byte
+ 3700 F97D  3E 74       	LD	A,74H		; noch Bytes
+ 3701 F97F  CD FAF3     MBOUT1:	CALL	SETDT
+ 3702 F982  C1          MBOUTE:	POP	BC
+ 3703 F983  D1          	POP	DE
+ 3704 F984  CB 9B       	RES	3,E
+ 3705 F986  C9          	RET
+ 3706                   
+ 3707 F987  2A B7DC     NOINIT:	LD	HL,(DTADR)
+ 3708 F98A  72          	LD	(HL),D		; Byte eintragen
+ 3709 F98B  CB 73       	BIT	6,E
+ 3710 F98D  20 23       	JR	NZ,MCLOS
+ 3711 F98F  3A B7DE     	LD	A,(DTNR)
+ 3712 F992  3D          	DEC	A
+ 3713 F993  20 EA       	JR	NZ,MBOUT1
+ 3714 F995  DD CB 07 4E 	BIT	1,(IX+7)	; schon Init?
+ 3715 F999  20 08       	JR	NZ,MBOUT2	; nein
+ 3716 F99B  CD FAD0     	CALL	MBLO		; ja-Blockout
+ 3717 F99E  CD FAEC     	CALL	SETDTN
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  68
+CAOS31  Z80
+
+ 3718 F9A1  18 DF       	JR	MBOUTE
+ 3719                   	;
+ 3720 F9A3  DD CB 07 8E MBOUT2:	RES	1,(IX+7)	; ruecksetzen
+ 3721 F9A7  CD E36A     	CALL	ISRO		; Init
+ 3722 F9AA  CD FAD7     	CALL	MBLNR		; Blocknr.
+ 3723 F9AD  CD FAEC     	CALL	SETDTN
+ 3724 F9B0  18 D0       JMBOUTE: JR	MBOUTE
+ 3725                   	;
+ 3726 F9B2  DD CB 07 4E MCLOS:	BIT	1,(IX+7)	; Init?
+ 3727 F9B6  28 05       	JR	Z,MBOUT3
+ 3728 F9B8  CD E36A     	CALL	ISRO		; aber jetzt!
+ 3729 F9BB  18 03       	JR	MBOUT4
+ 3730                   	;
+ 3731 F9BD  CD FAD0     MBOUT3:	CALL	MBLO		; Blockout
+ 3732 F9C0  ED 4B B7DA  MBOUT4:	LD	BC,(VORTN)
+ 3733 F9C4  CD E3F6     	CALL	CSRO
+ 3734 F9C7  D5          MBOUT5:	PUSH	DE
+ 3735 F9C8  CD F595     	CALL	CSRI
+ 3736 F9CB  DD CB 07 AE 	RES	5,(IX+7)	; 'U'-Merker
+ 3737 F9CF  D1          	POP	DE		; ruecksetzen
+ 3738 F9D0  18 DE       	JR	JMBOUTE
+ 3739                   
+ 3740 F9D2              MBIN:	;Byteweise MB-Eingabe				;**37**
+ 3741 F9D2  5A          	LD	E,D		; Steuerbyte
+ 3742 F9D3  57          	LD	D,A		; Datenbyte (PA!)
+ 3743 F9D4  D5          	PUSH	DE
+ 3744 F9D5  C5          	PUSH	BC
+ 3745 F9D6  CB 73       	BIT	6,E		; Close?
+ 3746 F9D8  20 ED       	JR	NZ,MBOUT5
+ 3747 F9DA  CB 5B       	BIT	3,E		; Init?
+ 3748 F9DC  28 6E       	JR	Z,MBIU
+ 3749 F9DE  3E 01       	LD	A,1		; erwarteter Block
+ 3750 F9E0  DD 77 03    	LD	(IX+3),A
+ 3751 F9E3  E5          	PUSH	HL
+ 3752 F9E4  CD E415     	CALL	ISRI
+ 3753 F9E7  E1          MBIN1:	POP	HL
+ 3754 F9E8  DA FA9C     	JP	C,JBLERR	; Fehler
+ 3755 F9EB  DD 7E 02    	LD	A,(IX+2)	; gelesener Blk.
+ 3756 F9EE  FE 01       	CP	1
+ 3757 F9F0  C2 FA9C     	JP	NZ,JBLERR	; Fehler
+ 3758 F9F3  DD CB 07 96 	RES	2,(IX+7)	; Kopfblock geladen
+ 3759 F9F7  DD 34 03    	INC	(IX+3)		; erw. Block
+ 3760 F9FA  11 B700     	LD	DE,CASS
+ 3761 F9FD  06 0B       	LD	B,11
+ 3762 F9FF  1A          	LD	A,(DE)
+ 3763 FA00  FE D5       	CP	'U'+80H		; hohes 'U'?
+ 3764 FA02  20 04       	JR	NZ,MBIN2
+ 3765 FA04  DD CB 07 EE 	SET	5,(IX+7)	; Merker zur Blocknummernausgabeunterdrueckung
+ 3766 FA08  C6 29       MBIN2:	ADD	A,29H		; geschuetzte
+ 3767 FA0A  30 12       	JR	NC,MBIN3	; BASIC-
+ 3768 FA0C  1A          	LD	A,(DE)		; Programme
+ 3769 FA0D  D6 04       	SUB	4		; als unge-
+ 3770 FA0F  12          	LD	(DE),A		; schuetzt
+ 3771 FA10  13          	INC	DE		; anzeigen
+ 3772 FA11  12          	LD	(DE),A		; und Setzen
+ 3773 FA12  13          	INC	DE		; LIST/EDIT/BYE-
+ 3774 FA13  12          	LD	(DE),A		; Schutz
+ 3775 FA14  32 035E     	LD	(35EH),A ;<=hier
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  69
+CAOS31  Z80
+
+ 3776 FA17  DD CB 07 F6 	SET	6,(IX+7)	; RESET-Schutz
+ 3777 FA1B  11 B700     	LD	DE,CASS
+ 3778 FA1E  1A          MBIN3:	LD	A,(DE)
+ 3779 FA1F  CD FACD     	CALL	MBCRT		; anzeigen
+ 3780 FA22  1A          	LD	A,(DE)
+ 3781 FA23  BE          	CP	(HL)		; stimmt Name?
+ 3782 FA24  28 04       	JR	Z,MBIN4
+ 3783 FA26  DD CB 07 D6 	SET	2,(IX+7)	; nein-merken
+ 3784 FA2A  23          MBIN4:	INC	HL
+ 3785 FA2B  13          	INC	DE
+ 3786 FA2C  10 F0       	DJNZ	MBIN3
+ 3787 FA2E  3E 0A       	LD	A,LF
+ 3788 FA30  CD FACD     	CALL	MBCRT
+ 3789 FA33  3E 0D       	LD	A,CR
+ 3790 FA35  CD FACD     	CALL	MBCRT
+ 3791 FA38  DD CB 07 56 	BIT	2,(IX+7)
+ 3792 FA3C  C2 FAE8     	JP	NZ,JIOERR	; ?IO ERROR
+ 3793 FA3F  EB          	EX	DE,HL
+ 3794 FA40  3E 75       	LD	A,75H		; noch Bytes
+ 3795 FA42  56          MBIN5:	LD	D,(HL)		; auszulesen
+ 3796 FA43  CD FAF3     	CALL	SETDT
+ 3797 FA46  7A          	LD	A,D
+ 3798 FA47  C1          	POP	BC
+ 3799 FA48  D1          	POP	DE
+ 3800 FA49  CB 9B       	RES	3,E
+ 3801 FA4B  C9          	RET
+ 3802                   
+ 3803 FA4C  2A B7DC     MBIU:	LD	HL,(DTADR)
+ 3804 FA4F  3A B7DE     	LD	A,(DTNR)
+ 3805 FA52  3D          	DEC	A
+ 3806 FA53  20 ED       	JR	NZ,MBIN5
+ 3807 FA55  CD E439     MBIU1:	CALL	MBI
+ 3808 FA58  38 3E       	JR	C,MERR
+ 3809 FA5A  CD FAEC     	CALL	SETDTN
+ 3810 FA5D  3E FF       	LD	A,0FFH
+ 3811 FA5F  DD BE 02    	CP	(IX+2)		; Block FF?
+ 3812 FA62  28 15       	JR	Z,MBIU3
+ 3813 FA64  DD 7E 03    	LD	A,(IX+3)
+ 3814 FA67  DD BE 02    	CP	(IX+2)		; erwarteter?
+ 3815 FA6A  28 0D       	JR	Z,MBIU3
+ 3816 FA6C  3E 2A       	LD	A,'*'
+ 3817 FA6E  CD FACD     MBIU2:	CALL	MBCRT		; nicht
+ 3818 FA71  CD FAAB     	CALL	BLNR		; erwartet
+ 3819 FA74  CD FAE4     	CALL	JBRKT
+ 3820 FA77  18 DC       	JR	MBIU1
+ 3821                   	;
+ 3822 FA79  DD 34 03    MBIU3:	INC	(IX+3)		; naechsten
+ 3823 FA7C  3D          	DEC	A		; erwarteten
+ 3824 FA7D  DD CB 07 6E 	BIT	5,(IX+7)
+ 3825 FA81  20 0D       	JR	NZ,MBIU4
+ 3826 FA83  CD FAAB     	CALL	BLNR		; Blocknr.
+ 3827 FA86  3E 3E       	LD	A,'>'
+ 3828 FA88  CD FACD     	CALL	MBCRT
+ 3829 FA8B  3E 20       	LD	A,' '
+ 3830 FA8D  CD FACD     	CALL	MBCRT
+ 3831 FA90  CD FAEC     MBIU4:	CALL	SETDTN
+ 3832 FA93  2A B7DC     	LD	HL,(DTADR)
+ 3833 FA96  18 AA       	JR	MBIN5
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  70
+CAOS31  Z80
+
+ 3834                   
+ 3835 FA98  3E 3F       MERR:	LD	A,'?'		; Fehler in Block
+ 3836 FA9A  18 D2       	JR	MBIU2
+ 3837                   
+ 3838 FA9C  3E 2A       JBLERR:	LD	A,'*'		; nicht erw. Blk.
+ 3839 FA9E  CD FACD     	CALL	MBCRT
+ 3840 FAA1  CD FAE4     	CALL	JBRKT
+ 3841 FAA4  CD E439     	CALL	MBI
+ 3842 FAA7  E5          	PUSH	HL
+ 3843 FAA8  C3 F9E7     	JP	MBIN1
+ 3844                   
+ 3845 FAAB  DD 7E 02    BLNR:	LD	A,(IX+2)
+ 3846 FAAE  F5          	PUSH	AF		; siehe AHEX!
+ 3847 FAAF  1F          	RRA
+ 3848 FAB0  1F          	RRA
+ 3849 FAB1  1F          	RRA
+ 3850 FAB2  1F          	RRA
+ 3851 FAB3  CD FAB7     	CALL	BLNR1
+ 3852 FAB6  F1          	POP	AF
+ 3853 FAB7  E6 0F       BLNR1:	AND	0FH
+ 3854 FAB9  C6 30       	ADD	'0'
+ 3855 FABB  FE 3A       	CP	'9'+1
+ 3856 FABD  38 02       	JR	C,BLNR2
+ 3857 FABF  C6 07       	ADD	7
+ 3858 FAC1  CD F725     BLNR2:	CALL	CRT
+ 3859 FAC4  C9          	RET
+ 3860                   
+ 3861 FAC5  F5          	PUSH	AF		; Space-Ausgabe
+ 3862 FAC6  3E 20       	LD	A,' '		; nicht benutzt!
+ 3863 FAC8  CD F725     CRTA:	CALL	CRT
+ 3864 FACB  F1          	POP	AF
+ 3865 FACC  C9          	RET
+ 3866                   
+ 3867 FACD  F5          MBCRT:	PUSH	AF
+ 3868 FACE  18 F8       	JR	CRTA
+ 3869                   
+ 3870 FAD0  ED 4B B7DA  MBLO:	LD	BC,(VORTN)
+ 3871 FAD4  CD E376     	CALL	MBO
+ 3872 FAD7  CD FAAB     MBLNR:	CALL	BLNR		; AHEX
+ 3873 FADA  3E 3E       	LD	A,'>'
+ 3874 FADC  CD FACD     	CALL	MBCRT
+ 3875 FADF  3E 20       	LD	A,' '
+ 3876 FAE1  CD FACD     	CALL	MBCRT
+ 3877 FAE4  CD F43E     JBRKT:	CALL	BRKT		; BRK?
+ 3878 FAE7  D0          	RET	NC
+ 3879 FAE8  2A B7C9     JIOERR:	LD	HL,(IOERR)
+ 3880 FAEB  E9          	JP	(HL)
+ 3881                   
+ 3882 FAEC              SETDTN:	;Setzen Datenzeiger neu
+ 3883 FAEC  3E 80       	LD	A,80H
+ 3884 FAEE  21 B700     	LD	HL,CASS
+ 3885 FAF1  18 01       	JR	SETDT1
+ 3886                    
+ 3887 FAF3              SETDT:	;naechsten Datenzeiger setzen
+ 3888 FAF3  23          	INC	HL
+ 3889 FAF4  22 B7DC     SETDT1:	LD	(DTADR),HL
+ 3890 FAF7  32 B7DE     	LD	(DTNR),A
+ 3891 FAFA  C9          	RET
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  71
+CAOS31  Z80
+
+ 3892                   
+ 3893 FAFB  7F7F        	DW	7F7FH
+ 3894 FAFD  44 49 53 50 	DB	'DISPLAY',1
+ 3895 FB05  3A B781     DISP:	LD	A,(ARGN)				;**3B**
+ 3896 FB08  FE 03       	CP	3
+ 3897 FB0A  30 02       	JR	NC,DISP1
+ 3898 FB0C  0E 08       	LD	C,8		; default
+ 3899 FB0E  C5          DISP1:	PUSH	BC
+ 3900 FB0F  CD F2C0     DISP2:	CALL	HLHX		; Adresse
+ 3901 FB12  3E BF       	LD	A,0BFH
+ 3902 FB14  BC          	CP	H
+ 3903 FB15  38 50       	JR	C,DISP6		; C000H...
+ 3904 FB17  E5          	PUSH	HL
+ 3905 FB18  06 08       	LD	B,8		; 8 Byte
+ 3906 FB1A  7E          DISP3:	LD	A,(HL)
+ 3907 FB1B  CD F2E2     	CALL	AHEX		; hex anzeigen
+ 3908 FB1E  05          	DEC	B
+ 3909 FB1F  28 06       	JR	Z,DISP4
+ 3910 FB21  CD F2C8     	CALL	SPACE
+ 3911 FB24  23          	INC	HL
+ 3912 FB25  18 F3       	JR	DISP3
+ 3913                   	;
+ 3914 FB27  3E 09       DISP4:	LD	A,9		; CUR
+ 3915 FB29  CD F1EF     	CALL	OCHR
+ 3916 FB2C  CD FB69     	CALL	CSTBT
+ 3917 FB2F  E1          	POP	HL
+ 3918 FB30  06 08       	LD	B,8		; 8 Byte
+ 3919 FB32  7E          DISP5:	LD	A,(HL)
+ 3920 FB33  CD F1EF     	CALL	OCHR		; ASCII anzeigen
+ 3921 FB36  23          	INC	HL
+ 3922 FB37  10 F9       	DJNZ	DISP5
+ 3923 FB39  CD FB69     	CALL	CSTBT
+ 3924 FB3C  CD F2D7     	CALL	CRLF
+ 3925 FB3F  CD F43E     	CALL	BRKT
+ 3926 FB42  38 23       	JR	C,DISP6		; BRK
+ 3927 FB44  D5          	PUSH	DE
+ 3928 FB45  EB          	EX	DE,HL
+ 3929 FB46  ED 52       	SBC	HL,DE		; EAdr erreicht?
+ 3930 FB48  EB          	EX	DE,HL
+ 3931 FB49  D1          	POP	DE
+ 3932 FB4A  38 1B       	JR	C,DISP6
+ 3933 FB4C  0D          	DEC	C
+ 3934 FB4D  20 C0       	JR	NZ,DISP2
+ 3935 FB4F  CD F210     	CALL	KBD		; Warten Taste
+ 3936 FB52  FE 03       	CP	3		; BRK?
+ 3937 FB54  C1          	POP	BC
+ 3938 FB55  C8          	RET	Z
+ 3939 FB56  FE 13       	CP	13H	;STOP?
+ 3940 FB58  20 B4       	JR	NZ,DISP1
+ 3941 FB5A  CD F1C6     	CALL	OSTR
+ 3942 FB5D  0B 09 09 09 	DB	0BH,9,9,9,9,9,0
+ 3943 FB64  C3 F688     	JP	MODI1		; -> MODIFY
+ 3944                   	;
+ 3945 FB67  C1          DISP6:	POP	BC
+ 3946 FB68  C9          	RET
+ 3947                   
+ 3948 FB69  F5          CSTBT:	PUSH	AF
+ 3949 FB6A  3A B7A2     	LD	A,(STBT)
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  72
+CAOS31  Z80
+
+ 3950 FB6D  EE 08       	XOR	8
+ 3951 FB6F  32 B7A2     	LD	(STBT),A
+ 3952 FB72  F1          	POP	AF
+ 3953 FB73  C9          	RET
+ 3954                   
+ 3955 FB74  21 B900     KEYUP:	LD	HL,0B900H
+ 3956 FB77  47          	LD	B,A
+ 3957 FB78  7E          KUP1:	LD	A,(HL)
+ 3958 FB79  A7          	AND	A		; Dummys
+ 3959 FB7A  23          	INC	HL		; auszaehlen
+ 3960 FB7B  20 FB       	JR	NZ,KUP1
+ 3961 FB7D  10 F9       	DJNZ	KUP1
+ 3962 FB7F  7E          KUP2:	LD	A,(HL)
+ 3963 FB80  A7          	AND	A		; Ende-Dummy?
+ 3964 FB81  C8          	RET	Z
+ 3965 FB82  23          	INC	HL
+ 3966 FB83  CD FB69     	CALL	CSTBT
+ 3967 FB86  CD F1EF     	CALL	OCHR		; anzeigen
+ 3968 FB89  CD FB69     	CALL	CSTBT
+ 3969 FB8C  18 F1       	JR	KUP2
+ 3970                   
+ 3971 FB8E  7F7F        	DW	7F7FH
+ 3972 FB90  4B 45 59 4C 	DB	'KEYLIST',1
+ 3973 FB98  0E 01       KEYLI:	LD	C,1					;**39**
+ 3974 FB9A  3E 46       KEYL1:	LD	A,'F'
+ 3975 FB9C  CD F1EF     	CALL	OCHR		; F
+ 3976 FB9F  79          	LD	A,C
+ 3977 FBA0  CD F2EB     	CALL	AHEX0		; Nr.
+ 3978 FBA3  CD F1C6     	CALL	OSTR
+ 3979 FBA6  20 3A 20 00 	DB	' : ',0
+ 3980 FBAA  79          	LD	A,C
+ 3981 FBAB  CD FB74     	CALL	KEYUP		; praesentieren
+ 3982 FBAE  CD F2D7     	CALL	CRLF
+ 3983 FBB1  0C          	INC	C
+ 3984 FBB2  3E 0D       	LD	A,13
+ 3985 FBB4  B9          	CP	C		; F1-FC
+ 3986 FBB5  C8          	RET	Z
+ 3987 FBB6  18 E2       	JR	KEYL1
+ 3988                   
+ 3989 FBB8  7F7F        	DW	7F7FH
+ 3990 FBBA  4B 45 59 01 	DB	'KEY',1
+ 3991 FBBE  7D          	LD	A,L
+ 3992 FBBF  A7          KEY:	AND	A					;**3A*
+ 3993 FBC0  C8          	RET	Z		; 0
+ 3994 FBC1  FE 0D       	CP	13
+ 3995 FBC3  D0          	RET	NC		; >12
+ 3996 FBC4  CD FB74     	CALL	KEYUP		; praesentieren
+ 3997 FBC7  11 B99B     	LD	DE,0B99BH
+ 3998 FBCA  EB          	EX	DE,HL
+ 3999 FBCB  A7          	AND	A
+ 4000 FBCC  ED 52       	SBC	HL,DE
+ 4001 FBCE  D8          	RET	C
+ 4002 FBCF  EB          	EX	DE,HL
+ 4003 FBD0  4B          	LD	C,E		; BC=Laenge bis
+ 4004 FBD1  42          	LD	B,D		; Pufferende
+ 4005 FBD2  CD F210     KEY1:	CALL	KBD
+ 4006 FBD5  A7          	AND	A
+ 4007 FBD6  28 FA       	JR	Z,KEY1		; keine Taste
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  73
+CAOS31  Z80
+
+ 4008 FBD8  FE 13       	CP	13H
+ 4009 FBDA  CA F2D7     	JP	Z,CRLF		; STOP-Ende
+ 4010 FBDD  FE 01       	CP	1
+ 4011 FBDF  28 20       	JR	Z,KEY2		; CLR
+ 4012 FBE1  E5          	PUSH	HL
+ 4013 FBE2  21 B99A     	LD	HL,0B99AH	; vorletztes
+ 4014 FBE5  34          	INC	(HL)		; Zeichen 0?
+ 4015 FBE6  35          	DEC	(HL)
+ 4016 FBE7  20 30       	JR	NZ,KEY3		; nein-voll!
+ 4017 FBE9  E3          	EX	(SP),HL
+ 4018 FBEA  CD FB69     	CALL	CSTBT
+ 4019 FBED  E1          	POP	HL
+ 4020 FBEE  54          	LD	D,H
+ 4021 FBEF  5D          	LD	E,L
+ 4022 FBF0  13          	INC	DE
+ 4023 FBF1  C5          	PUSH	BC		; Pufferrest
+ 4024 FBF2  ED B8       	LDDR			; hinterziehen
+ 4025 FBF4  C1          	POP	BC
+ 4026 FBF5  23          	INC	HL
+ 4027 FBF6  77          	LD	(HL),A		; eintragen
+ 4028 FBF7  23          	INC	HL		; und
+ 4029 FBF8  CD F725     	CALL	CRT		; anzeigen
+ 4030 FBFB  CD FB69     	CALL	CSTBT
+ 4031 FBFE  0B          	DEC	BC		; Laenge-1
+ 4032 FBFF  18 D1       	JR	KEY1
+ 4033                   	;
+ 4034 FC01  2B          KEY2:	DEC	HL
+ 4035 FC02  7E          	LD	A,(HL)
+ 4036 FC03  A7          	AND	A		; Leere Belegung
+ 4037 FC04  23          	INC	HL		; nicht loeschen!
+ 4038 FC05  28 CB       	JR	Z,KEY1
+ 4039 FC07  2B          	DEC	HL
+ 4040 FC08  E5          	PUSH	HL
+ 4041 FC09  23          	INC	HL
+ 4042 FC0A  03          	INC	BC		; Laenge+1
+ 4043 FC0B  C5          	PUSH	BC
+ 4044 FC0C  54          	LD	D,H
+ 4045 FC0D  5D          	LD	E,L
+ 4046 FC0E  1B          	DEC	DE		;Pufferrest
+ 4047 FC0F  ED B0       	LDIR			;vorziehen
+ 4048 FC11  C1          	POP	BC
+ 4049 FC12  CD F1C6     	CALL	OSTR
+ 4050 FC15  08 20 08 00 	DB	8,' ',8,0
+ 4051 FC19  E1          KEY3:	POP	HL
+ 4052 FC1A  18 B6       	JR	KEY1
+ 4053                   
+ 4054 FC1C  FE 0A       WININ:	CP	10					;**3C**
+ 4055 FC1E  D0          	RET	NC		; Nr. zu gross
+ 4056 FC1F  47          	LD	B,A
+ 4057 FC20  7D          	LD	A,L
+ 4058 FC21  FE 28       	CP	40
+ 4059 FC23  D0          	RET	NC		; Spalte zu gross
+ 4060 FC24  83          	ADD	E
+ 4061 FC25  FE 29       	CP	41
+ 4062 FC27  D0          	RET	NC		; Ende zu gross
+ 4063 FC28  7C          	LD	A,H
+ 4064 FC29  FE 20       	CP	32
+ 4065 FC2B  D0          	RET	NC		; Zeile zu gross
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  74
+CAOS31  Z80
+
+ 4066 FC2C  82          	ADD	D
+ 4067 FC2D  FE 21       	CP	33
+ 4068 FC2F  D0          	RET	NC		; Ende zu gross
+ 4069 FC30  C5          	PUSH	BC
+ 4070 FC31  E5          	PUSH	HL
+ 4071 FC32  D5          	PUSH	DE
+ 4072 FC33  11 B79B     	LD	DE,WINNR
+ 4073 FC36  CD FC5C     	CALL	WIN1
+ 4074 FC39  EB          	EX	DE,HL
+ 4075 FC3A  ED B0       	LDIR			; Daten kopieren
+ 4076 FC3C  E1          	POP	HL
+ 4077 FC3D  22 B79E     	LD	(WINLG),HL
+ 4078 FC40  E1          	POP	HL
+ 4079 FC41  22 B79C     	LD	(WINON),HL
+ 4080 FC44  F1          	POP	AF
+ 4081 FC45  32 B79B     	LD	(WINNR),A
+ 4082 FC48  AF          	XOR	A
+ 4083 FC49  21 B7A0     	LD	HL,CURSO
+ 4084 FC4C  77          	LD	(HL),A		; Spalte=0
+ 4085 FC4D  23          	INC	HL
+ 4086 FC4E  77          	LD	(HL),A		; Zeile=0
+ 4087 FC4F  23          	INC	HL
+ 4088 FC50  77          	LD	(HL),A		; STBT=0
+ 4089 FC51  23          	INC	HL
+ 4090 FC52  36 39       	LD	(HL),39H	; COLOR
+ 4091 FC54  23          	INC	HL
+ 4092 FC55  36 7D       	LD	(HL),LOW(SCRLPG)
+ 4093 FC57  23          	INC	HL		; WEND
+ 4094 FC58  36 F7       	LD	(HL),HIGH(SCRLPG)
+ 4095 FC5A  37          	SCF
+ 4096 FC5B  C9          	RET
+ 4097                   
+ 4098 FC5C              WIN1:	;Adresse von Fenstervektor berechnen
+ 4099 FC5C  1A          	LD	A,(DE)		; Nummer
+ 4100 FC5D  21 B992     WIN2:	LD	HL,WNDFN-10
+ 4101 FC60  01 000A     	LD	BC,10		; Laenge Vektor
+ 4102 FC63  3C          	INC	A
+ 4103 FC64  09          WIN3:	ADD	HL,BC
+ 4104 FC65  3D          	DEC	A
+ 4105 FC66  20 FC       	JR	NZ,WIN3
+ 4106 FC68  13          	INC	DE		; DE=WINON
+ 4107 FC69  C9          	RET
+ 4108                    
+ 4109 FC6A  FE 0A       WINAK:	CP	10					;**3D**
+ 4110 FC6C  D0          	RET	NC		; Fehler, zu gross
+ 4111 FC6D  F5          	PUSH	AF
+ 4112 FC6E  11 B79B     	LD	DE,WINNR
+ 4113 FC71  D5          	PUSH	DE
+ 4114 FC72  CD FC5C     	CALL	WIN1
+ 4115 FC75  EB          	EX	DE,HL
+ 4116 FC76  ED B0       	LDIR			; aktuellen Vektor retten
+ 4117 FC78  D1          	POP	DE
+ 4118 FC79  F1          	POP	AF
+ 4119 FC7A  12          	LD	(DE),A
+ 4120 FC7B  CD FC5D     	CALL	WIN2
+ 4121 FC7E  ED B0       	LDIR			; neuen Vektor holen
+ 4122 FC80  37          	SCF		; OK
+ 4123 FC81  C9          	RET
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  75
+CAOS31  Z80
+
+ 4124                    
+ 4125 FC82              LINE:	;Linie zeichnen					;**3E**
+ 4126                   ; von (ARG1)/(ARG2) nach (ARG3)/(ARG4)
+ 4127 FC82  2A B786     	LD	HL,(ARG3)	; XEND
+ 4128 FC85  ED 4B B782  	LD	BC,(ARG1)	; XANF
+ 4129 FC89  ED 43 B7D3  	LD	(HOR),BC	; X-Start
+ 4130 FC8D  A7          	AND	A
+ 4131 FC8E  ED 42       	SBC	HL,BC
+ 4132 FC90  01 0000     	LD	BC,0
+ 4133 FC93  30 01       	JR	NC,LINE1	; wenn XANF>=XEND
+ 4134 FC95  0B          	DEC	BC		; ruecklaeufig
+ 4135 FC96  ED 43 B7E7  LINE1:	LD	(XDIR),BC
+ 4136 FC9A  06 07       	LD	B,7
+ 4137 FC9C  CB 25       LINE2:	SLA	L		; XSTEPS
+ 4138 FC9E  CB 14       	RL	H		; *128
+ 4139 FCA0  10 FA       	DJNZ	LINE2
+ 4140 FCA2  22 B7E3     	LD	(XCNT),HL
+ 4141 FCA5  22 B7DF     	LD	(XSTEP),HL
+ 4142 FCA8  3A B788     	LD	A,(ARG4)	; YEND
+ 4143 FCAB  6F          	LD	L,A
+ 4144 FCAC  3A B784     	LD	A,(ARG2)	; YANF
+ 4145 FCAF  32 B7D5     	LD	(VERT),A	; Y-Start
+ 4146 FCB2  4F          	LD	C,A
+ 4147 FCB3  26 00       	LD	H,0
+ 4148 FCB5  44          	LD	B,H
+ 4149 FCB6  AF          	XOR	A
+ 4150 FCB7  ED 42       	SBC	HL,BC
+ 4151 FCB9  30 01       	JR	NC,LINE3
+ 4152 FCBB  3D          	DEC	A		; ruecklaeufig
+ 4153 FCBC  32 B7E9     LINE3:	LD	(YDIR),A
+ 4154 FCBF  06 07       	LD	B,7
+ 4155 FCC1  CB 25       LINE4:	SLA	L		; YSTEPS
+ 4156 FCC3  CB 14       	RL	H		; *128
+ 4157 FCC5  10 FA       	DJNZ	LINE4
+ 4158 FCC7  22 B7E1     	LD	(YSTEP),HL
+ 4159 FCCA  22 B7E5     	LD	(YCNT),HL
+ 4160 FCCD  01 0200     	LD	BC,200H
+ 4161                   	;LINE-Hauptschleife
+ 4162 FCD0  CD E13D     LINE5:	CALL	PUSE		; Punkt setzen
+ 4163 FCD3  2A B7E3     	LD	HL,(XCNT)
+ 4164 FCD6  ED 5B B7DF  	LD	DE,(XSTEP)
+ 4165 FCDA  19          	ADD	HL,DE
+ 4166 FCDB  22 B7E3     	LD	(XCNT),HL
+ 4167 FCDE  2A B7D3     	LD	HL,(HOR)
+ 4168 FCE1  ED 5B B7E7  	LD	DE,(XDIR)
+ 4169 FCE5  ED 5A       	ADC	HL,DE
+ 4170 FCE7  22 B7D3     	LD	(HOR),HL	; X neu
+ 4171 FCEA  2A B7E5     	LD	HL,(YCNT)
+ 4172 FCED  ED 5B B7E1  	LD	DE,(YSTEP)
+ 4173 FCF1  19          	ADD	HL,DE
+ 4174 FCF2  22 B7E5     	LD	(YCNT),HL
+ 4175 FCF5  3A B7D5     	LD	A,(VERT)	; Y neu
+ 4176 FCF8  5F          	LD	E,A
+ 4177 FCF9  3A B7E9     	LD	A,(YDIR)
+ 4178 FCFC  8B          	ADC	E
+ 4179 FCFD  32 B7D5     	LD	(VERT),A
+ 4180 FD00  0B          	DEC	BC
+ 4181 FD01  78          	LD	A,B
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  76
+CAOS31  Z80
+
+ 4182 FD02  B1          	OR	C
+ 4183 FD03  20 CB       	JR	NZ,LINE5
+ 4184 FD05  C9          	RET
+ 4185                   
+ 4186 FD06              CIRCL:	;Kreis zeichnen um (ARG1)/(ARG2)		;**3F**
+ 4187 FD06  3A B786     	LD	A,(ARG3)	; Radius
+ 4188 FD09  4F          	LD	C,A
+ 4189 FD0A  16 B6       	LD	D,182		; 1/SQR(2) * 256
+ 4190 FD0C  CD FD83     	CALL	MULT
+ 4191 FD0F  78          	LD	A,B
+ 4192 FD10  32 B7E5     	LD	(YCNT),A
+ 4193 FD13  51          	LD	D,C
+ 4194 FD14  CD FD83     	CALL	MULT
+ 4195 FD17  4F          	LD	C,A
+ 4196 FD18  ED 43 B7E3  	LD	(XCNT),BC
+ 4197                   	;CIRCLE-Hauptschleife
+ 4198 FD1C  2A B7E3     CIR1:	LD	HL,(XCNT)
+ 4199 FD1F  3A B7E5     	LD	A,(YCNT)
+ 4200 FD22  4F          	LD	C,A
+ 4201 FD23  57          	LD	D,A
+ 4202 FD24  D5          	PUSH	DE		; Achtelkreis
+ 4203 FD25  CD FD83     	CALL	MULT		; berechnen
+ 4204 FD28  4F          	LD	C,A
+ 4205 FD29  A7          	AND	A
+ 4206 FD2A  ED 42       	SBC	HL,BC
+ 4207 FD2C  CD FD75     	CALL	SQR
+ 4208 FD2F  D1          	POP	DE
+ 4209 FD30  5F          	LD	E,A
+ 4210 FD31  A7          	AND	A		; und jeweils 8
+ 4211 FD32  3F          CIR2:	CCF			; Punkte setzen
+ 4212 FD33  F5          	PUSH	AF
+ 4213 FD34  2A B782     	LD	HL,(ARG1)
+ 4214 FD37  06 00       	LD	B,0
+ 4215 FD39  4A          	LD	C,D
+ 4216 FD3A  09          	ADD	HL,BC
+ 4217 FD3B  22 B7D3     	LD	(HOR),HL
+ 4218 FD3E  3A B784     	LD	A,(ARG2)
+ 4219 FD41  F5          	PUSH	AF
+ 4220 FD42  83          	ADD	E
+ 4221 FD43  32 B7D5     	LD	(VERT),A
+ 4222 FD46  CD E13D     	CALL	PUSE		; 1. Punkt
+ 4223 FD49  F1          	POP	AF
+ 4224 FD4A  F5          	PUSH	AF
+ 4225 FD4B  93          	SUB	E
+ 4226 FD4C  32 B7D5     	LD	(VERT),A
+ 4227 FD4F  CD E13D     	CALL	PUSE		; 2. Punkt
+ 4228 FD52  ED 42       	SBC	HL,BC
+ 4229 FD54  ED 42       	SBC	HL,BC
+ 4230 FD56  22 B7D3     	LD	(HOR),HL
+ 4231 FD59  CD E13D     	CALL	PUSE		; 3. Punkt
+ 4232 FD5C  F1          	POP	AF
+ 4233 FD5D  83          	ADD	E
+ 4234 FD5E  32 B7D5     	LD	(VERT),A
+ 4235 FD61  CD E13D     	CALL	PUSE		; 4. Punkt
+ 4236 FD64  7B          	LD	A,E
+ 4237 FD65  5A          	LD	E,D		; D/E vertauscht
+ 4238 FD66  57          	LD	D,A
+ 4239 FD67  F1          	POP	AF
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  77
+CAOS31  Z80
+
+ 4240 FD68  38 C8       	JR	C,CIR2		; 5. bis 8. Punkt
+ 4241 FD6A  3A B7E5     	LD	A,(YCNT)
+ 4242 FD6D  D6 01       	SUB	1
+ 4243 FD6F  32 B7E5     	LD	(YCNT),A
+ 4244 FD72  30 A8       	JR	NC,CIR1		; weiter
+ 4245 FD74  C9          	RET
+ 4246                   
+ 4247 FD75              SQR:	;A=SQR(HL)					;**40**
+ 4248 FD75  AF          	XOR	A
+ 4249 FD76  3E FF       	LD	A,0FFH
+ 4250 FD78  5F          	LD	E,A
+ 4251 FD79  57          	LD	D,A
+ 4252 FD7A  3C          SQR1:	INC	A
+ 4253 FD7B  13          	INC	DE
+ 4254 FD7C  13          	INC	DE
+ 4255 FD7D  ED 52       	SBC	HL,DE
+ 4256 FD7F  F2 FD7A     	JP	P,SQR1
+ 4257 FD82  C9          	RET
+ 4258                    
+ 4259 FD83              MULT:	;BA=C*D						;**41**
+ 4260 FD83  06 00       	LD	B,0
+ 4261 FD85  1E 09       	LD	E,9
+ 4262 FD87  7A          MUL1:	LD	A,D
+ 4263 FD88  1F          	RRA
+ 4264 FD89  1D          	DEC	E
+ 4265 FD8A  C8          	RET	Z
+ 4266 FD8B  57          	LD	D,A
+ 4267 FD8C  78          	LD	A,B
+ 4268 FD8D  30 01       	JR	NC,MUL2
+ 4269 FD8F  81          	ADD	A,C
+ 4270 FD90  1F          MUL2:	RRA
+ 4271 FD91  47          	LD	B,A
+ 4272 FD92  18 F3       	JR	MUL1		; 8*
+ 4273                   
+ 4274 FD94  E5          SCRLUP:	PUSH	HL		; Scroll-UP
+ 4275 FD95  D5          	PUSH	DE
+ 4276 FD96  C5          	PUSH	BC
+ 4277 FD97  E5          	PUSH	HL
+ 4278 FD98  CD E0BF     	CALL	PADR
+ 4279 FD9B  C1          	POP	BC
+ 4280 FD9C  E5          	PUSH	HL		; Pixel-neu
+ 4281 FD9D  D5          	PUSH	DE		; Farbe-neu
+ 4282 FD9E  6F          	LD	L,A
+ 4283 FD9F  3E 08       	LD	A,8
+ 4284 FDA1  80          	ADD	B
+ 4285 FDA2  67          	LD	H,A
+ 4286 FDA3  7D          	LD	A,L
+ 4287 FDA4  69          	LD	L,C
+ 4288 FDA5  CD E0BF     	CALL	PADR
+ 4289 FDA8  E3          	EX	(SP),HL		; Pixel-alt
+ 4290 FDA9  EB          	EX	DE,HL		; Farbe-alt
+ 4291 FDAA  4F          	LD	C,A
+ 4292 FDAB  06 00       	LD	B,0
+ 4293 FDAD  C5          	PUSH	BC		; Breite
+ 4294 FDAE  ED B0       	LDIR			; Farbscrolling
+ 4295 FDB0  C1          	POP	BC
+ 4296 FDB1  E1          	POP	HL
+ 4297 FDB2  D1          	POP	DE
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  78
+CAOS31  Z80
+
+ 4298 FDB3  ED B0       	LDIR			; Pixelscrolling
+ 4299 FDB5  C3 F1FE     	JP	POP3
+ 4300                    
+ 4301 FDB8  E5          CUCP:	PUSH	HL					;**25**
+ 4302 FDB9  D5          	PUSH	DE
+ 4303 FDBA  C5          	PUSH	BC
+ 4304 FDBB  F5          	PUSH	AF
+ 4305 FDBC  ED 5B B7A0  	LD	DE,(CURSO)
+ 4306 FDC0  CD E024     	CALL	DABR
+ 4307 FDC3  38 16       	JR	C,CUCP2		; ausserhalb!
+ 4308 FDC5  CD F8D0     	CALL	FADR
+ 4309 FDC8  CD E0BF     	CALL	PADR
+ 4310 FDCB  1A          	LD	A,(DE)
+ 4311 FDCC  2F          	CPL			; 1. Farbbyte
+ 4312 FDCD  12          	LD	(DE),A
+ 4313 FDCE  CB EB       	SET	5,E
+ 4314 FDD0  1A          	LD	A,(DE)
+ 4315 FDD1  2F          	CPL			; 2. Farbbyte
+ 4316 FDD2  DD CB 08 7E 	BIT	7,(IX+8)	; CAPS?
+ 4317 FDD6  20 02       	JR	NZ,CUCP1
+ 4318 FDD8  EE 04       	XOR	4
+ 4319 FDDA  12          CUCP1:	LD	(DE),A
+ 4320 FDDB  C3 E0AC     CUCP2:	JP	POP4
+ 4321                   
+ 4322 FDDE  21 0030     BEEP:	LD	HL,30H		; CHR(7)
+ 4323 FDE1  01 000F     	LD	BC,0FH
+ 4324 FDE4  D5          	PUSH	DE
+ 4325 FDE5  5C          	LD	E,H		; E=0
+ 4326 FDE6  CD E52A     	CALL	TON1
+ 4327 FDE9  3E 1E       	LD	A,1EH		; Tondauer
+ 4328 FDEB  CD F208     	CALL	WAIT
+ 4329 FDEE  3E 03       	LD	A,3
+ 4330 FDF0  D3 8C       	OUT	(8CH),A		; Ton aus
+ 4331 FDF2  3E 10       	LD	A,10H
+ 4332 FDF4  D1          	POP	DE		; Cursor
+ 4333 FDF5  C3 F208     	JP	WAIT		; Tonpause
+ 4334                   
+ 4335 FDF8  00          ZEI0:	DB	0	;CRT
+ 4336 FDF9  38          	DB	38H	;MBOUT
+ 4337 FDFA  02          	DB	2	;UOUT1
+ 4338 FDFB  03          	DB	3	;UOUT2
+ 4339 FDFC  04          ZEI4:	DB	4	;KBD
+ 4340 FDFD  37          	DB	37H	;MBIN
+ 4341 FDFE  06          	DB	6	;UIN1
+ 4342 FDFF  07          	DB	7	;UIN2
+ 4343                   
+ 4344                   ; FE00h Zeichensatz Kleinbuchstaben
+ 4345                   
+ 4346 FE00  00 00 00 00 	DB	000H, 000H, 000H, 000H, 000H, 000H, 081H, 0FFH	; 00h
+ 4347 FE08  00 00 22 72 	DB	000H, 000H, 022H, 072H, 022H, 03EH, 000H, 000H	; 01h
+ 4348 FE10  00 00 12 32 	DB	000H, 000H, 012H, 032H, 07EH, 032H, 012H, 000H	; 02h
+ 4349 FE18  7E 81 B9 A5 	DB	07EH, 081H, 0B9H, 0A5H, 0B9H, 0A5H, 0B9H, 081H	; 03h
+ 4350 FE20  55 FF 55 FF 	DB	055H, 0FFH, 055H, 0FFH, 055H, 0FFH, 055H, 0FFH	; 04h
+ 4351 FE28  AA AA AA AA 	DB	0AAH, 0AAH, 0AAH, 0AAH, 0AAH, 0AAH, 0AAH, 0AAH	; 05h
+ 4352 FE30  FF 00 FF 00 	DB	0FFH, 000H, 0FFH, 000H, 0FFH, 000H, 0FFH, 000H	; 06h
+ 4353 FE38  00 00 3C 42 	DB	000H, 000H, 03CH, 042H, 042H, 07EH, 000H, 000H	; 07h
+ 4354 FE40  00 10 30 7E 	DB	000H, 010H, 030H, 07EH, 030H, 010H, 000H, 000H	; 08h
+ 4355 FE48  00 08 0C 7E 	DB	000H, 008H, 00CH, 07EH, 00CH, 008H, 000H, 000H	; 09h
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  79
+CAOS31  Z80
+
+ 4356 FE50  00 10 10 10 	DB	000H, 010H, 010H, 010H, 07CH, 038H, 010H, 000H	; 0Ah
+ 4357 FE58  08 1C 3E 08 	DB	008H, 01CH, 03EH, 008H, 008H, 008H, 008H, 000H	; 0Bh
+ 4358 FE60  38 30 28 08 	DB	038H, 030H, 028H, 008H, 008H, 008H, 03EH, 000H	; 0Ch
+ 4359 FE68  00 00 12 32 	DB	000H, 000H, 012H, 032H, 07EH, 030H, 010H, 000H	; 0Dh
+ 4360 FE70  AA 55 AA 55 	DB	0AAH, 055H, 0AAH, 055H, 0AAH, 055H, 0AAH, 055H	; 0Eh
+ 4361 FE78  3E 7C 7C 3E 	DB	03EH, 07CH, 07CH, 03EH, 03EH, 07CH, 0F8H, 0F8H	; 0Fh
+ 4362                   
+ 4363 FE80  38 30 28 04 	DB	038H, 030H, 028H, 004H, 004H, 004H, 004H, 000H	; 10h
+ 4364 FE88  7F 08 1C 2A 	DB	07FH, 008H, 01CH, 02AH, 008H, 008H, 008H, 000H	; 11h
+ 4365 FE90  00 08 08 08 	DB	000H, 008H, 008H, 008H, 02AH, 01CH, 008H, 07FH	; 12h
+ 4366 FE98  7E 81 9D A1 	DB	07EH, 081H, 09DH, 0A1H, 0B9H, 085H, 085H, 0B9H	; 13h
+ 4367 FEA0  00 3C 42 5A 	DB	000H, 03CH, 042H, 05AH, 05AH, 042H, 03CH, 000H	; 14h
+ 4368 FEA8  88 44 22 11 	DB	088H, 044H, 022H, 011H, 088H, 044H, 022H, 011H	; 15h
+ 4369 FEB0  00 7F 22 72 	DB	000H, 07FH, 022H, 072H, 027H, 022H, 07FH, 000H	; 16h
+ 4370 FEB8  11 22 44 88 	DB	011H, 022H, 044H, 088H, 011H, 022H, 044H, 088H	; 17h
+ 4371 FEC0  00 01 09 0D 	DB	000H, 001H, 009H, 00DH, 07FH, 00DH, 009H, 001H	; 18h
+ 4372 FEC8  00 90 B0 FE 	DB	000H, 090H, 0B0H, 0FEH, 0B0H, 090H, 000H, 000H	; 19h
+ 4373 FED0  00 08 7C 06 	DB	000H, 008H, 07CH, 006H, 07CH, 008H, 000H, 000H	; 1Ah
+ 4374 FED8  CC CC 33 33 	DB	0CCH, 0CCH, 033H, 033H, 0CCH, 0CCH, 033H, 033H	; 1Bh
+ 4375 FEE0  7E 81 A1 A1 	DB	07EH, 081H, 0A1H, 0A1H, 0A1H, 0A1H, 0BDH, 081H	; 1Ch
+ 4376 FEE8  7E 81 B9 A5 	DB	07EH, 081H, 0B9H, 0A5H, 0B9H, 0A5H, 0A5H, 081H	; 1Dh
+ 4377 FEF0  7E 81 99 A1 	DB	07EH, 081H, 099H, 0A1H, 0A1H, 0A1H, 099H, 081H	; 1Eh
+ 4378 FEF8  00 10 3E 60 	DB	000H, 010H, 03EH, 060H, 03EH, 010H, 000H, 000H	; 1Fh
+ 4379                   
+ 4380 FF00  7E 81 99 A1 	DB	07EH, 081H, 099H, 0A1H, 0A1H, 099H, 081H, 07EH	; 60h
+ 4381 FF08  00 00 3C 66 	DB	000H, 000H, 03CH, 066H, 066H, 066H, 03BH, 000H	; 61h
+ 4382 FF10  00 60 60 78 	DB	000H, 060H, 060H, 078H, 06CH, 06CH, 078H, 000H	; 62h
+ 4383 FF18  00 00 3C 66 	DB	000H, 000H, 03CH, 066H, 060H, 066H, 03CH, 000H	; 63h
+ 4384 FF20  00 06 06 1E 	DB	000H, 006H, 006H, 01EH, 036H, 036H, 01EH, 000H	; 64h
+ 4385 FF28  00 00 38 6C 	DB	000H, 000H, 038H, 06CH, 07CH, 060H, 038H, 000H	; 65h
+ 4386 FF30  00 1E 18 7E 	DB	000H, 01EH, 018H, 07EH, 018H, 018H, 018H, 000H	; 66h
+ 4387 FF38  00 00 3C 66 	DB	000H, 000H, 03CH, 066H, 066H, 03FH, 006H, 03CH	; 67h
+ 4388 FF40  00 60 60 6C 	DB	000H, 060H, 060H, 06CH, 076H, 066H, 066H, 000H	; 68h
+ 4389 FF48  00 18 00 18 	DB	000H, 018H, 000H, 018H, 018H, 018H, 018H, 000H	; 69h
+ 4390 FF50  00 18 00 38 	DB	000H, 018H, 000H, 038H, 018H, 018H, 018H, 030H	; 6Ah
+ 4391 FF58  00 60 66 6C 	DB	000H, 060H, 066H, 06CH, 078H, 06CH, 066H, 000H	; 6Bh
+ 4392 FF60  00 30 30 30 	DB	000H, 030H, 030H, 030H, 030H, 030H, 018H, 000H	; 6Ch
+ 4393 FF68  00 00 36 7F 	DB	000H, 000H, 036H, 07FH, 06BH, 063H, 063H, 000H	; 6Dh
+ 4394 FF70  00 00 7C 66 	DB	000H, 000H, 07CH, 066H, 066H, 066H, 066H, 000H	; 6Eh
+ 4395 FF78  00 00 3C 66 	DB	000H, 000H, 03CH, 066H, 066H, 066H, 03CH, 000H	; 6Fh
+ 4396                   
+ 4397 FF80  00 00 7C 66 	DB	000H, 000H, 07CH, 066H, 066H, 07CH, 060H, 060H	; 70h
+ 4398 FF88  00 00 3C 66 	DB	000H, 000H, 03CH, 066H, 066H, 03EH, 006H, 006H	; 71h
+ 4399 FF90  00 00 36 38 	DB	000H, 000H, 036H, 038H, 030H, 030H, 030H, 000H	; 72h
+ 4400 FF98  00 00 1C 30 	DB	000H, 000H, 01CH, 030H, 01CH, 006H, 03CH, 000H	; 73h
+ 4401 FFA0  00 18 18 3C 	DB	000H, 018H, 018H, 03CH, 018H, 018H, 00CH, 000H	; 74h
+ 4402 FFA8  00 00 66 66 	DB	000H, 000H, 066H, 066H, 066H, 066H, 03CH, 000H	; 75h
+ 4403 FFB0  00 00 66 66 	DB	000H, 000H, 066H, 066H, 03CH, 03CH, 018H, 000H	; 76h
+ 4404 FFB8  00 00 63 63 	DB	000H, 000H, 063H, 063H, 06BH, 07FH, 036H, 000H	; 77h
+ 4405 FFC0  00 00 66 3C 	DB	000H, 000H, 066H, 03CH, 018H, 03CH, 066H, 000H	; 78h
+ 4406 FFC8  00 00 66 3C 	DB	000H, 000H, 066H, 03CH, 018H, 030H, 060H, 000H	; 79h
+ 4407 FFD0  00 00 7E 0C 	DB	000H, 000H, 07EH, 00CH, 018H, 030H, 07EH, 000H	; 7Ah
+ 4408 FFD8  66 00 3C 66 	DB	066H, 000H, 03CH, 066H, 066H, 066H, 03BH, 000H	; 7Bh
+ 4409 FFE0  66 00 3C 66 	DB	066H, 000H, 03CH, 066H, 066H, 066H, 03CH, 000H	; 7Ch
+ 4410 FFE8  66 00 66 66 	DB	066H, 000H, 066H, 066H, 066H, 066H, 03CH, 000H	; 7Dh
+ 4411 FFF0  00 38 6C 78 	DB	000H, 038H, 06CH, 078H, 06CH, 078H, 060H, 060H	; 7Eh
+ 4412 FFF8  FF 81 81 81 	DB	0FFH, 081H, 081H, 081H, 081H, 081H, 081H, 0FFH	; 7Fh
+ 4413                   
+SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  80
+CAOS31  Z80
+
+ 4414                   	.DEPHASE
+ 4415                   	END
+ 0 Error(s) Detected.
+ 8320 Absolute Bytes. 544 Symbols Detected.
+03CH, 03CH, 018H, 000H	; 76h
+ 4404 FF
