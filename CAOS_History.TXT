@@ -29,16 +29,20 @@ Y =
 Z =
 
 
-Speicherbelegung CAOS 4.8 (12.09.2021):
+Speicherbelegung CAOS 4.8 (01.01.2021):
 =========================
 
-CAOS-C:   17 Byte frei
+CAOS-C:   12 Byte frei
 CAOS-E:    4 Byte frei
 CAOS-F:    8 Byte frei
 
 
 History:
 ========
+
+01.01.2022: (CAOS 4.8 Patch 2)
+- Abfrage der DEP-Version zuverlaessiger gemacht indem bei Systemstart ein 
+  definierter Wert in die Speicherzelle im Koppel-RAM eingeschrieben wird.
 
 12.09.2021: (CAOS 4.8 Patch 1)
 - LOAD weiter optimiert, jetzt kann auch Endadresse+1 = 0000 geladen werden

@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  C000h bis CFFFh	**
 ;**					**
-;**	letzte Aenderung: 19.06.2021	**
+;**	letzte Aenderung: 01.01.2022	**
 ;*****************************************
 
 ;	ORG	0C000H
@@ -188,6 +188,16 @@ DINIT:	LD	HL,DRV0		; zunaechst den Kassettentreiber
 	IN	A,(C)
 	CP	5		; CAOS-Betriebsart?
 	JR	NZ,NODISK
+
+; 01.01.2022:
+; Falls eine alte Original-CAOS-Diskette benutzt wird, wird diese Speicherzelle
+; mit der CAOS-Versionsnummer nicht beschrieben und enthaelt den Inhalt vom
+; Urlader. Dieser fuehrt zu falschen Versionsmeldungen. Deshalb wird hier eine
+; Versionsnummer kleiner als 2.0 eingetragen - somit funktioniert die DEP-
+; Versionsabfrage zuverlaessiger.
+	LD	BC,DEPVER	; DEP-Version
+	OUT	(C),A		; Version 0.5 setzen
+
 ;	LD	HL,DRV1		; Floppy-Treiber
 	LD	BC,32
 	LDIR			; in Treibertabelle kopieren

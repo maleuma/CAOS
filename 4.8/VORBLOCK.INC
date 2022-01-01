@@ -1,7 +1,7 @@
 ; Erzeugen des CAOS-Vorblock fuer CAOS 4.8 und USER-ROM:
 
 DATUM	MACRO
-	DB	'12.09.2021'	; Versionsdatum nur hier aendern!
+	DB	'01.01.2022'	; Versionsdatum nur hier aendern!
 	ENDM
 
 	VB_NAME			; Dateiname

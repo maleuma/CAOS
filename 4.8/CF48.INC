@@ -1049,7 +1049,8 @@ SAVE7F:	DW	7F7FH
 ;
 ; PE:   HL	Dateiname
 ; PA:   CY=1    Fehler oder BRK
-
+; VR:	AF, BC, DE, HL
+;
 SAVE:	CALL	CLC		; Kassettenpuffer loeschen
 ;	LD	DE,CASS		; DE wird von CLC uebergeben
 	PUSH	HL		; Dateiname
