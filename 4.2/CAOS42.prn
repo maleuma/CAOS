@@ -3610,7 +3610,9 @@
           EDED B2F9             DW      ESC9    ;Farbebene o/o
           EDEF B9F9             DW      ESCA    ;HiRes o/o
           EDF1
-          EDF1 00000000         DS      0FH     ;frei
+          EDF1 00000000         DS      0EH     ;frei
+          EDFF
+          EDFF 42		DB	42H	;CAOS-Version
           EE00
           EE00                  END
 
@@ -4922,7 +4924,7 @@
           F8F1          BUPTAB: ;H-Teil konstant!
           F8F1 16               DB      16H     ;INTB
           F8F2 24               DB      24H     ;OCHR
-          F8F3 27               DB      27H     ;MBIN
+          F8F3 37               DB      37H     ;MBIN
           F8F4 38               DB      38H     ;MBOUT
           F8F5 06               DB      06H     ;USIN1
           F8F6 02               DB      02H     ;UOT1
