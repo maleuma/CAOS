@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  C000h bis CFFFh	**
 ;**					**
-;**	letzte Aenderung: 01.01.2022	**
+;**	letzte Aenderung: 21.05.2022	**
 ;*****************************************
 
 ;	ORG	0C000H
@@ -2623,13 +2623,13 @@ MBLO1:	BIT	5,(IX+7)	; Blocknummern unterdruecken?
 ; Tabelle der Modulnamen:
 
 MTAB:	DB	000h,'VARIABEL',0	; M042 (Tim Henning)
-	DB	001H,'START-ROM',0	; M033 Typestar
-	DB	070H,'32K EPROM',0	; M045
-	DB	071H,'64K EPROM',0	; M046
-	DB	072H,'128K EPROM',0	; M047
-	DB	073H,'256K EPROM',0	; M048
-;	DB	074H,'512K EPROM',0	; M049 reserviert!
-;	DB	075H,'1M EPROM',0	; M050 reserviert!
+	DB	001H,'START-ROM',0	; M033 z.B. Typestar
+	DB	070H,'32K ROM',0	; M045
+	DB	071H,'64K ROM',0	; M046
+	DB	072H,'128K ROM',0	; M047
+	DB	073H,'256K ROM',0	; M048 (Mario Leubner)
+	DB	074H,'512K ROM',0	; M049 (Andreas Schlechte)
+;	DB	075H,'1M ROM',0	;	 M050 reserviert!
 	DB	076H,'4M ROM',0		; M044 (Bert Lange, Andreas Schlechte)
 	DB	077H,'64K RAM',0	; M032 - 64k-Variante
 	DB	078H,'128K RAM',0	; M036
@@ -2677,6 +2677,6 @@ M052A:	DB	'NET+'			; M052 (USB+Netzwerk, 32K EEPROM 4 * 8K)
 M052B:	DB	'USB',0			; M052 (nur USB, 8K EEPROM)
 	;
 M062A:	DB	'4*8K RAM',0		; M062-RAM (E. Mueller)
-M062B:	DB	'8*8K EPROM',0		; M062-ROM (E. Mueller)
+M062B:	DB	'8*8K ROM',0		; M062-ROM (E. Mueller)
 
 ;	ABSFILL	0D000h,<ROM-C-Ende>
