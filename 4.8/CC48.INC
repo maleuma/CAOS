@@ -2639,7 +2639,7 @@ MTAB:	DB	000h,'VARIABEL',0	; M042 (Tim Henning)
 ;	DB	07CH,'32K EEPROM',0	; reserviert!
 ;	DB	07DH,'64K EEPROM',0	; reserviert!
 ;	DB	07EH,'128K EEPROM',0	; reserviert!
-;	DB	07FH,'256K EEPROM',0	; reserviert!
+;	DB	07FH,'256K EEPROM',0	; M109 '256x8K CMOS RAM' (Tim Henning)
 	DB	0A7H,'FLOPPY',0		; D004, D008
 	DB	0BFH,'MT02',0		; MT02 (Nachbau Pruefmodul MT01)
 ;	DB	0D8h,'Z8E',0		; M127 (reserviert fuer Thomas Schramm)

@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  F000h bis FDFFh	**
 ;**					**
-;**	letzte Aenderung: 12.09.2021	**
+;**	letzte Aenderung: 28.10.2022	**
 ;*****************************************
 
 ;	ORG	0F000H
@@ -827,13 +827,19 @@ GO7F:	DW	7F7FH
 	DB	3		; mindestens 1 Argument erforderlich
 	XOR	A
 	LD	(ARGN),A
-	PUSH	HL		; Adresse auf den Stack
-	EX	DE,HL		; ARG2 von DE nach HL
-	LD	D,B
-	LD	E,C		; ARG3 von BC nach DE
-	LD	BC,(ARG4)	; ARG4 nach BC
-	LD	A,(ARG5)
-	RET			; Sprung zu Adresse
+; alter Code, 4 Byte lang:
+;	PUSH	HL		; Adresse auf den Stack
+;	EX	DE,HL		; ARG2 von DE nach HL
+;	LD	D,B
+;	LD	E,C		; ARG3 von BC nach DE
+; 28.10.2022: neuer Code von ZM.ASM uebernommen, 3 Byte lang
+; BC(Arg3) => DE(Arg2) => HL(Arg1) => Stack
+	PUSH	BC		; (SP)=(ARG3)
+	EX	(SP),HL		; Stack = (ARG1), HL=(ARG3)
+	EX	DE,HL		; DE = (ARG3), HL=(ARG2)
+	LD	BC,(ARG4)	; BC = (ARG4)
+	LD	A,(ARG5)	; A = (ARG5)
+	RET			; JMP (ARG1)
 ;_____________________________________________________________
 ;							**19**
 ; ERROR anzeigen
@@ -1450,12 +1456,15 @@ WININ:	LD	BC,WININC
 ;
 WINAK:	LD	BC,WINAKC
 JROMC:	JP	CLROMC		; im ROM-C ausfuehren
+;_____________________________________________________________
 ;
-KEY7F:	DW	7F7FH
+; F-Taste belegen bzw. Belegung auflisten
+;
+	DW	7F7FH
 	DB	'KEY'
-	DB	1
-	CP	1
-	JR	NC,KEYL
+	DB	1		; Parameter hexadezimal
+	CP	1		; Parameter angegeben?
+	JR	NC,KEYL		; ja, F-Taste bearbeiten
 ;_____________________________________________________________
 ;							**3A**
 KEYLI:	LD	BC,KEYLIC	; Keylist
@@ -1469,7 +1478,7 @@ KEY:	LD	BC,KEYC		; Taste belegen
 ;_____________________________________________________________
 ;							**25**
 ; Cursor komplementieren
-
+;
 CUCP:	PUSH	HL
 	PUSH	DE
 	PUSH	BC

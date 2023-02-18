@@ -1098,10 +1098,10 @@ BEXP1:	LD	A,B		; Nr.
 	JR	NC,SNERR1	; Token ausserhalb
 	RLCA			; *2
 	LD	C,A
-	LD	B,0
+	LD	B,0		; BC = Offset in Adresstabelle
 	EX	DE,HL
-	LD	HL,TADR5
-	JP	DLI22		; Ruecksprung zu Tokenverarbeitung
+	LD	HL,TADR5	; Adresse der Erweiterungstoken
+	JP	DLI22		; Ruecksprung zu Tokenverarbeitung (BASIC-ROM)
 
 LOCOL:	;LoadColor
 	PUSH	HL
