@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  D000h bis DAB7h	**
 ;**					**
-;**	letzte Aenderung: 11.09.2021	**
+;**	letzte Aenderung: 19.02.2023	**
 ;*****************************************
 
 ;	ORG	0D000H
@@ -873,8 +873,7 @@ TYPE7F:	DW	7F7FH
 	JR	NC,TYPE4	; kein Vorblock, da > 4
 	JR	TYPE3		; Vorblock -> dann ersten Datenblock einlesen
 	;
-TYPE1:	;LD	A,0CH		; CLS
-	CALL	CLSX		; CLS Bildschirm, damit nicht zu Druckprotokoll!
+TYPE1:	CALL	CLSX		; CLS Bildschirm, damit nicht zu Druckprotokoll!
 	LD	A,LF
 	CALL	CRT		; oben eine Zeile frei lassen
 TYPE2:	LD	A,E
@@ -934,8 +933,7 @@ FCLOSE:	CALL	PV7		; Datei schliessen
 	LD	(MODST+5),A	; wieder eintragen
 	JP	COFF		; und so schalten -> DUMP-Ende
 	;
-DUMP2:	;LD	A,0CH		; CLS
-	CALL	CLSX		; CLS Bildschirm, damit nicht zu Druckprotokoll!
+DUMP2:	CALL	CLSX		; CLS Bildschirm, damit nicht zu Druckprotokoll!
 	LD	A,LF
 	CALL	CRT		; oben eine Zeile frei lassen
 DUMP3:	LD	A,E
@@ -1564,7 +1562,7 @@ DRV1:	DB	1		; Kennung (Treiber Nr. 1)
 	DW	FERA		; 10: ERA = Datei loeschen
 	DW	FREN		; 11: REN = Datei umbenennen
 ;
-; Portinitialisierungstabellen:
+; Portinitialisierungstabelle fuer Erstinitialisierung (POWER ON und RESET):
 ;
 ; Bei Erstinitialisierung des PIO-Port-A muss sichergestellt werden, dass der
 ; CAOS-ROM-E immer im Zugriff bleibt. Im Einschaltzustand sind die PIO-Ports
@@ -1572,10 +1570,10 @@ DRV1:	DB	1		; Kennung (Treiber Nr. 1)
 ; 1. PIO-Port B initialisieren, und PIO damit aus dem RESET-Zustand holen
 ;    (so wird auch das Ausgaberegister von Port A beschreibbar)
 ; 2. Port A Datenwort einschreiben
-; 3. Betriebsart Byte-Ausgabe einstellen um das Datenwort zu uebernehmen.
+; 3. Port A Betriebsart Byte-Ausgabe einstellen um das Datenwort zu uebernehmen.
 ; Der RESET-Impuls zur D005-Tastatur wirkt nur, wenn die PIO bereits vorher
 ; auf Byte-Ausgabe initialisiert ist (also nur bei RESET, nicht bei POWER-ON)
-
+;
 IOTAB1:	DB	6		; 6 Ports fuer Erstinitialisierung
 
 	 DB	PIOBS,3		; PIO-B Steuerwort
@@ -1600,22 +1598,7 @@ IOTAB1:	DB	6		; 6 Ports fuer Erstinitialisierung
 
 	 DB	PORT2,1		; Ausgabeport 86h
 	  DB	11100011b	; RAM4 ein, USER-C 3, CAOS-C ein
-
-IOTAB2:	DB	4		; 4 Ports initialisieren
-
-	 DB	PIOAS,1		; PIO-A Steuerwort
-	  DB	0E4h		; Interruptvektor
-
-	 DB	PIOBS,1		; PIO-B Steuerwort
-	  DB	0E6h		; Interruptvektor
-
-	 DB	CTC0,1		; CTC Kanal 0
-	  DB	0E8h		; Interruptvektor
-
-	 DB	CTC2,2		; CTC Kanal 2: blinken
-	  DB	01000111b	; DI, Zaehler, RESET
-	  DB	12		; Zeitkonstante
-
+;
 ; Initialisierungstabelle fuer M001 als Centronics-Druckerschnittstelle:
 ;
 DIOINI:	DB	3
@@ -1627,7 +1610,7 @@ DIOINI:	DB	3
 	  DB	11111110b	; Bit 0 Ausgang
 	 DB	05h,1		; PIO-B Daten
 	  DB	00000001b	; Strobe passiv
-
+;
 ; Voreingestellte Zuordnung von Joystickfunktionen zu ASCII-Tastencodes
 ; Tabelle wird bei Power-On in den IRM kopiert, Bereich A894..A89F
 ; Hinweis: Fire2 ist beim M008 die primaere oder einzige Feuertaste
@@ -1647,14 +1630,14 @@ JOYTBD:	DB	2		; Wartezyklen fuer Tastenwiederholung
 ;
 ; Interrupttabelle (wird in den RAM kopiert):
 ;
-ISRTAB:	DW	IRET	; 01D0	(IX-32) M052 USB-PIO
-	DW	IRET	; 01D2	(IX-30) -
-	DW	IRET	; 01D4	(IX-28) Empfehlung fuer CTC Kanal 2 des 2. M003
-	DW	IRET	; 01D6	(IX-26) Empfehlung fuer CTC Kanal 3 des 2. M003
-	DW	IRET	; 01D8	(IX-24) Empfehlung fuer SIO des 2. M003 
-	DW	IRET	; 01DA	(IX-22) Empfehlung fuer SIO des 1. M003
-	DW	IRET	; 01DC	(IX-20) Empfehlung fuer CTC Kanal 2 des 1. M003
-	DW	IRET	; 01DE	(IX-18) Empfehlung fÅr CTC Kanal 3 des 1. M003
+ISRTAB:	;DW	IRET	; 01D0	(IX-32) M052 USB-PIO (USB-Tastatur)
+	;DW	IRET	; 01D2	(IX-30) -
+	;DW	IRET	; 01D4	(IX-28) Empfehlung fuer CTC Kanal 2 des 2. M003
+	;DW	IRET	; 01D6	(IX-26) Empfehlung fuer CTC Kanal 3 des 2. M003
+	;DW	IRET	; 01D8	(IX-24) Empfehlung fuer SIO des 2. M003 
+	;DW	IRET	; 01DA	(IX-22) Empfehlung fuer SIO des 1. M003
+	;DW	IRET	; 01DC	(IX-20) Empfehlung fuer CTC Kanal 2 des 1. M003
+	;DW	IRET	; 01DE	(IX-18) Empfehlung fuer CTC Kanal 3 des 1. M003
 	DW	ISRJ	; 01E0	(IX-16) M008 PIO A: Joystick
 	DW	ISRSB	; 01E2	(IX-14) M003 SIO B: V.24-Empfang
 	DW	ISRPA	; 01E4	(IX-12) PIO A: Kassette
@@ -1663,7 +1646,23 @@ ISRTAB:	DW	IRET	; 01D0	(IX-32) M052 USB-PIO
 	DW	ISRC1	; 01EA	(IX-6)  CTC 1: Kassette
 	DW	ISRC2	; 01EC	(IX-4)  CTC 2: Tondauer
 	DW	ISRC3	; 01EE	(IX-2)  CTC 3: Tastatur
-ISRTX:
+;
+; Portinitialisierungstabelle fuer Neuinitialisierung bei SIXD
+;
+IOTAB2:	DB	4		; 4 Ports initialisieren
+
+	 DB	PIOAS,1		; PIO-A Steuerwort
+	  DB	0E4h		; Interruptvektor
+
+	 DB	PIOBS,1		; PIO-B Steuerwort
+	  DB	0E6h		; Interruptvektor
+
+	 DB	CTC0,1		; CTC Kanal 0
+	  DB	0E8h		; Interruptvektor
+
+	 DB	CTC2,2		; CTC Kanal 2: blinken
+	  DB	01000111b	; DI, Zaehler, RESET
+	  DB	12		; Zeitkonstante
 ;
 ; IBM-Kodierungen fuer allgemeine Druckroutine PRINTC
 ;

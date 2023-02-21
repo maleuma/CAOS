@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  C000h bis CFFFh	**
 ;**					**
-;**	letzte Aenderung: 21.05.2022	**
+;**	letzte Aenderung: 19.02.2023	**
 ;*****************************************
 
 ;	ORG	0C000H
@@ -23,7 +23,7 @@ WIN1:	DW	LARGE		; CCTL0
 	DW	SMALL		; CCTL1
 	DW	LARGE		; CCTL2
 	DW	SMALL		; CCTL3
-	DW	STACK		; SYSP
+	DW	STACK		; SYSP				B7AE
 	DW	SUT_IRM		; SUTAB
 	DW	CRTTAB		; CTAB
 	OUT	(PIOAD),A	; NCAOS
@@ -75,23 +75,32 @@ PWRONC:	DI
 	CALL	INIMEX		; komplett benutzen
 
 	LD	BC,0080H	; alle Module abschalten
-PWRC2:	OUT	(C),D		; D=0 vom vorhergehenden INIMEX
-	DJNZ	PWRC2
+PWRC1:	OUT	(C),D		; D=0 vom vorhergehenden INIMEX
+	DJNZ	PWRC1
 
 	LD	SP,0C000H	; Loeschbereich 0..BFFFh
 	LD	BC,6000H	; Anzahl = 60h * 256 Wort = C000h
 	LD	H,C
 	LD	L,C		; HL=0
-PWRC1:	PUSH	HL		; schnelles Speicher loeschen (rueckwaerts)
+PWRC2:	PUSH	HL		; schnelles Speicher loeschen (rueckwaerts)
 	DEC	C
-	JR	NZ,PWRC1
-	DJNZ	PWRC1
-	LD	SP,STACK	; System-Stack setzen
+	JR	NZ,PWRC2
+	DJNZ	PWRC2
 
 ; neu ab CAOS 4.8: Autostart INIT (z.B. bei USB) vorbereiten
 ; (Die Aktivierung erfolgt erst bei der Initialisierung des Modul-Treibers)
 	LD	HL,INIT		; INIT-Kommando als Autostart
 	LD	(FTAST),HL	; vorbereiten fuer Abarbeitung
+
+; 19.02.2023: alle Anwender-ISR bei POWER-ON mit IRET vorbelegen
+	LD	HL,STACK	; ISR-Tabelle beginnt nach dem Stack
+	LD	SP,HL		; System-Stack setzen
+	LD	B,14		; Anzahl ISR-Routinen bis 01E0H
+PWRC3:	LD	(HL),Low(IRET)
+	INC	HL		; alle Anwender-ISR mit der Adrersse IRET
+	LD	(HL),High(IRET)	; vorbelegen
+	INC	HL
+	DJNZ	PWRC3
 
 ; 08.10.2020: SYSI nach der Portinitialisierung aufrufen, sodass der KOUT-
 ; Impuls zum Ruecksetzen der D005-Tastatur nur bei RESET kommt.
@@ -107,12 +116,11 @@ PWRC1:	PUSH	HL		; schnelles Speicher loeschen (rueckwaerts)
 ; -> Reihenfolge geaendert, nun ist Fenster 0 wieder aktiv wie bis CAOS 3.4
 
 	LD	A,9		; Fenster Nr. 9
-PWRC3:	LD	(WINNR),A	; Nr. eintragen
+PWRC4:	LD	(WINNR),A	; Nr. eintragen
 	CALL	WCOPY		; Fenstervektorspeicher initialisieren
 	SUB	1		; fuer 10 Fenster (9-0)
-	JR	NC,PWRC3
+	JR	NC,PWRC4
 	CALL	ESC3		; Anzeige Bild 0, Zugriff Bild 1
-;	LD	A,0CH
 	CALL	CLSX		; Bild 1: CLS
 	CALL	ESC1		; Anzeige+Zugriff Bild 0
 
@@ -135,7 +143,9 @@ SYSI2:	LD	IX,1F0H
 	LD	E,LOW(CTCMD)	; (D war 0B7h)
 	LD	C,KCTAB3-KCTAB2	; (B war 0)
 	LDIR			; 2. Teil in IRM kopieren
-	LD	DE,MODST	; Modulsteuerbytespeicher
+	INC	D		; D=B8H
+	LD	E,C		; E=00H
+;	LD	DE,MODST	; Modulsteuerbytespeicher B800H
 	LD	A,(MODST+4)	; RAM4 aktueller Schaltzustand
 	AND	4		; RAM4-Ebene herausloesen
 	LD	C,KCTAB4-KCTAB3	; (B war 0)
@@ -152,9 +162,9 @@ SYSI2:	LD	IX,1F0H
 
 ; CAOS 4.6 - SUTAB vom ROM in den IRM kopieren:
 
-	ld	de,SUT_IRM-1	; SUTAB im IRM (beginnend mit SULEN)
-	ld	hl,SUTB-1	; SUTAB im ROM
-	ld	BC,SUEND-SUTB+1	; Laenge
+	LD	DE,SUT_IRM-1	; SUTAB im IRM (beginnend mit SULEN)
+	LD	HL,SUTB-1	; SUTAB im ROM
+	LD	BC,SUEND-SUTB+1	; Laenge
 	LDIR			; SUTAB zur Nutzung in den IRM kopieren
 
 	LD	A,1		; Standardwert fuer IXH- und I-Register
@@ -166,11 +176,12 @@ SYSI2:	LD	IX,1F0H
 ; CAOS 4.6 - Device-Treibertabellen erzeugen
 
 	LD	DE,DEVTAB	; Treibertabelle(n) im IRM aufbauen
-	LD	A,8		; fuer 8 Treiber
+;	LD	A,8		; fuer 8 Treiber
 DINIT:	LD	HL,DRV0		; zunaechst den Kassettentreiber
 	LD	BC,32		; je 32 Byte (Groesse festgeschrieben)
 	LDIR			; kopieren
-	DEC	A		; alle 8 Treiber auf Kassette initialisieren
+	LD	A,E		; bis E=0 ist
+	OR	A		; alle 8 Treiber auf Kassette initialisieren
 	JR	NZ,DINIT
 	LD	(DEVTAB),A	; Tape-Treiber mit '0' aktivieren
 	LD	DE,DEVTAB+32	; folgende Treiber als Nr. 1 eintragen
@@ -266,33 +277,43 @@ NOUSB:	LD	A,(DEVTAB+32)	; Treiber 1 vorhanden?
 ;
 SIXC:	CP	0FFH
 	JP	Z,SYSI		; grosse Initialisierung mit Device-Tabelle usw.
-	LD	HL,ISRTAB	; ISR-Tabelle im ROM
+
+; 19.02.2023: kompletten IX-Bereich, einschliesslich der bisherigen alten
+; ISR-Tabelle mitnehmen zum neuen IX-Bereich
+; Vorteil: USB-Tastatur funktioniert nach SIXD weiter
 	DI
 	LD	(MIXIT),A	; neuer Wert fuer IXH- und I-Register
 	LD	I,A		; I-Register aktualisieren
 	IM	2
-	LD	E,0D0H
-	LD	D,A
-	LD	BC,ISRTX-ISRTAB	; Interrupttabelle fuer 16 Interrupts
-	LDIR			; kopieren aus dem ROM nach xxD0h bis xxF0h
-	LD	H,(IX+1)
-	LD	L,(IX+4)	; alte Merker mitnehmen
-	LD	A,(IX+8)
+	PUSH	IX		; bisheriger IX-Bereich
+	POP	HL
+	LD	L,0C4H		; 01C4H = erste USER-ISR
+	LD	BC,01F9H-01C4H	; Alles im IX-Bereich von 01C4H bis 01F8H
+	LD	D,A		; neuer Wert von IXH
+	LD	E,L		; DE = neue ISR-Tabelle
+	LDIR			; kompletten IX-Bereich incl. ISR mitnehmen
+	LD	HL,ISRTAB	; ISR-Tabelle fuer System-ISR im ROM
+	LD	E,0E0H		; 01E0H = ISR fuer Joystick
+	LD	C,IOTAB2-ISRTAB	; Interrupttabelle fuer 8 Interrupts
+				; (B=0 vom vorherigen LDIR)
+	LDIR			; kopieren aus dem ROM nach xxE0h bis xxF0h
+;	LD	H,(IX+1)
+;	LD	L,(IX+4)	; alte Merker mitnehmen
+;	LD	A,(IX+8)
 	PUSH	DE		; neuer Wert fuer IX = xxF0h
 	POP	IX
-	LD	(IX+8),A
-	LD	(IX+1),H	; mitgenommene Merker neu eintragen
-	LD	(IX+4),L
+;	LD	(IX+8),A
+;	LD	(IX+1),H	; mitgenommene Merker neu eintragen
+;	LD	(IX+4),L
 	LD	(IX+14),LOW(KTAB) ; Tastaturtabelle
 	LD	(IX+15),HIGH(KTAB)
 	LD	(IX+9),7FH	; Standard-Prologbyte
-	LD	HL,IOTAB2	; PIO A,B und CTC
+;	LD	HL,IOTAB2	; PIO A,B und CTC (IOTAB2 folgt auf ISRTAB)
 	CALL	INIMEX		; Ports neu initialisieren
 	LD	HL,CENINI
 	CALL	INIMEX		; M021 initialisieren
-	CALL	KPUFF		; Kassettenpuffer (IX+5 und IX+6) definieren
 	EI
-	RET
+	JP	KPUFF		; Kassettenpuffer (IX+5 und IX+6) definieren
 
 ; Systemcheck oder Modulkontrollanzeige (interne Module):
 

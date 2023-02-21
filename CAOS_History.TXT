@@ -29,16 +29,25 @@ Y =
 Z =
 
 
-Speicherbelegung CAOS 4.8 (01.01.2021):
+Speicherbelegung CAOS 4.8 (20.02.2023):
 =========================
 
-CAOS-C:   12 Byte frei
+CAOS-C:   31 Byte frei
 CAOS-E:    4 Byte frei
-CAOS-F:    8 Byte frei
+CAOS-F:   12 Byte frei
 
 
 History:
 ========
+
+19.02.2023: (CAOS 4.8 Patch 4)
+- SIXD optimiert, ISR-Tabelle wird komplett mit uebernommen auf neuen IX-Bereich
+  dadurch funktioniert eine USB-Tastatur nach Aufruf von SIXD weiter
+- SWITCH optimiert, 3 Byte kuerzer
+- GO optimiert, 1 Byte kuerzer
+
+21.05.2022: (CAOS 4.8 Patch 3)
+- Modul M049 (512K EPROM) in Modul-Liste definiert
 
 01.01.2022: (CAOS 4.8 Patch 2)
 - Abfrage der DEP-Version zuverlaessiger gemacht indem bei Systemstart ein 

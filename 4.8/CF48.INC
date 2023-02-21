@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  F000h bis FDFFh	**
 ;**					**
-;**	letzte Aenderung: 28.10.2022	**
+;**	letzte Aenderung: 20.02.2023	**
 ;*****************************************
 
 ;	ORG	0F000H
@@ -158,11 +158,11 @@ SWI7F:	DW	7F7FH
 	DB	'SWITCH'
 	DB	1
 	AND	A		; Argumente?
-	JR	Z,MLIST		; nein, Module auflisten
-	LD	BC,SWIC		; lesen/schalten
-	JP	CLROMC		; im ROM-C ausfuehren
-	;
-MLIST:	CALL	ESC6		; interne Module listen
+	LD	BC,SWIC		; Module lesen/schalten
+	JR	NZ,JROMC2	; im ROM-C ausfuehren
+
+; Module auflisten
+	CALL	ESC6		; interne Module listen
 	;
 ESC5:	CALL	CON
 	CALL	MODULC		; externe Module listen
@@ -191,7 +191,7 @@ MODUSW:	LD	A,2		; Modul schalten
 ; VR:	AF,H,BC
 
 MODU:	LD	BC,MODUC
-	JP	CLROMC		; im ROM-C ausfuehren
+JROMC2:	JP	CLROMC		; im ROM-C ausfuehren
 
 ESCD:	CALL	CON
 	CALL	ESCDD		; DEVICE-Umschaltung
