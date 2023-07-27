@@ -796,7 +796,13 @@ KBD13:	LD	HL,STBT
 ;							**17**
 ; Eingabe einer Zeile mit Funktion aller Cursortasten,
 ; Abschluss mit <ENTER> oder Abbruch <BRK>
-
+; Cursor danach am Anfang der naechsten Zeile
+;
+; PA:	CY=0	Eingabe mit Enter beendet (ab CAOS 4.3)
+;	CY=1	Eingabe mit BRK beendet (ab CAOS 4.3)
+;	DE	VRAM-Adresse auf Beginn der Eingabezeile
+; VR:	AF, DE
+;
 INLIN:	CALL	INTB
 	CALL	OCHR
 	CP	3		; BRK?
@@ -804,18 +810,18 @@ INLIN:	CALL	INTB
 	JR	Z,INLI1
 	CP	CR		; ENTER?
 	JR	NZ,INLIN
-INLI1:	PUSH	AF
-	CALL	CRLF		; PA: A=0
+INLI1:	PUSH	AF		; CY=1 bei BRK, CY=0 bei Enter
+	CALL	CRLF		; Cursor an Anfang der naechsten Zeile (PA: A=0)
 	LD	DE,(CURSO)
 	CP	D		; Zeile 1 durch PAGE-Mode?
 	JR	NZ,INLI2
 	LD	A,(WINLG+1)	; Anzahl Zeilen
 	LD	D,A		; D muss dann in letzte Zeile zeigen
-INLI2:	DEC	D		; Zeile drueber
-	PUSH	HL
-	CALL	DABR
-	EX	DE,HL
-	POP	HL		; PA: DE
+INLI2:	DEC	D		; Zeile darueber
+	PUSH	HL		; HL sichern
+	CALL	DABR		; VRAM-Adresse ermitteln
+	EX	DE,HL		; VRAM-Adresse in DE zurueckgeben
+	POP	HL		; HL unveraendert
 	POP	AF		; PA: CY=BRK
 NOOP:	RET
 ;
@@ -1607,19 +1613,23 @@ CLR12a:	LD	A,1FH		; DEL
 ;		06 = Eingabe Kanal 3 = Anwenderkanal 2
 ;		07 = Ausgabe Kanal 3 = Anwenderkanal 2
 ;	Bit 3	Init = Datei oeffnen
-;	Bit 4	BIT8
+;	Bit 4	BIT8 - ungenutzt?
 ;	Bit 5	Ruecksprung zu CAOS (BYE)
 ;	Bit 6	Close = Datei schliessen
 ;	Bit 7	Abfrage Tastaturstatus
 ;	HL	Zeiger, bei Init beginnt Dateiname 2 Byte danach
-;	A	Datenbyte bei Ausgabe
+;	D	Datenbyte bei Ausgabe
 ; PA:	A	Datenbyte bei Eingabe
+;	E	Steuerbyte
+;	Bit 3	nach Init zurueckgesetzt
+;	Bit 7	Tastaturstatus 0=Taste gedrueckt
+; VR:	AF, DE
 
-BASPV:	PUSH	HL
-	PUSH	BC
-	CALL	IRMON
+BASPV:	PUSH	HL		; HL sichern (Dateiname)
+	PUSH	BC		; BC sichern
+	CALL	IRMON		; IRM ein und System-SP setzen
 	BIT	5,E
-	JP	NZ,BASBYE	; BYE
+	JP	NZ,BASBYE	; BYE -> BASIC-ROM aus -> CAOS
 	PUSH	DE		; E = Steuerbyte
 	INC	HL
 	INC	HL
@@ -1665,12 +1675,12 @@ BSA0:	LD	A,E		; Steuerbyte
 	CALL	Z,VERIF		; bei "Y" VERIFY ausfuehren
 BSA1:	LD	A,D		; Ausgabeparameter
 	RES	3,E		; Init ruecksetzen
-	CALL	IRMOF
-	POP	BC
-	POP	HL
+	CALL	IRMOF		; IRM aus und BASIC-SP wiederherstellen
+	POP	BC		; BC regenerieren
+	POP	HL		; HL regenerieren
 	RET
-
-BSA2:	CALL	KBDS		; Tastaturabfrage
+	;
+BSA2:	CALL	KBDS		; Tastaturstatusabfrage
 	POP	DE
 	LD	D,A		; Zeichencode in D zurueck geben
 	JR	NC,BSA1		; keine Taste gedrueckt

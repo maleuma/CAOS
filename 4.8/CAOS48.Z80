@@ -114,7 +114,7 @@ USER8	EQU	0		; Erweiterung des USER-ROM in 8 Ebenen
 ; 32 KByte USER-ROM C000-DFFF (4 Ebenen)
 ; Statt der einzelnen ROMs kann auch die 512K Flash-ROM-Erweiterung von
 ; Andreas Schlechte verwendet werden. Dann stehen gleichzeitig 8 verschiedene
-; CAOS-Versionen zur Verfuegung und auch beide Zeichens„tze von CAOS 4.8
+; CAOS-Versionen zur Verfuegung und auch beide Zeichensaetze von CAOS 4.8
 ;---------------------------------------------------------------------
 
 ;**	Speicheruebersicht, Belegung der CAOS-ROMs	**
