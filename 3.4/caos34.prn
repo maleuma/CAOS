@@ -32,11 +32,11 @@ CAOS34  Z80
    16                    
    17                   ;*** Steuerung ***
    18                    
-   19 E011              OSTEST:	;CAOS-on-Test
+   19 E011              OSTEST:	;CAOS-on-Test (Modul)-Version
    20 E011  DB 88       	IN A,(88H)
-   21 E013  1F          	RRA
-   22 E014  D2 F17E     	JP NC,BYE
-   23 E017  3E 08       	LD A,8
+   21 E013  1F          	RRA		;Bit 0 = CAOS-ROM?
+   22 E014  D2 F17E     	JP NC,BYE	;CAOS-ROM ist ein
+   23 E017  3E 08       	LD A,8		;Steckplatz 8
    24 E019  CD F003     	CALL 0F003H
    25 E01C  27          	DEFB 27H	;JUMP
    26                    
@@ -2410,7 +2410,7 @@ ZSGROSS INC
     7         000C      CTC	EQU 00CH	;SIO-CTC
     8                   ; StrukturByte des Interface-Moduls
     9         01EE      UMODL	EQU 1EEH	;M003 V24
-   10                    
+   10                   ;UMODL	EQU 1EFH	;M001 DIO
    11         F000      	ORG 0F000H
    12                    
    13 F000  C3 F143     PRESET:	JP PWRON	;>> POWER ON <<
@@ -2641,7 +2641,7 @@ CAOSFV  ASM
   226 F143  F3          PWRON:	DI
   227 F144  31 01C4     	LD SP,1C4H	;System-Stack KC85/3-5
   228 F147  3E 3E       	LD A,3EH
-  229 F149  D3 88       	OUT (88H),A
+  229 F149  D3 88       	OUT (88H),A	;interner ROM aus
   230 F14B  CD FABA     	CALL MODSW1
   231 F14E  DD 5E 04    	LD E,(IX+4)
   232 F151  AF          	XOR A
@@ -4157,7 +4157,7 @@ CAOSFV  ASM
  1667 FAAF  D1          	POP DE
  1668 FAB0  C9          	RET
  1669                    
- 1670                   ;	f}r PWRON
+ 1670                   ;	fuer PWRON
  1671 FAB1  11 01EE     MODSW:	LD DE,UMODL	;IO-Modul
  1672 FAB4  CD FAC9     	CALL MOSW
  1673 FAB7  32 B7E1     	LD (0B7E1H),A	;IO-Modul 0/1?
@@ -4191,11 +4191,11 @@ CAOSFV  ASM
  1701                    
  1702                   ;*** Druckertreiber (V24) ***
  1703                    
- 1704 FAE3              PRZK:	;folgt TAB, 1.Byte L{nge
+ 1704 FAE3              PRZK:	;folgt TAB, 1.Byte Laenge
  1705 FAE3  E3          	EX (SP),HL
- 1706 FAE4  46          	LD B,(HL)
+ 1706 FAE4  46          	LD B,(HL)	;Laenge
  1707 FAE5  23          	INC HL
- 1708 FAE6  7E          PRZK1:	LD A,(HL)
+ 1708 FAE6  7E          PRZK1:	LD A,(HL)	;Datenbyte
  1709 FAE7  23          	INC HL
  1710 FAE8  CD FB19     	CALL PRINT
  1711 FAEB  10 F9       	DJNZ PRZK1
@@ -4232,485 +4232,488 @@ CAOSFV  ASM
  1739 FB19  F5          PRINT:	PUSH AF
  1740 FB1A  00          	NOP		;Freihalte-Bytes
  1741 FB1B  00          	NOP		; f. CENTR.Vers.
- 1742 FB1C  CD F274     WT:	CALL BRKT
- 1743 FB1F  38 0E       	JR C,PRT
- 1744 FB21  DB 0A       	IN A,(SIO+2)
- 1745 FB23  CB 57       	BIT 2,A
- 1746 FB25  28 F5       	JR Z,WT
- 1747 FB27  F1          	POP AF
- 1748 FB28  D3 08       	OUT (SIO),A
- 1749 FB2A  C9          	RET
- 1750 FB2B  ED 44       	NEG
- 1751 FB2D  ED 44       	NEG
- 1752 FB2F  F1          PRT:	POP AF
- 1753 FB30  C9          	RET
- 1754                    
- 1755 FB31              SHCLX:	;Reaktion auf SH+CLR
- 1756 FB31  3A B7E1     	LD A,(0B7E1H)
- 1757 FB34  3D          	DEC A
- 1758 FB35  20 24       	JR NZ,HCPX	;IO-Modul vorhanden
- 1759 FB37  2A B7B9     	LD HL,(0B7B9H)	;OUTAB
- 1760 FB3A  7E          	LD A,(HL)
- 1761 FB3B  B7          	OR A
- 1762 FB3C  28 08       	JR Z,SHX1
- 1763 FB3E  21 FB19     	LD HL,PRINT
- 1764 FB41  01 F008     	LD BC,ZEI0
- 1765 FB44  18 06       	JR SHX2
- 1766 FB46  21 FAEF     SHX1:	LD HL,ECHO
- 1767 FB49  01 F00B     	LD BC,ZEI2
- 1768 FB4C  22 B7BE     SHX2:	LD (0B7BEH),HL	;UOUT1+1
- 1769 FB4F  ED 43 B7B9  	LD (0B7B9H),BC	;OUTAB
- 1770 FB53  C9          	RET
- 1771                    
- 1772 FB54  3A B7E1     ESC6:	LD A,(0B7E1H)	;HCOPY
- 1773 FB57  B7          	OR A
- 1774 FB58  C8          	RET Z		;kein IO-Modul
- 1775 FB59  18 03       	JR HCPX0
- 1776 FB5B  FE 02       HCPX:	CP 2
- 1777 FB5D  D0          	RET NC
+ 1742                   ;	OUT (4),A	; M001 PIO Port A (Daten)
+ 1743 FB1C  CD F274     WT:	CALL BRKT
+ 1744 FB1F  38 0E       	JR C,PRT
+ 1745 FB21  DB 0A       	IN A,(SIO+2)
+ 1746                   ;	IN A,(5)	; M001 PIO Port B (Steuersignale)
+ 1747 FB23  CB 57       	BIT 2,A
+ 1748 FB25  28 F5       	JR Z,WT
+ 1749                   ;	JR NZ,WT	; Centr. BUSY?
+ 1750 FB27  F1          	POP AF
+ 1751 FB28  D3 08       	OUT (SIO),A
+ 1752 FB2A  C9          	RET
+ 1753 FB2B  ED 44       	NEG
+ 1754 FB2D  ED 44       	NEG
+ 1755 FB2F  F1          PRT:	POP AF
+ 1756 FB30  C9          	RET
+ 1757                    
+ 1758 FB31              SHCLX:	;Reaktion auf SH+CLR
+ 1759 FB31  3A B7E1     	LD A,(0B7E1H)
+ 1760 FB34  3D          	DEC A
+ 1761 FB35  20 24       	JR NZ,HCPX	;IO-Modul vorhanden
+ 1762 FB37  2A B7B9     	LD HL,(0B7B9H)	;OUTAB
+ 1763 FB3A  7E          	LD A,(HL)
+ 1764 FB3B  B7          	OR A
+ 1765 FB3C  28 08       	JR Z,SHX1
+ 1766 FB3E  21 FB19     	LD HL,PRINT
+ 1767 FB41  01 F008     	LD BC,ZEI0
+ 1768 FB44  18 06       	JR SHX2
+ 1769 FB46  21 FAEF     SHX1:	LD HL,ECHO
+ 1770 FB49  01 F00B     	LD BC,ZEI2
+ 1771 FB4C  22 B7BE     SHX2:	LD (0B7BEH),HL	;UOUT1+1
+ 1772 FB4F  ED 43 B7B9  	LD (0B7B9H),BC	;OUTAB
+ 1773 FB53  C9          	RET
+ 1774                    
+ 1775 FB54  3A B7E1     ESC6:	LD A,(0B7E1H)	;HCOPY
+ 1776 FB57  B7          	OR A
+ 1777 FB58  C8          	RET Z		;kein IO-Modul
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  71
 CAOSFV  ASM
 
- 1778 FB5E  D5          HCPX0:	PUSH DE
- 1779 FB5F  21 0000     	LD HL,0
- 1780 FB62  CD FAE3     HCPX1:	CALL PRZK
- 1781 FB65  09          	DEFB 9
- 1782 FB66  1B          	DEFB 1BH
- 1783 FB67  4A          	DEFB 'J'	;Vorschub 1/9"
- 1784 FB68  18          	DEFB 24
- 1785 FB69  0D          	DEFB 0DH
- 1786 FB6A  1B          	DEFB 1BH
- 1787 FB6B  2A          	DEFB '*'	;Plottergrafik
- 1788 FB6C  05          	DEFB 5
- 1789 FB6D  0140        	DEFW 140H
- 1790 FB6F  E5          HCPX2:	PUSH HL
- 1791 FB70  CD E048     	CALL PADR
- 1792 FB73  CD FBA7     	CALL RDX
- 1793 FB76  0E 08       	LD C,8
- 1794 FB78  21 B78E     HCPX3:	LD HL,0B78EH	;ARG7
- 1795 FB7B  06 08       	LD B,8
- 1796 FB7D  CB 16       HCPX4:	RL (HL)
- 1797 FB7F  2C          	INC L
- 1798 FB80  17          	RLA
- 1799 FB81  10 FA       	DJNZ HCPX4
- 1800 FB83  2E A2       	LD L,0A2H
- 1801 FB85  CB 56       	BIT 2,(HL)
- 1802 FB87  28 01       	JR Z,HCPX5
- 1803 FB89  2F          	CPL		;negiert
- 1804 FB8A  CD FB19     HCPX5:	CALL PRINT
- 1805 FB8D  0D          	DEC C
- 1806 FB8E  20 E8       	JR NZ,HCPX3
- 1807 FB90  E1          	POP HL
- 1808 FB91  2C          	INC L
- 1809 FB92  7D          	LD A,L
- 1810 FB93  FE 28       	CP 40
- 1811 FB95  20 D8       	JR NZ,HCPX2
- 1812 FB97  2E 00       	LD L,0
- 1813 FB99  7C          	LD A,H
- 1814 FB9A  C6 08       	ADD 8
- 1815 FB9C  67          	LD H,A
- 1816 FB9D  30 C3       	JR NC,HCPX1
- 1817 FB9F  CD FAE3     	CALL PRZK
- 1818 FBA2  02          	DEFB 2
- 1819 FBA3  0D0A        	DEFW 0D0AH
- 1820 FBA5  D1          	POP DE
- 1821 FBA6  C9          	RET
- 1822                    
- 1823 FBA7              RDX:	;liest Zeichen nach ARG7
- 1824 FBA7  11 B78E     	LD DE,0B78EH
- 1825 FBAA  01 0080     	LD BC,80H
- 1826 FBAD  E5          	PUSH HL
- 1827 FBAE  CD FBB4     	CALL RDX1
- 1828 FBB1  E1          	POP HL
- 1829 FBB2  CB ED       	SET 5,L
- 1830 FBB4  3E 04       RDX1:	LD A,4
- 1831 FBB6  ED A0       RDX2:	LDI
- 1832 FBB8  09          	ADD HL,BC
- 1833 FBB9  03          	INC BC
- 1834 FBBA  3D          	DEC A
- 1835 FBBB  20 F9       	JR NZ,RDX2
+ 1778 FB59  18 03       	JR HCPX0
+ 1779 FB5B  FE 02       HCPX:	CP 2
+ 1780 FB5D  D0          	RET NC
+ 1781 FB5E  D5          HCPX0:	PUSH DE
+ 1782 FB5F  21 0000     	LD HL,0
+ 1783 FB62  CD FAE3     HCPX1:	CALL PRZK
+ 1784 FB65  09          	DEFB 9
+ 1785 FB66  1B          	DEFB 1BH
+ 1786 FB67  4A          	DEFB 'J'	;Vorschub 1/9"
+ 1787 FB68  18          	DEFB 24
+ 1788 FB69  0D          	DEFB 0DH
+ 1789 FB6A  1B          	DEFB 1BH
+ 1790 FB6B  2A          	DEFB '*'	;Plottergrafik
+ 1791 FB6C  05          	DEFB 5
+ 1792 FB6D  0140        	DEFW 140H
+ 1793 FB6F  E5          HCPX2:	PUSH HL
+ 1794 FB70  CD E048     	CALL PADR
+ 1795 FB73  CD FBA7     	CALL RDX
+ 1796 FB76  0E 08       	LD C,8
+ 1797 FB78  21 B78E     HCPX3:	LD HL,0B78EH	;ARG7
+ 1798 FB7B  06 08       	LD B,8
+ 1799 FB7D  CB 16       HCPX4:	RL (HL)
+ 1800 FB7F  2C          	INC L
+ 1801 FB80  17          	RLA
+ 1802 FB81  10 FA       	DJNZ HCPX4
+ 1803 FB83  2E A2       	LD L,0A2H
+ 1804 FB85  CB 56       	BIT 2,(HL)
+ 1805 FB87  28 01       	JR Z,HCPX5
+ 1806 FB89  2F          	CPL		;negiert
+ 1807 FB8A  CD FB19     HCPX5:	CALL PRINT
+ 1808 FB8D  0D          	DEC C
+ 1809 FB8E  20 E8       	JR NZ,HCPX3
+ 1810 FB90  E1          	POP HL
+ 1811 FB91  2C          	INC L
+ 1812 FB92  7D          	LD A,L
+ 1813 FB93  FE 28       	CP 40
+ 1814 FB95  20 D8       	JR NZ,HCPX2
+ 1815 FB97  2E 00       	LD L,0
+ 1816 FB99  7C          	LD A,H
+ 1817 FB9A  C6 08       	ADD 8
+ 1818 FB9C  67          	LD H,A
+ 1819 FB9D  30 C3       	JR NC,HCPX1
+ 1820 FB9F  CD FAE3     	CALL PRZK
+ 1821 FBA2  02          	DEFB 2
+ 1822 FBA3  0D0A        	DEFW 0D0AH
+ 1823 FBA5  D1          	POP DE
+ 1824 FBA6  C9          	RET
+ 1825                    
+ 1826 FBA7              RDX:	;liest Zeichen nach ARG7
+ 1827 FBA7  11 B78E     	LD DE,0B78EH
+ 1828 FBAA  01 0080     	LD BC,80H
+ 1829 FBAD  E5          	PUSH HL
+ 1830 FBAE  CD FBB4     	CALL RDX1
+ 1831 FBB1  E1          	POP HL
+ 1832 FBB2  CB ED       	SET 5,L
+ 1833 FBB4  3E 04       RDX1:	LD A,4
+ 1834 FBB6  ED A0       RDX2:	LDI
+ 1835 FBB8  09          	ADD HL,BC
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  72
 CAOSFV  ASM
 
- 1836 FBBD  C9          	RET
- 1837                    
- 1838 FBBE  7F7F        	DEFW 7F7FH	;>V24><
- 1839 FBC0  56 32 34    	DEFM 'V24'
- 1840 FBC3  01          	DEFB 1		; als Parameter 0 oder 1 eingeben
- 1841                   	;		; (fuer V.24-Modul nutzen oder nicht)
- 1842 FBC4  7D          	LD A,L
- 1843 FBC5  32 B7E1     	LD (0B7E1H),A	;IO-Modul
- 1844 FBC8  C9          	RET
- 1845                    
- 1846 FBC9  7F7F        	DEFW 7F7FH	;>SEND<
- 1847 FBCB  53 45 4E 44 	DEFM 'SEND'
- 1848 FBCF  01          	DEFB 1
- 1849                   	;
- 1850 FBD0  C8          	RET Z		;kein Argument eingegeben
- 1851 FBD1  47          	LD B,A		;Anzahl Argumente
- 1852 FBD2  21 B782     	LD HL,0B782H	;ARG1
- 1853 FBD5  7E          SND1:	LD A,(HL)
- 1854 FBD6  23          	INC HL
- 1855 FBD7  23          	INC HL
- 1856 FBD8  CD FB19     	CALL PRINT
- 1857 FBDB  10 F8       	DJNZ SND1
- 1858 FBDD  C9          	RET
- 1859                    
- 1860 FBDE  7F7F        	DEFW 7F7FH	;>USER<
- 1861 FBE0  55 53 45 52 	DEFM 'USER'
- 1862 FBE4  01          	DEFB 1
- 1863                   	;
- 1864 FBE5  FE 03       	CP 3
- 1865 FBE7  CA F77A     	JP Z,JPLD
- 1866 FBEA  3D          	DEC A
- 1867 FBEB  C2 F31A     	JP NZ,ERRM
- 1868 FBEE  E9          	JP (HL)
- 1869                    
- 1870 FBEF  7F7F        	DEFW 7F7FH
- 1871 FBF1  53 45 45 4B 	DEFM 'SEEK'
- 1872 FBF5  01          	DEFB 1
- 1873                    
- 1874 FBF6  FE 03       	CP	3
- 1875 FBF8  D8          	RET	C
- 1876 FBF9  EB          	EX	DE,HL
- 1877 FBFA  ED 52       	SBC	HL,DE
- 1878 FBFC  44          	LD	B,H
- 1879 FBFD  4D          	LD	C,L
- 1880 FBFE  EB          	EX	DE,HL
- 1881 FBFF  11 B786     SCHL	LD	DE,0B786H	;ARG3
- 1882 FC02  1A          	LD	A,(DE)
- 1883 FC03  ED B1       	CPIR
- 1884 FC05  E2 F324     	JP	PO,CRLF
- 1885 FC08  C5          	PUSH	BC
- 1886 FC09  E5          	PUSH	HL
- 1887 FC0A  3A B781     	LD	A,(0B781H)
- 1888 FC0D  D6 03       	SUB	3
- 1889 FC0F  47          	LD	B,A
- 1890 FC10  28 09       	JR	Z,GEF
- 1891 FC12  13          NBYT	INC	DE
- 1892 FC13  13          	INC	DE
- 1893 FC14  1A          	LD	A,(DE)
+ 1836 FBB9  03          	INC BC
+ 1837 FBBA  3D          	DEC A
+ 1838 FBBB  20 F9       	JR NZ,RDX2
+ 1839 FBBD  C9          	RET
+ 1840                    
+ 1841 FBBE  7F7F        	DEFW 7F7FH	;>V24><
+ 1842 FBC0  56 32 34    	DEFM 'V24'
+ 1843 FBC3  01          	DEFB 1		; als Parameter 0 oder 1 eingeben
+ 1844                   	;		; (fuer V.24-Modul nutzen oder nicht)
+ 1845 FBC4  7D          	LD A,L
+ 1846 FBC5  32 B7E1     	LD (0B7E1H),A	;IO-Modul
+ 1847 FBC8  C9          	RET
+ 1848                    
+ 1849 FBC9  7F7F        	DEFW 7F7FH	;>SEND<
+ 1850 FBCB  53 45 4E 44 	DEFM 'SEND'
+ 1851 FBCF  01          	DEFB 1
+ 1852                   	;
+ 1853 FBD0  C8          	RET Z		;kein Argument eingegeben
+ 1854 FBD1  47          	LD B,A		;Anzahl Argumente
+ 1855 FBD2  21 B782     	LD HL,0B782H	;ARG1
+ 1856 FBD5  7E          SND1:	LD A,(HL)
+ 1857 FBD6  23          	INC HL
+ 1858 FBD7  23          	INC HL
+ 1859 FBD8  CD FB19     	CALL PRINT
+ 1860 FBDB  10 F8       	DJNZ SND1
+ 1861 FBDD  C9          	RET
+ 1862                    
+ 1863 FBDE  7F7F        	DEFW 7F7FH	;>USER<
+ 1864 FBE0  55 53 45 52 	DEFM 'USER'
+ 1865 FBE4  01          	DEFB 1
+ 1866                   	;
+ 1867 FBE5  FE 03       	CP 3
+ 1868 FBE7  CA F77A     	JP Z,JPLD
+ 1869 FBEA  3D          	DEC A
+ 1870 FBEB  C2 F31A     	JP NZ,ERRM
+ 1871 FBEE  E9          	JP (HL)
+ 1872                    
+ 1873 FBEF  7F7F        	DEFW 7F7FH
+ 1874 FBF1  53 45 45 4B 	DEFM 'SEEK'
+ 1875 FBF5  01          	DEFB 1
+ 1876                    
+ 1877 FBF6  FE 03       	CP	3
+ 1878 FBF8  D8          	RET	C
+ 1879 FBF9  EB          	EX	DE,HL
+ 1880 FBFA  ED 52       	SBC	HL,DE
+ 1881 FBFC  44          	LD	B,H
+ 1882 FBFD  4D          	LD	C,L
+ 1883 FBFE  EB          	EX	DE,HL
+ 1884 FBFF  11 B786     SCHL	LD	DE,0B786H	;ARG3
+ 1885 FC02  1A          	LD	A,(DE)
+ 1886 FC03  ED B1       	CPIR
+ 1887 FC05  E2 F324     	JP	PO,CRLF
+ 1888 FC08  C5          	PUSH	BC
+ 1889 FC09  E5          	PUSH	HL
+ 1890 FC0A  3A B781     	LD	A,(0B781H)
+ 1891 FC0D  D6 03       	SUB	3
+ 1892 FC0F  47          	LD	B,A
+ 1893 FC10  28 09       	JR	Z,GEF
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  73
 CAOSFV  ASM
 
- 1894 FC15  BE          	CP	(HL)
- 1895 FC16  23          	INC	HL
- 1896 FC17  20 10       	JR	NZ,NGEF
- 1897 FC19  10 F7       	DJNZ	NBYT
- 1898 FC1B  E1          GEF	POP	HL
- 1899 FC1C  C1          	POP	BC
- 1900 FC1D  2B          	DEC	HL
- 1901 FC1E  CD F30D     	CALL	HLHX
- 1902 FC21  23          	INC	HL
- 1903 FC22  CD F274     	CALL	BRKT
- 1904 FC25  DA F324     	JP	C,CRLF
- 1905 FC28  11          	DEFB	11H
- 1906 FC29  E1          NGEF	POP	HL
- 1907 FC2A  C1          	POP	BC
- 1908 FC2B  18 D2       	JR	SCHL
- 1909                    
- 1910                   ;*** Tabellen ***
- 1911                    
- 1912 FC2D  E1D4        ESCTAB:	DEFW ASC5	;ESC0	Tabulatorschritt
- 1913 FC2F  E410        	DEFW ESC1	;ESC1
- 1914 FC31  F61D        	DEFW ESC2	;ESC2
- 1915 FC33  E36B        	DEFW ESC3	;ESC3
- 1916 FC35  E368        	DEFW ESC4	;ESC4
- 1917 FC37  FAA1        	DEFW MODUL	;ESC5	Auflisten aller Module
- 1918 FC39  FB54        	DEFW ESC6	;ESC6
- 1919 FC3B  E369        	DEFW ESC7	;ESC7
- 1920 FC3D  E32E        	DEFW ASC6	;ESC8
- 1921 FC3F  E36A        	DEFW ESCF	;ESC9
- 1922 FC41  E560        	DEFW MOT	;ESCA
- 1923                    
- 1924                    
- 1925 FC43  E354        SUTAB:	DEFW CRT	;0
- 1926 FC45  E49B        	DEFW MBOT	;1
- 1927 FC47  B7BD        	DEFW 0B7BDH	;UOUT 1
- 1928 FC49  B7C3        	DEFW 0B7C3H	;UOUT 2
- 1929 FC4B  F288        	DEFW KBD	;4
- 1930 FC4D  E4FF        	DEFW MBI	;5
- 1931 FC4F  B7C0        	DEFW 0B7C0H	;USIN 1
- 1932 FC51  B7C6        	DEFW 0B7C6H	;USIN 2
- 1933 FC53  E48D        	DEFW ISRO	;8
- 1934 FC55  E461        	DEFW CSRO	;9
- 1935 FC57  E4FC        	DEFW ISRI	;0A
- 1936 FC59  F534        	DEFW CSRI	;0B
- 1937 FC5B  E3FC        	DEFW KBDS	;0C
- 1938 FC5D  F17E        	DEFW BYE	;0D
- 1939 FC5F  E407        	DEFW KBDZ	;0E
- 1940 FC61  F605        	DEFW COLOR	;0F
- 1941 FC63  F4A2        	DEFW LOAD	;10
- 1942 FC65  F495        	DEFW VERIFY	;11
- 1943 FC67  F1E8        	DEFW LOOP	;12
- 1944 FC69  F257        	DEFW NORM	;13
- 1945 FC6B  E313        	DEFW WAIT	;14
- 1946 FC6D  F473        	DEFW LARG	;15
- 1947 FC6F  F0A2        	DEFW INTB	;16
- 1948 FC71  F2E6        	DEFW INLIN	;17
- 1949 FC73  F34F        	DEFW RHEX	;18
- 1950 FC75  F31A        	DEFW ERRM	;19
- 1951 FC77  F30D        	DEFW HLHX	;1A
+ 1894 FC12  13          NBYT	INC	DE
+ 1895 FC13  13          	INC	DE
+ 1896 FC14  1A          	LD	A,(DE)
+ 1897 FC15  BE          	CP	(HL)
+ 1898 FC16  23          	INC	HL
+ 1899 FC17  20 10       	JR	NZ,NGEF
+ 1900 FC19  10 F7       	DJNZ	NBYT
+ 1901 FC1B  E1          GEF	POP	HL
+ 1902 FC1C  C1          	POP	BC
+ 1903 FC1D  2B          	DEC	HL
+ 1904 FC1E  CD F30D     	CALL	HLHX
+ 1905 FC21  23          	INC	HL
+ 1906 FC22  CD F274     	CALL	BRKT
+ 1907 FC25  DA F324     	JP	C,CRLF
+ 1908 FC28  11          	DEFB	11H
+ 1909 FC29  E1          NGEF	POP	HL
+ 1910 FC2A  C1          	POP	BC
+ 1911 FC2B  18 D2       	JR	SCHL
+ 1912                    
+ 1913                   ;*** Tabellen ***
+ 1914                    
+ 1915 FC2D  E1D4        ESCTAB:	DEFW ASC5	;ESC0	Tabulatorschritt
+ 1916 FC2F  E410        	DEFW ESC1	;ESC1
+ 1917 FC31  F61D        	DEFW ESC2	;ESC2
+ 1918 FC33  E36B        	DEFW ESC3	;ESC3
+ 1919 FC35  E368        	DEFW ESC4	;ESC4
+ 1920 FC37  FAA1        	DEFW MODUL	;ESC5	Auflisten aller Module
+ 1921 FC39  FB54        	DEFW ESC6	;ESC6
+ 1922 FC3B  E369        	DEFW ESC7	;ESC7
+ 1923 FC3D  E32E        	DEFW ASC6	;ESC8
+ 1924 FC3F  E36A        	DEFW ESCF	;ESC9
+ 1925 FC41  E560        	DEFW MOT	;ESCA
+ 1926                    
+ 1927                    
+ 1928 FC43  E354        SUTAB:	DEFW CRT	;0
+ 1929 FC45  E49B        	DEFW MBOT	;1
+ 1930 FC47  B7BD        	DEFW 0B7BDH	;UOUT 1
+ 1931 FC49  B7C3        	DEFW 0B7C3H	;UOUT 2
+ 1932 FC4B  F288        	DEFW KBD	;4
+ 1933 FC4D  E4FF        	DEFW MBI	;5
+ 1934 FC4F  B7C0        	DEFW 0B7C0H	;USIN 1
+ 1935 FC51  B7C6        	DEFW 0B7C6H	;USIN 2
+ 1936 FC53  E48D        	DEFW ISRO	;8
+ 1937 FC55  E461        	DEFW CSRO	;9
+ 1938 FC57  E4FC        	DEFW ISRI	;0A
+ 1939 FC59  F534        	DEFW CSRI	;0B
+ 1940 FC5B  E3FC        	DEFW KBDS	;0C
+ 1941 FC5D  F17E        	DEFW BYE	;0D
+ 1942 FC5F  E407        	DEFW KBDZ	;0E
+ 1943 FC61  F605        	DEFW COLOR	;0F
+ 1944 FC63  F4A2        	DEFW LOAD	;10
+ 1945 FC65  F495        	DEFW VERIFY	;11
+ 1946 FC67  F1E8        	DEFW LOOP	;12
+ 1947 FC69  F257        	DEFW NORM	;13
+ 1948 FC6B  E313        	DEFW WAIT	;14
+ 1949 FC6D  F473        	DEFW LARG	;15
+ 1950 FC6F  F0A2        	DEFW INTB	;16
+ 1951 FC71  F2E6        	DEFW INLIN	;17
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  74
 CAOSFV  ASM
 
- 1952 FC79  F346        	DEFW HLDE	;1B
- 1953 FC7B  F333        	DEFW AHEX	;1C
- 1954 FC7D  F219        	DEFW ZSUCH	;1D
- 1955 FC7F  F25D        	DEFW SOUT	;1E
- 1956 FC81  F26A        	DEFW SIN	;1F
- 1957 FC83  F25A        	DEFW NOUT	;20
- 1958 FC85  F267        	DEFW NIN	;21
- 1959 FC87  F384        	DEFW GARG	;22
- 1960 FC89  F251        	DEFW OSTR	;23
- 1961 FC8B  F0AB        	DEFW OCHR	;24
- 1962 FC8D  F807        	DEFW CUCP	;25
- 1963 FC8F  F0D7        	DEFW MODU	;26
- 1964 FC91  F120        	DEFW JUMP	;27
- 1965 FC93  E344        	DEFW LDMA	;28
- 1966 FC95  E346        	DEFW LDAM	;29
- 1967 FC97  F274        	DEFW BRKT	;2A
- 1968 FC99  F315        	DEFW SPAC	;2B
- 1969 FC9B  F324        	DEFW CRLF	;2C
- 1970 FC9D  F32B        	DEFW HOME	;2D
- 1971 FC9F  F68B        	DEFW MODI	;2E
- 1972 FCA1  F837        	DEFW PUDE	;2F
- 1973 FCA3  F838        	DEFW PUSE	;30
- 1974 FCA5  F3BA        	DEFW SIXD	;31
- 1975 FCA7  E0B6        	DEFW DABR	;32
- 1976 FCA9  E0AA        	DEFW TCIF	;33
- 1977 FCAB  E048        	DEFW PADR	;34
- 1978 FCAD  E5BE        	DEFW TON	;35
- 1979 FCAF  F43A        	DEFW SAVE	;36
- 1980 FCB1  FA03        	DEFW MBIN	;37
- 1981 FCB3  F996        	DEFW MBOUT	;38
- 1982 FCB5  F790        	DEFW KEY	;39
- 1983 FCB7  F7ED        	DEFW KEYLI	;3A
- 1984 FCB9  F656        	DEFW DISP	;3B
- 1985 FCBB  F721        	DEFW WININ	;3C
- 1986 FCBD  F73D        	DEFW WINAK	;3D
- 1987 FCBF  F862        	DEFW LINE	;3E
- 1988 FCC1  F8CD        	DEFW CIRCLE	;3F
- 1989 FCC3  FA7D        	DEFW SQR	;40
- 1990 FCC5  FA89        	DEFW MULT	;41
- 1991 FCC7  F63F        	DEFW CSTBT	;42
- 1992 FCC9  F40A        	DEFW INIEA	;43
- 1993 FCCB  F415        	DEFW INIME	;44
- 1994 FCCD  FA74        	DEFW ZKOUT	;45
- 1995 FCCF  F1A7        	DEFW MENU	;46
- 1996                    
- 1997                    
- 1998 FCD1  E353        CRTTAB:	DEFW DUMMY
- 1999 FCD3  E21C        	DEFW CLEAR
- 2000 FCD5  E2E6        	DEFW DELLN
- 2001 FCD7  E353        	DEFW DUMMY	;BRK
- 2002 FCD9  E353        	DEFW DUMMY
- 2003 FCDB  E1D4        	DEFW ASC5	;Tab
- 2004 FCDD  E32E        	DEFW ASC6	;Color
- 2005 FCDF  E309        	DEFW BEL
- 2006 FCE1  E1FB        	DEFW CUL
- 2007 FCE3  E1E4        	DEFW CUR
- 2008 FCE5  E1ED        	DEFW CUD
- 2009 FCE7  E20B        	DEFW CUU
+ 1952 FC73  F34F        	DEFW RHEX	;18
+ 1953 FC75  F31A        	DEFW ERRM	;19
+ 1954 FC77  F30D        	DEFW HLHX	;1A
+ 1955 FC79  F346        	DEFW HLDE	;1B
+ 1956 FC7B  F333        	DEFW AHEX	;1C
+ 1957 FC7D  F219        	DEFW ZSUCH	;1D
+ 1958 FC7F  F25D        	DEFW SOUT	;1E
+ 1959 FC81  F26A        	DEFW SIN	;1F
+ 1960 FC83  F25A        	DEFW NOUT	;20
+ 1961 FC85  F267        	DEFW NIN	;21
+ 1962 FC87  F384        	DEFW GARG	;22
+ 1963 FC89  F251        	DEFW OSTR	;23
+ 1964 FC8B  F0AB        	DEFW OCHR	;24
+ 1965 FC8D  F807        	DEFW CUCP	;25
+ 1966 FC8F  F0D7        	DEFW MODU	;26
+ 1967 FC91  F120        	DEFW JUMP	;27
+ 1968 FC93  E344        	DEFW LDMA	;28
+ 1969 FC95  E346        	DEFW LDAM	;29
+ 1970 FC97  F274        	DEFW BRKT	;2A
+ 1971 FC99  F315        	DEFW SPAC	;2B
+ 1972 FC9B  F324        	DEFW CRLF	;2C
+ 1973 FC9D  F32B        	DEFW HOME	;2D
+ 1974 FC9F  F68B        	DEFW MODI	;2E
+ 1975 FCA1  F837        	DEFW PUDE	;2F
+ 1976 FCA3  F838        	DEFW PUSE	;30
+ 1977 FCA5  F3BA        	DEFW SIXD	;31
+ 1978 FCA7  E0B6        	DEFW DABR	;32
+ 1979 FCA9  E0AA        	DEFW TCIF	;33
+ 1980 FCAB  E048        	DEFW PADR	;34
+ 1981 FCAD  E5BE        	DEFW TON	;35
+ 1982 FCAF  F43A        	DEFW SAVE	;36
+ 1983 FCB1  FA03        	DEFW MBIN	;37
+ 1984 FCB3  F996        	DEFW MBOUT	;38
+ 1985 FCB5  F790        	DEFW KEY	;39
+ 1986 FCB7  F7ED        	DEFW KEYLI	;3A
+ 1987 FCB9  F656        	DEFW DISP	;3B
+ 1988 FCBB  F721        	DEFW WININ	;3C
+ 1989 FCBD  F73D        	DEFW WINAK	;3D
+ 1990 FCBF  F862        	DEFW LINE	;3E
+ 1991 FCC1  F8CD        	DEFW CIRCLE	;3F
+ 1992 FCC3  FA7D        	DEFW SQR	;40
+ 1993 FCC5  FA89        	DEFW MULT	;41
+ 1994 FCC7  F63F        	DEFW CSTBT	;42
+ 1995 FCC9  F40A        	DEFW INIEA	;43
+ 1996 FCCB  F415        	DEFW INIME	;44
+ 1997 FCCD  FA74        	DEFW ZKOUT	;45
+ 1998 FCCF  F1A7        	DEFW MENU	;46
+ 1999                    
+ 2000                    
+ 2001 FCD1  E353        CRTTAB:	DEFW DUMMY
+ 2002 FCD3  E21C        	DEFW CLEAR
+ 2003 FCD5  E2E6        	DEFW DELLN
+ 2004 FCD7  E353        	DEFW DUMMY	;BRK
+ 2005 FCD9  E353        	DEFW DUMMY
+ 2006 FCDB  E1D4        	DEFW ASC5	;Tab
+ 2007 FCDD  E32E        	DEFW ASC6	;Color
+ 2008 FCDF  E309        	DEFW BEL
+ 2009 FCE1  E1FB        	DEFW CUL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  75
 CAOSFV  ASM
 
- 2010 FCE9  E292        	DEFW CLS
- 2011 FCEB  E2A2        	DEFW CRN
- 2012 FCED  E353        	DEFW DUMMY
- 2013 FCEF  E1F7        	DEFW HCOPY
- 2014 FCF1  E2A0        	DEFW HOMEPG
- 2015 FCF3  E210        	DEFW PAGE
- 2016 FCF5  E217        	DEFW SCROL
- 2017 FCF7  E353        	DEFW DUMMY	;STOP
- 2018 FCF9  E34B        	DEFW CLICK
- 2019 FCFB  E353        	DEFW DUMMY
- 2020 FCFD  E348        	DEFW SHLOCK
- 2021 FCFF  E353        	DEFW DUMMY
- 2022 FD01  E205        	DEFW CEL
- 2023 FD03  E2A2        	DEFW CRN	;CCR
- 2024 FD05  E242        	DEFW INS
- 2025 FD07  E367        	DEFW ESC
- 2026 FD09  E353        	DEFW DUMMY	;LIST
- 2027 FD0B  E353        	DEFW DUMMY	;RUN
- 2028 FD0D  E1EB        	DEFW CRNL	;CONT
- 2029 FD0F  E21F        	DEFW DEL
- 2030                    
- 2031                    
- 2032 FD11  57 77       KTAB:	DEFM 'Ww'
- 2033 FD13  41 61       	DEFM 'Aa'
- 2034 FD15  32 22       	DEFM '2"'
- 2035 FD17  1908        	DEFW 1908H
- 2036 FD19  0C10        	DEFW 0C10H
- 2037 FD1B  2D 3D       	DEFM '-='
- 2038 FD1D  F8F2        	DEFW 0F8F2H
- 2039 FD1F  59 79       	DEFM 'Yy'
- 2040 FD21  45 65       	DEFM 'Ee'
- 2041 FD23  53 73       	DEFM 'Ss'
- 2042 FD25  33 23       	DEFM '3#'
- 2043 FD27  5E 5D       	DEFM '^]'
- 2044 FD29  0F01        	DEFW 0F01H
- 2045 FD2B  3A 2A       	DEFM ':*'
- 2046 FD2D  F9F3        	DEFW 0F9F3H
- 2047 FD2F  58 78       	DEFM 'Xx'
- 2048 FD31  54 74       	DEFM 'Tt'
- 2049 FD33  46 66       	DEFM 'Ff'
- 2050 FD35  35 25       	DEFM '5%'
- 2051 FD37  50 70       	DEFM 'Pp'
- 2052 FD39  021F        	DEFW 21FH
- 2053 FD3B  4030        	DEFW 4030H
- 2054 FD3D  FBF5        	DEFW 0FBF5H
- 2055 FD3F  56 76       	DEFM 'Vv'
- 2056 FD41  55 75       	DEFM 'Uu'
- 2057 FD43  48 68       	DEFM 'Hh'
- 2058 FD45  2737        	DEFW 2737H
- 2059 FD47  4F 6F       	DEFM 'Oo'
- 2060 FD49  141A        	DEFW 141AH
- 2061 FD4B  39 29       	DEFM '9)'
- 2062 FD4D  0303        	DEFW 303H
- 2063 FD4F  4E 6E       	DEFM 'Nn'
- 2064 FD51  49 69       	DEFM 'Ii'
- 2065 FD53  4A 6A       	DEFM 'Jj'
- 2066 FD55  38 28       	DEFM '8('
- 2067 FD57  20 5B       	DEFM ' ['
+ 2010 FCE3  E1E4        	DEFW CUR
+ 2011 FCE5  E1ED        	DEFW CUD
+ 2012 FCE7  E20B        	DEFW CUU
+ 2013 FCE9  E292        	DEFW CLS
+ 2014 FCEB  E2A2        	DEFW CRN
+ 2015 FCED  E353        	DEFW DUMMY
+ 2016 FCEF  E1F7        	DEFW HCOPY
+ 2017 FCF1  E2A0        	DEFW HOMEPG
+ 2018 FCF3  E210        	DEFW PAGE
+ 2019 FCF5  E217        	DEFW SCROL
+ 2020 FCF7  E353        	DEFW DUMMY	;STOP
+ 2021 FCF9  E34B        	DEFW CLICK
+ 2022 FCFB  E353        	DEFW DUMMY
+ 2023 FCFD  E348        	DEFW SHLOCK
+ 2024 FCFF  E353        	DEFW DUMMY
+ 2025 FD01  E205        	DEFW CEL
+ 2026 FD03  E2A2        	DEFW CRN	;CCR
+ 2027 FD05  E242        	DEFW INS
+ 2028 FD07  E367        	DEFW ESC
+ 2029 FD09  E353        	DEFW DUMMY	;LIST
+ 2030 FD0B  E353        	DEFW DUMMY	;RUN
+ 2031 FD0D  E1EB        	DEFW CRNL	;CONT
+ 2032 FD0F  E21F        	DEFW DEL
+ 2033                    
+ 2034                    
+ 2035 FD11  57 77       KTAB:	DEFM 'Ww'
+ 2036 FD13  41 61       	DEFM 'Aa'
+ 2037 FD15  32 22       	DEFM '2"'
+ 2038 FD17  1908        	DEFW 1908H
+ 2039 FD19  0C10        	DEFW 0C10H
+ 2040 FD1B  2D 3D       	DEFM '-='
+ 2041 FD1D  F8F2        	DEFW 0F8F2H
+ 2042 FD1F  59 79       	DEFM 'Yy'
+ 2043 FD21  45 65       	DEFM 'Ee'
+ 2044 FD23  53 73       	DEFM 'Ss'
+ 2045 FD25  33 23       	DEFM '3#'
+ 2046 FD27  5E 5D       	DEFM '^]'
+ 2047 FD29  0F01        	DEFW 0F01H
+ 2048 FD2B  3A 2A       	DEFM ':*'
+ 2049 FD2D  F9F3        	DEFW 0F9F3H
+ 2050 FD2F  58 78       	DEFM 'Xx'
+ 2051 FD31  54 74       	DEFM 'Tt'
+ 2052 FD33  46 66       	DEFM 'Ff'
+ 2053 FD35  35 25       	DEFM '5%'
+ 2054 FD37  50 70       	DEFM 'Pp'
+ 2055 FD39  021F        	DEFW 21FH
+ 2056 FD3B  4030        	DEFW 4030H
+ 2057 FD3D  FBF5        	DEFW 0FBF5H
+ 2058 FD3F  56 76       	DEFM 'Vv'
+ 2059 FD41  55 75       	DEFM 'Uu'
+ 2060 FD43  48 68       	DEFM 'Hh'
+ 2061 FD45  2737        	DEFW 2737H
+ 2062 FD47  4F 6F       	DEFM 'Oo'
+ 2063 FD49  141A        	DEFW 141AH
+ 2064 FD4B  39 29       	DEFM '9)'
+ 2065 FD4D  0303        	DEFW 303H
+ 2066 FD4F  4E 6E       	DEFM 'Nn'
+ 2067 FD51  49 69       	DEFM 'Ii'
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  76
 CAOSFV  ASM
 
- 2068 FD59  4B 6B       	DEFM 'Kk'
- 2069 FD5B  2C 3C       	DEFM ',<'
- 2070 FD5D  1B13        	DEFW 1B13H	;STOP/ESC
- 2071 FD5F  4D 6D       	DEFM 'Mm'
- 2072 FD61  5A 7A       	DEFM 'Zz'
- 2073 FD63  47 67       	DEFM 'Gg'
- 2074 FD65  36 26       	DEFM '6&'
- 2075 FD67  051B        	DEFW 51BH	;Taste nicht vorhanden
- 2076 FD69  4C 6C       	DEFM 'Ll'
- 2077 FD6B  2E 3E       	DEFM '.>'
- 2078 FD6D  FCF6        	DEFW 0FCF6H
- 2079 FD6F  42 62       	DEFM 'Bb'
- 2080 FD71  52 72       	DEFM 'Rr'
- 2081 FD73  44 64       	DEFM 'Dd'
- 2082 FD75  34 24       	DEFM '4$'
- 2083 FD77  5F 5C       	DEFM '_\'
- 2084 FD79  2B 3B       	DEFM '+;'
- 2085 FD7B  2F 3F       	DEFM '/?'
- 2086 FD7D  FAF4        	DEFW 0FAF4H
- 2087 FD7F  43 63       	DEFM 'Cc'
- 2088 FD81  51 71       	DEFM 'Qq'
- 2089 FD83  1616        	DEFW 1616H
- 2090 FD85  31 21       	DEFM '1!'
- 2091 FD87  120A        	DEFW 120AH
- 2092 FD89  110B        	DEFW 110BH
- 2093 FD8B  1809        	DEFW 1809H
- 2094 FD8D  F7F1        	DEFW 0F7F1H
- 2095 FD8F  0D0D        	DEFW 0D0DH
- 2096                    
- 2097                    
- 2098 FD91  E576        ISRTAB:	DEFW ISRPA
- 2099 FD93  E37D        	DEFW ISRPB
- 2100 FD95  E585        	DEFW INTEND
- 2101 FD97  E566        	DEFW ISRC1
- 2102 FD99  E5B5        	DEFW ISRC2
- 2103 FD9B  E371        	DEFW ISRC3
- 2104                    
- 2105                    
- 2106 FD9D              KCTAB0:
- 2107 FD9D  88          	DEFB 88H	;PIO A D
- 2108 FD9E  01          	DEFB 1		;Anz.
- 2109 FD9F  1E          	DEFB 1EH	;/NMI=H! (CAOS-E aus)
- 2110                   	;
- 2111 FDA0  0C          	DEFB CTC	;SIO-CTC
- 2112 FDA1  02          	DEFB 2
- 2113 FDA2  47          	DEFB 47H	;9600 Bd
- 2114 FDA3  5B          	DEFB 5BH
- 2115                   	;
- 2116 FDA4  0A          	DEFB SIO+2	;Drucker SIO
- 2117 FDA5  06          	DEFB 6		;Takt *1
- 2118 FDA6  04          	DEFB 4		;8 Datenbits
- 2119 FDA7  04          	DEFB 4		;1 Stopbit
- 2120 FDA8  03          	DEFB 3		;keine Parit{t
- 2121 FDA9  20          	DEFB 20H
- 2122 FDAA  05          	DEFB 5
- 2123 FDAB  6A          	DEFB 6AH
- 2124 FDAC              KCTAB1:
- 2125 FDAC  8A          	DEFB 8AH	;PIO A C
+ 2068 FD53  4A 6A       	DEFM 'Jj'
+ 2069 FD55  38 28       	DEFM '8('
+ 2070 FD57  20 5B       	DEFM ' ['
+ 2071 FD59  4B 6B       	DEFM 'Kk'
+ 2072 FD5B  2C 3C       	DEFM ',<'
+ 2073 FD5D  1B13        	DEFW 1B13H	;STOP/ESC
+ 2074 FD5F  4D 6D       	DEFM 'Mm'
+ 2075 FD61  5A 7A       	DEFM 'Zz'
+ 2076 FD63  47 67       	DEFM 'Gg'
+ 2077 FD65  36 26       	DEFM '6&'
+ 2078 FD67  051B        	DEFW 51BH	;Taste nicht vorhanden
+ 2079 FD69  4C 6C       	DEFM 'Ll'
+ 2080 FD6B  2E 3E       	DEFM '.>'
+ 2081 FD6D  FCF6        	DEFW 0FCF6H
+ 2082 FD6F  42 62       	DEFM 'Bb'
+ 2083 FD71  52 72       	DEFM 'Rr'
+ 2084 FD73  44 64       	DEFM 'Dd'
+ 2085 FD75  34 24       	DEFM '4$'
+ 2086 FD77  5F 5C       	DEFM '_\'
+ 2087 FD79  2B 3B       	DEFM '+;'
+ 2088 FD7B  2F 3F       	DEFM '/?'
+ 2089 FD7D  FAF4        	DEFW 0FAF4H
+ 2090 FD7F  43 63       	DEFM 'Cc'
+ 2091 FD81  51 71       	DEFM 'Qq'
+ 2092 FD83  1616        	DEFW 1616H
+ 2093 FD85  31 21       	DEFM '1!'
+ 2094 FD87  120A        	DEFW 120AH
+ 2095 FD89  110B        	DEFW 110BH
+ 2096 FD8B  1809        	DEFW 1809H
+ 2097 FD8D  F7F1        	DEFW 0F7F1H
+ 2098 FD8F  0D0D        	DEFW 0D0DH
+ 2099                    
+ 2100                    
+ 2101 FD91  E576        ISRTAB:	DEFW ISRPA
+ 2102 FD93  E37D        	DEFW ISRPB
+ 2103 FD95  E585        	DEFW INTEND
+ 2104 FD97  E566        	DEFW ISRC1
+ 2105 FD99  E5B5        	DEFW ISRC2
+ 2106 FD9B  E371        	DEFW ISRC3
+ 2107                    
+ 2108                    
+ 2109 FD9D              KCTAB0:
+ 2110 FD9D  88          	DEFB 88H	;PIO A D
+ 2111 FD9E  01          	DEFB 1		;Anz.
+ 2112 FD9F  1E          	DEFB 1EH	;/NMI=H! (CAOS-E aus)
+ 2113                   	;
+ 2114 FDA0  0C          	DEFB CTC	;SIO-CTC
+ 2115 FDA1  02          	DEFB 2
+ 2116 FDA2  47          	DEFB 47H	;9600 Bd
+ 2117 FDA3  5B          	DEFB 5BH
+ 2118                   	;
+ 2119 FDA4  0A          	DEFB SIO+2	;Drucker SIO
+ 2120 FDA5  06          	DEFB 6		;Takt *1
+ 2121 FDA6  04          	DEFB 4		;8 Datenbits
+ 2122 FDA7  04          	DEFB 4		;1 Stopbit
+ 2123 FDA8  03          	DEFB 3		;keine Parit{t
+ 2124 FDA9  20          	DEFB 20H
+ 2125 FDAA  05          	DEFB 5
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  77
 CAOSFV  ASM
 
- 2126 FDAD  03          	DEFB 3		;Anz.
- 2127 FDAE  E4          	DEFB 0E4H	;I-Vektor
- 2128 FDAF  0F          	DEFB 0FH	;Byteout
- 2129 FDB0  03          	DEFB 3		;DI
- 2130                   	;
- 2131 FDB1  8B          	DEFB 8BH	;PIO B C
- 2132 FDB2  03          	DEFB 3		;Anz.
- 2133 FDB3  E6          	DEFB 0E6H	;I-Vektor
- 2134 FDB4  0F          	DEFB 0FH	;Byteout
- 2135 FDB5  83          	DEFB 83H	;EI
- 2136                   	;
- 2137 FDB6  8C          	DEFB 8CH	;CTC 0
- 2138 FDB7  01          	DEFB 1		;Anz.
- 2139 FDB8  E8          	DEFB 0E8H	;I-Vektor
- 2140                   	;
- 2141 FDB9  8E          	DEFB 8EH	;CTC 2
- 2142 FDBA  02          	DEFB 2		;Anz.
- 2143 FDBB  47          	DEFB 47H	;Zaehler,DI
- 2144 FDBC  0C          	DEFB 0CH	;Blink-ZK
- 2145                    
- 2146                    
- 2147 FDBD  FB31        SYSTAB:	DEFW SHCLX	;HCADR
- 2148 FDBF  00          	DEFB 0		;WINNR
- 2149 FDC0  0000        	DEFW 0		;WINON
- 2150 FDC2  2028        	DEFW 2028H	;WINLG
- 2151 FDC4  0000        	DEFW 0		;CURSO
- 2152 FDC6  00          	DEFB 0		;STBT
- 2153 FDC7  39          	DEFB 39H	;COLOR
- 2154 FDC8  E2A5        	DEFW SCRLPG	;WEND
- 2155 FDCA  EE00        	DEFW 0EE00H	;CCTL 0
- 2156 FDCC  FE00        	DEFW 0FE00H	;CCTL 1
- 2157 FDCE  EE00        	DEFW 0EE00H	;CCTL 2
- 2158 FDD0  FE00        	DEFW 0FE00H	;CCLT 3
- 2159 FDD2  01C4        	DEFW 01C4H	;SYSP
- 2160 FDD4  FC43        	DEFW SUTAB	;SUTAB
- 2161 FDD6  FCD1        	DEFW CRTTAB	;CTAB
- 2162 FDD8  ED 79       	OUT (C),A	;JUMP IN NEUES
- 2163 FDDA  C3 F012     	JP 0F012H	; CAOS
- 2164 FDDD  F008        	DEFW ZEI0	;OUTAB
- 2165 FDDF  F00E        	DEFW ZEI4	;INTAB
- 2166 FDE1  C3 FB19     	JP PRINT	;USER OUT 2
- 2167 FDE4  C3 E353     	JP DUMMY	;USER  IN 2
- 2168 FDE7  C3 E353     	JP DUMMY	;USER OUT 3
- 2169 FDEA  C3 E353     	JP DUMMY	;USER  IN 3
- 2170 FDED  DC82        	DEFW 0DC82H	;ZEIG. IO ERROR
- 2171 FDEF              STBE1:	;
- 2172 FDEF  FD          	DEFB 0FDH	;H-Teil Bittab
- 2173 FDF0  25          	DEFM '%'	;Prompter
- 2174 FDF1  00A0        	DEFW 0A0H	;Vortonl{nge
- 2175 FDF3  00          	DEFB 0		;Byte-Z{hler
- 2176 FDF4  FC2D        	DEFW ESCTAB
- 2177 FDF6  0B          	DEFB 11		;L{nge ESC-TAB.
- 2178 FDF7  05          	DEFB 5		;COUNT
- 2179 FDF8              STBE2:	;
- 2180                   	;
- 2181         0032      STBL1	EQU STBE1-SYSTAB
- 2182         0009      STBL2	EQU STBE2-STBE1
- 2183                    
+ 2126 FDAB  6A          	DEFB 6AH
+ 2127 FDAC              KCTAB1:
+ 2128 FDAC  8A          	DEFB 8AH	;PIO A C
+ 2129 FDAD  03          	DEFB 3		;Anz.
+ 2130 FDAE  E4          	DEFB 0E4H	;I-Vektor
+ 2131 FDAF  0F          	DEFB 0FH	;Byteout
+ 2132 FDB0  03          	DEFB 3		;DI
+ 2133                   	;
+ 2134 FDB1  8B          	DEFB 8BH	;PIO B C
+ 2135 FDB2  03          	DEFB 3		;Anz.
+ 2136 FDB3  E6          	DEFB 0E6H	;I-Vektor
+ 2137 FDB4  0F          	DEFB 0FH	;Byteout
+ 2138 FDB5  83          	DEFB 83H	;EI
+ 2139                   	;
+ 2140 FDB6  8C          	DEFB 8CH	;CTC 0
+ 2141 FDB7  01          	DEFB 1		;Anz.
+ 2142 FDB8  E8          	DEFB 0E8H	;I-Vektor
+ 2143                   	;
+ 2144 FDB9  8E          	DEFB 8EH	;CTC 2
+ 2145 FDBA  02          	DEFB 2		;Anz.
+ 2146 FDBB  47          	DEFB 47H	;Zaehler,DI
+ 2147 FDBC  0C          	DEFB 0CH	;Blink-ZK
+ 2148                    
+ 2149                    
+ 2150 FDBD  FB31        SYSTAB:	DEFW SHCLX	;HCADR
+ 2151 FDBF  00          	DEFB 0		;WINNR
+ 2152 FDC0  0000        	DEFW 0		;WINON
+ 2153 FDC2  2028        	DEFW 2028H	;WINLG
+ 2154 FDC4  0000        	DEFW 0		;CURSO
+ 2155 FDC6  00          	DEFB 0		;STBT
+ 2156 FDC7  39          	DEFB 39H	;COLOR
+ 2157 FDC8  E2A5        	DEFW SCRLPG	;WEND
+ 2158 FDCA  EE00        	DEFW 0EE00H	;CCTL 0
+ 2159 FDCC  FE00        	DEFW 0FE00H	;CCTL 1
+ 2160 FDCE  EE00        	DEFW 0EE00H	;CCTL 2
+ 2161 FDD0  FE00        	DEFW 0FE00H	;CCLT 3
+ 2162 FDD2  01C4        	DEFW 01C4H	;SYSP
+ 2163 FDD4  FC43        	DEFW SUTAB	;SUTAB
+ 2164 FDD6  FCD1        	DEFW CRTTAB	;CTAB
+ 2165 FDD8  ED 79       	OUT (C),A	;JUMP IN NEUES
+ 2166 FDDA  C3 F012     	JP 0F012H	; CAOS
+ 2167 FDDD  F008        	DEFW ZEI0	;OUTAB
+ 2168 FDDF  F00E        	DEFW ZEI4	;INTAB
+ 2169 FDE1  C3 FB19     	JP PRINT	;USER OUT 2
+ 2170 FDE4  C3 E353     	JP DUMMY	;USER  IN 2
+ 2171 FDE7  C3 E353     	JP DUMMY	;USER OUT 3
+ 2172 FDEA  C3 E353     	JP DUMMY	;USER  IN 3
+ 2173 FDED  DC82        	DEFW 0DC82H	;ZEIG. IO ERROR
+ 2174 FDEF              STBE1:	;
+ 2175 FDEF  FD          	DEFB 0FDH	;H-Teil Bittab
+ 2176 FDF0  25          	DEFM '%'	;Prompter
+ 2177 FDF1  00A0        	DEFW 0A0H	;Vortonl{nge
+ 2178 FDF3  00          	DEFB 0		;Byte-Z{hler
+ 2179 FDF4  FC2D        	DEFW ESCTAB
+ 2180 FDF6  0B          	DEFB 11		;L{nge ESC-TAB.
+ 2181 FDF7  05          	DEFB 5		;COUNT
+ 2182 FDF8              STBE2:	;
+ 2183                   	;
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  78
 CAOSFV  ASM
 
- 2184                    
- 2185 FDF8    0000      	DS 0FDF8h-$,0FFH
- 2186 FDF8  80          BITTAB:	DEFB 80H
- 2187 FDF9  40          	DEFB 40H
- 2188 FDFA  20          	DEFB 20H
- 2189 FDFB  10          	DEFB 10H
- 2190 FDFC  08          	DEFB 08H
- 2191 FDFD  04          	DEFB 04H
- 2192 FDFE  02          	DEFB 02H
- 2193 FDFF  01          	DEFB 01H
- 2194                   ;
- 2195                   ;
- 2196                   ;	END
+ 2184         0032      STBL1	EQU STBE1-SYSTAB
+ 2185         0009      STBL2	EQU STBE2-STBE1
+ 2186                    
+ 2187                    
+ 2188 FDF8    0000      	DS 0FDF8h-$,0FFH
+ 2189 FDF8  80          BITTAB:	DEFB 80H
+ 2190 FDF9  40          	DEFB 40H
+ 2191 FDFA  20          	DEFB 20H
+ 2192 FDFB  10          	DEFB 10H
+ 2193 FDFC  08          	DEFB 08H
+ 2194 FDFD  04          	DEFB 04H
+ 2195 FDFE  02          	DEFB 02H
+ 2196 FDFF  01          	DEFB 01H
+ 2197                   ;
+ 2198                   ;
+ 2199                   ;	END
    16                   include zsklein.inc
     1                   ;*****************************************
     2                   ;**	CAOS 4.5 Zeichensatz Klein	**
@@ -4753,12 +4756,12 @@ CAOSFV  ASM
    39 FEE8  7E 81 B9 A5 	DB	07EH, 081H, 0B9H, 0A5H, 0B9H, 0A5H, 0A5H, 081H	; 1DH Run
    40 FEF0  7E 81 99 A1 	DB	07EH, 081H, 099H, 0A1H, 0A1H, 0A1H, 099H, 081H	; 1EH Cont
    41 FEF8  00 10 3E 60 	DB	000H, 010H, 03EH, 060H, 03EH, 010H, 000H, 000H	; 1FH DEL
-   42                   
-   43 FF00  3C 42 99 A1 	DB	03CH, 042H, 099H, 0A1H, 0A1H, 099H, 042H, 03CH	; 60H (c)
-   44 FF08  00 00 78 0C 	DB	000H, 000H, 078H, 00CH, 07CH, 0CCH, 076H, 000H	; 61H a
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  79
 ZSKLEIN INC
 
+   42                   
+   43 FF00  3C 42 99 A1 	DB	03CH, 042H, 099H, 0A1H, 0A1H, 099H, 042H, 03CH	; 60H (c)
+   44 FF08  00 00 78 0C 	DB	000H, 000H, 078H, 00CH, 07CH, 0CCH, 076H, 000H	; 61H a
    45 FF10  E0 60 7C 66 	DB	0E0H, 060H, 07CH, 066H, 066H, 066H, 0DCH, 000H	; 62H b
    46 FF18  00 00 78 CC 	DB	000H, 000H, 078H, 0CCH, 0C0H, 0CCH, 078H, 000H	; 63H c
    47 FF20  1C 0C 7C CC 	DB	01CH, 00CH, 07CH, 0CCH, 0CCH, 0CCH, 076H, 000H	; 64H d
@@ -4793,4 +4796,4 @@ ZSKLEIN INC
  0 Error(s) Detected.
  4224 Absolute Bytes. 587 Symbols Detected.
  034H, 018H, 000H	; 74H t
-   65 FFA8  0
+   65 FFA8  00 00 CC CC 	DB	000H, 000H, 0CCH, 0CCH, 0CCH, 0CCH, 076H, 000H	; 75H 

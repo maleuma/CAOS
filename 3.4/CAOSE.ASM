@@ -2,26 +2,27 @@
 ;	Version CENTRONICS & V.24
 ;
 ;	Date: 11.06.1991  (c) by '#+$'
-;	Intern-ROM-Version!
-;BUGFIX: CSRLIN eingebaut!
- 
+;	Externe (Modul)-Version!
+
 	ORG 0E000H
  
-RESET:
-	JP BYE
+RESET:	DI
+	JR OSTEST
 	JP BEXP1
 	JP BEXP2
 	JP BEXP3
 	DEFW TOKTAB
 	JP BASPV
  
-BEL:	LD BC,0A1FH
-	LD L,70H
-	CALL RTON
-	LD A,2EH	;Ton+Pause
-	JP	WAIT
-
 ;*** Steuerung ***
+ 
+OSTEST:	;CAOS-on-Test (Modul)-Version
+	IN A,(88H)
+	RRA		;Bit 0 = CAOS-ROM?
+	JP NC,BYE	;CAOS-ROM ist ein
+	LD A,8		;Steckplatz 8
+	CALL 0F003H
+	DEFB 27H	;JUMP
  
 	DEFW 7F7FH	;>BASIC<
 	DEFM 'BASIC'
@@ -38,9 +39,6 @@ BEL:	LD BC,0A1FH
 BASON:	IN A,(88H)
 	SET 7,A
 	OUT (88H),A
-	in	a,(89h)
-	or	60h
-	OUT	(89H),A		;Segment 3!
 	JP (HL)
  
 ;*** CRT-Unit ***
@@ -531,6 +529,17 @@ DL1:	LD (HL),A
 	POP DE
 	RET
  
+BEL:	LD BC,0A1FH
+	LD L,70H
+	CALL RTON
+	LD A,2EH	;Ton+Pause
+	;
+WAIT:	LD B,A		;UP 14 WAIT
+	XOR A
+WAIT0:	CALL WAIT1
+	DJNZ WAIT0
+	RET
+ 
 RCLICK:	LD BC,20FH
 	LD L,50H
 RTON:	PUSH DE		;Ton nur rechts
@@ -692,7 +701,7 @@ IMBII:	;intern mit Standardpuffer,
 	;
 IMBI:	;Init.MB-Eingabe ohne Lesen
 	;und ohne Init.(IX+5/6)
-	IN A,(89H)
+	IN A,(89H)			; hier IN A,(00H) in CAOS34.ROM ???
 	RES 7,A
 	OUT (89H),A	;Blink off
 	IN A,(88H)
@@ -729,8 +738,7 @@ BLION:	;Blinken on
 CSRO:	;Abschluss MB-Ausgabe mit
 	;Schreiben letzter Block
 	LD (IX+2),0FEH;UP 09 CSRO
-	CALL PV1
-	DEFB 1		;MBOT
+	CALL MBOT
 CRO0:	PUSH HL
 	LD HL,(0B7CDH)
 	LD (0B7B9H),HL
@@ -753,10 +761,7 @@ ISRO:	IN A,(88H)	;UP 08 ISRO
 	OR 60H
 	CALL IMBI1
 	LD (IX+2),0
-	LD BC,1000H
-	CALL	PV1
-	DEFB	1	;MBOT Shell!!
-	RET
+	LD BC,0A00H	;Vortonlaenge		hier 1000H in CAOS34.ROM ???
 	;
 MBOT:	INC (IX+2)	;UP 01 MBOT
 	DI
@@ -810,9 +815,6 @@ HBIT1:	LD A,(IX)
 	RET
  
 ISRI:	CALL IMBI	;UP 0A ISRI
-	CALL	PV1
-	DEFB	5	;MBI Shell!!
-	RET
 	;
 MBI:	LD A,83H	;UP 05 MBI
 	OUT (8AH),A
@@ -1585,14 +1587,14 @@ WNDW:	CALL 0C8BEH	;TCHAR1
 	CALL 0D421H	;ARGVL1
 	LD B,A		;WAY>B
 	PUSH BC
-	CALL MC8D4	;2. Wert holen
+	CALL MC8D4	;CPCOM/ARGVL1
 	LD D,A		;WEY>D
 	PUSH DE
-	CALL MC8D4	;3. Wert holen
+	CALL MC8D4	;CPCOM/ARGVL1
 	POP DE
 	LD E,A		;WAX>E
 	PUSH DE
-	CALL MC8D4	;4. Wert holen
+	CALL MC8D4	;CPCOM/ARGVL1
 	POP DE		;WEX>A
 	EX (SP),HL	;WAY>H
 	LD L,E		;WAX>L

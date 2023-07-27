@@ -226,7 +226,7 @@ SYS1:	DI
 PWRON:	DI
 	LD SP,1C4H	;System-Stack KC85/3-5
 	LD A,3EH
-	OUT (88H),A
+	OUT (88H),A	;interner ROM aus
 	CALL MODSW1
 	LD E,(IX+4)
 	XOR A

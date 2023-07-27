@@ -248,7 +248,7 @@ SYS1:	DI
 PWRON:	DI
 	LD SP,1C4H	;System-Stack KC85/3-5
 ;	LD A,3FH
-;	OUT (88H),A
+;	OUT (88H),A	;ROM-E ein, ROM-C aus
 	CALL MODSW1
 	XOR A
 	LD B,0E0H
@@ -2107,17 +2107,17 @@ ISRTAB:	DEFW ISRPA
  
  
 KCTAB0:
-	DEFB	8AH	;PIO A S
-	DEFB	2
-	DEFB	0E4H
-	DEFB	4FH
+	DEFB	8AH	;PIO A Steuerwort
+	DEFB	2	;2 Parameter
+	DEFB	0E4H	;Interruptvektor
+	DEFB	4FH	;Byte-Ausgabe
 	;
-	DEFB 88H	;PIO A D
-	DEFB 1		;Anz.
-	DEFB 1FH	;/NMI=H! (wurde hier Bit 4 an NMI gelegt?)
+	DEFB 88H	;PIO A Daten
+	DEFB 1		;1 Parameter
+	DEFB 1FH	;/NMI=H! (interner ROM mit CAOS 3.1 aus)
 	;
 	DEFB CTC	;SIO-CTC
-	DEFB 2
+	DEFB 2		;2 Parameter
 	DEFB 47H	;9600 Bd
 	DEFB 5BH
 	;

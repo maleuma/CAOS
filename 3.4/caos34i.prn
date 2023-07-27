@@ -36,8 +36,8 @@ CAOS34I Z80
    20 E016  CD E315     	CALL RTON
    21 E019  3E 2E       	LD A,2EH	;Ton+Pause
    22 E01B  C3 F24D     	JP	WAIT
-   23                   ;*** Steuerung ***
-   24                    
+   23                   
+   24                   ;*** Steuerung ***
    25                    
    26 E01E  7F7F        	DEFW 7F7FH	;>BASIC<
    27 E020  42 41 53 49 	DEFM 'BASIC'
@@ -2661,7 +2661,7 @@ CAOSFVI ASM
   248 F160  F3          PWRON:	DI
   249 F161  31 01C4     	LD SP,1C4H	;System-Stack KC85/3-5
   250                   ;	LD A,3FH
-  251                   ;	OUT (88H),A
+  251                   ;	OUT (88H),A	;ROM-E ein, ROM-C aus
   252 F164  CD FAB1     	CALL MODSW1
   253 F167  AF          	XOR A
   254 F168  06 E0       	LD B,0E0H
@@ -4616,17 +4616,17 @@ CAOSFVI ASM
  2107                    
  2108                    
  2109 FD8E              KCTAB0:
- 2110 FD8E  8A          	DEFB	8AH	;PIO A S
- 2111 FD8F  02          	DEFB	2
- 2112 FD90  E4          	DEFB	0E4H
- 2113 FD91  4F          	DEFB	4FH
+ 2110 FD8E  8A          	DEFB	8AH	;PIO A Steuerwort
+ 2111 FD8F  02          	DEFB	2	;2 Parameter
+ 2112 FD90  E4          	DEFB	0E4H	;Interruptvektor
+ 2113 FD91  4F          	DEFB	4FH	;Byte-Ausgabe
  2114                   	;
- 2115 FD92  88          	DEFB 88H	;PIO A D
- 2116 FD93  01          	DEFB 1		;Anz.
- 2117 FD94  1F          	DEFB 1FH	;/NMI=H! (wurde hier Bit 4 an NMI gelegt?)
+ 2115 FD92  88          	DEFB 88H	;PIO A Daten
+ 2116 FD93  01          	DEFB 1		;1 Parameter
+ 2117 FD94  1F          	DEFB 1FH	;/NMI=H! (interner ROM mit CAOS 3.1 aus)
  2118                   	;
  2119 FD95  0C          	DEFB CTC	;SIO-CTC
- 2120 FD96  02          	DEFB 2
+ 2120 FD96  02          	DEFB 2		;2 Parameter
  2121 FD97  47          	DEFB 47H	;9600 Bd
  2122 FD98  5B          	DEFB 5BH
  2123                   	;
@@ -4799,4 +4799,5 @@ ZSKLEIN INC
  0 Error(s) Detected.
  4224 Absolute Bytes. 585 Symbols Detected.
  034H, 018H, 000H	; 74H t
-   65 FFA8  00 00 CC CC 	DB	000H, 000H, 0CCH, 0CCH, 0CCH, 0
+   65 FFA8  00 00 CC CC 	DB	000H, 000H, 0CCH, 0CCH, 0CCH, 0CCH, 076H, 000H	; 75H u
+   66 
