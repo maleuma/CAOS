@@ -193,23 +193,24 @@ WPIX4:	POP BC
 	POP DE
 	RET
  
-CPIX:	CALL CPIX1
+;8 Byte in Pixel-IRM schreiben
+CPIX:	CALL CPIX1	; 4 Byte schreiben
 	SET 5,E
 	RES 0,D
-CPIX1:	CALL CPIX2
+CPIX1:	CALL CPIX2	; 2 Byte schreiben
 	SET 0,D
 CPIX2:	RES 7,E
-	LD A,(HL)
-	INC HL
+	LD A,(HL)	; Zeichencode
+	INC HL		; naechstes Byte
 	JR Z,CPIX3
 	CPL		; Pixel invertieren
-CPIX3:	LD (DE),A
+CPIX3:	LD (DE),A	; IRM schreiben
 	SET 7,E
-	LD A,(HL)
-	INC HL
+	LD A,(HL)	; Zeichencode
+	INC HL		; naechstes Byte
 	JR Z,CPIX4
-	CPL
-CPIX4:	LD (DE),A
+	CPL		; Pixel invertieren
+CPIX4:	LD (DE),A	; IRM schreiben
 	RET
  
 RSPALT:	;Berechne BC,DE:Fenstergrenzen
@@ -761,7 +762,7 @@ ISRO:	IN A,(88H)	;UP 08 ISRO
 	OR 60H
 	CALL IMBI1
 	LD (IX+2),0
-	LD BC,0A00H	;Vortonlaenge		hier 1000H in CAOS34.ROM ???
+	LD BC,1000H	;Vortonlaenge
 	;
 MBOT:	INC (IX+2)	;UP 01 MBOT
 	DI
@@ -1587,14 +1588,14 @@ WNDW:	CALL 0C8BEH	;TCHAR1
 	CALL 0D421H	;ARGVL1
 	LD B,A		;WAY>B
 	PUSH BC
-	CALL MC8D4	;CPCOM/ARGVL1
+	CALL MC8D4	;2. Wert holen
 	LD D,A		;WEY>D
 	PUSH DE
-	CALL MC8D4	;CPCOM/ARGVL1
+	CALL MC8D4	;3. Wert holen
 	POP DE
 	LD E,A		;WAX>E
 	PUSH DE
-	CALL MC8D4	;CPCOM/ARGVL1
+	CALL MC8D4	;4. Wert holen
 	POP DE		;WEX>A
 	EX (SP),HL	;WAY>H
 	LD L,E		;WAX>L

@@ -1,0 +1,18 @@
+; Zusammensetzen der Einzeldateien zu CAOS 3.4i
+; (C) Mario Leubner, 10.05.2019 - 19.08.2023
+;-------------------------------------------------
+; CAOS-Vorblock:
+	ORG	0E000H-128
+	DB	'CAOS34iVKCC'
+	DS	5,0
+	DB	2		; 2 Adressen
+	DW	4000H		; AADR
+	DW	6000H		; EADR+1
+	DS	107,0
+;-------------------------------------------------
+V24	EQU	1		; 0 erzeugt Centronics-Version (M001)
+				; 1 erzeugt V.24-Version (M003)
+include	caosei.asm		; ROM-E
+include zsgr34.inc		; Zeichensatz Grossbuchstaben
+include	caosfi.asm		; ROM-F
+include zskl34.inc		; Zeichensatz Kleinbuchstaben

@@ -1,13 +1,18 @@
 ;	CAOS 3.4 - ROM F
 ;	Version V.24 / RS 232
-;
+;	und Centronics
 ;	Date: 11.06.1991  (c) by '#+$'
+;	Intern-Version
+;(Direkteinbau in KC85/3)
 ;
 SIO	EQU 008H	;SIO PORT A
 CTC	EQU 00CH	;SIO-CTC
 ; StrukturByte des Interface-Moduls
+IF V24
 UMODL	EQU 1EEH	;M003 V24
-;UMODL	EQU 1EFH	;M001 DIO
+ELSE
+UMODL	EQU 1EFH	;M001 DIO
+ENDIF
 	ORG 0F000H
  
 PRESET:	JP PWRON	;>> POWER ON <<
@@ -138,6 +143,7 @@ RCALL:	EX (SP),HL	;*** RCALL ***
 	DEFW 7F7FH	;>SWITCH<
 	DEFM 'SWITCH'
 	DEFB 1
+	JR	Z,MODUL
 	;
 	LD D,E
 	CALL MODU
@@ -148,6 +154,17 @@ MODOUT:	;Ausgabe 3 Bytes L,H,D
 	LD A,D
 	CALL AHEX
 	JP CRLF
+MODUL:	PUSH DE
+	LD L,A
+MODUL1:	XOR A
+	CALL MODU
+	LD A,H
+	INC A
+	CALL NZ,MODOUT
+	INC L
+	JR NZ,MODUL1
+	POP DE
+	RET
  
 MODU:	;VR:AF,H,BC,(D)	;UP 26 MODU
 	LD H,0B8H
@@ -182,7 +199,18 @@ NRAM0:	DJNZ NIRM	; 1: IRM?
 	SET 2,A		; IRM ON
 	JR OUTB
  
-NIRM:	DJNZ NROM	; 2: BASIC-ROM?
+NIRM:	DJNZ NROM	; 2: USER-ROM?
+	;Neu: Segmentschaltung!
+	ld	a,d	; Steuerbyte
+	rla		; 1x nach links rotieren
+	cpl		;Seg 01=BASIC
+	and	60h	;Seg 11=EDAS
+	ld	h,a	;Seg 21=WordPro
+	in	a,89h	;Seg 31=FORTH?
+	and	9fh
+	or	h	; PIO-B Bit 5+6 schalten die Ebene des ROM-C
+	OUT	(89H),A
+	in	a,88h
 	RLA
 	LD H,D
 	RR H
@@ -208,15 +236,12 @@ JUMP:	OR A		;UP 27 JUMP
 	JP Z,ERRM
 	LD D,0FFH
 	CALL MOSW2
-	XOR A
-	LD B,(IX+4)
-	LD L,B
-	LD (HL),A
+	in	a,(88H)
+	and	7eh
 	JR SYS1
- 
-SYS:	LD C,88H
-	IN A,(C)
-	SET 0,A
+SYS:
+	IN	a,(88H)
+	res	4,a	;res "NMI"
 SYS1:	DI
 	JP 0B7B4H
  
@@ -225,10 +250,9 @@ SYS1:	DI
  
 PWRON:	DI
 	LD SP,1C4H	;System-Stack KC85/3-5
-	LD A,3EH
-	OUT (88H),A	;interner ROM aus
+;	LD A,3FH
+;	OUT (88H),A	;ROM-E ein, ROM-C aus
 	CALL MODSW1
-	LD E,(IX+4)
 	XOR A
 	LD B,0E0H
 	LD H,A		;Clear Memo
@@ -239,26 +263,20 @@ PWRO1:	LD (HL),A
 	INC H
 	DJNZ PWRO1
 	LD C,80H	;Modul off
-	LD A,E
-PWRO2:	CP B
-	JR Z,PWRO3
-	OUT (C),L
-PWRO3:	DJNZ PWRO2
-	LD B,E
+PWRO2:	OUT (C),a
+	DJNZ PWRO2
 NEWOS:	DI
-	LD (IX+4),B
 	CALL SYSI	;Systeminit
-	XOR A
+	ld	a,0ah
 PWRO4:	LD (0B79BH),A	;Windows
 	CALL WCOPY
-	INC A
-	CP 0AH
-	JR C,PWRO4
+	sub 1
+	JR NC,PWRO4
 	CALL MODSW
  
 BYE:	LD SP,1C4H	;UP 0D BYE
-	LD A,1EH
-	OUT (88H),A	;init.MEM on !!
+;	LD A,1FH
+;	OUT (88H),A	;init.MEM on !!
 	CALL SYSI
 	JR MEN1
  
@@ -270,7 +288,7 @@ BYE:	LD SP,1C4H	;UP 0D BYE
 MEN1:	CALL OSTR
 	DEFB 0CH
 	DEFB 0AH
-	DEFM '* HC-CAOS 3.4 *'
+	DEFM '* HC-CAOS 3.4i *'
 	DEFB 0
 MENU:	LD HL,0C000H	;UP 46 MENU
 	LD C,L
@@ -358,6 +376,13 @@ ZS3:	LD A,(HL)
 ZS4:	POP BC
 	POP AF
 	SCF
+	RET
+ 
+WAIT	;UP 14 WAIT
+	LD	B,A
+	XOR	A
+WAIT0	CALL	WAIT1
+	DJNZ	WAIT0
 	RET
  
 WAIT1:	DEC A
@@ -589,7 +614,11 @@ GARG1:	CALL RHEX
 ;*** Systeminit ***
  
 SYSI:	LD HL,KCTAB0
-	LD D,5+2	;+2:V.24-Interf.	hier 8 bei CAOS34.ROM ???
+IF V24
+	LD D,6+2	;+2:V.24-Interf.
+ELSE
+	LD D,6+3	;+3:CEN-Interf.
+ENDIF
 	CALL INIMEI
 	LD DE,0B799H	;HCADR
 	LD BC,STBL1
@@ -608,9 +637,7 @@ SIXD:	DI		;UP 31 SIXD
 	LD BC,0CH
 	LDIR
 	PUSH DE
-	LD E,(IX+4)
 	POP IX
-	LD (IX+4),E
 	LD (IX+8),88H
 	LD (IX+9),7FH
 	LD (IX+14),Low(KTAB)
@@ -819,7 +846,8 @@ NBR:	;NewBlockRead
 	LD H,(IX+3)
 NBR0:	CALL BRKT
 	JR C,NBREND
-	CALL MBI
+	CALL PV1
+	DEFB 5		;Saubere Schale
 	LD A,(IX+2)
 	PUSH AF
 	CP H
@@ -876,7 +904,8 @@ NBW1:	LD BC,(0B7DAH)	;mit CY=1 !
 	JR Z,NBW2
 	LD BC,500H
 NBW2:	JP C,CSRO
-	CALL MBOT
+	CALL PV1
+	DEFB 1		;MBOT
 NBW3:	CALL BNROST
 	DEFM '<'
 	DEFB 0DH
@@ -1651,23 +1680,7 @@ MU2:	RRA
 	LD A,D
 	RET
  
-	DEFW 7F7FH	;>MODUL<
-	DEFM 'MODUL'
-	DEFB 1
-	;
-MODUL:	PUSH DE		;UP 47 MODUL
-	LD L,A
-MODUL1:	XOR A
-	CALL MODU
-	LD A,H
-	INC A
-	CALL NZ,MODOUT
-	INC L
-	JR NZ,MODUL1
-	POP DE
-	RET
- 
-;	fuer PWRON
+; Module schalten fuer PWRON
 MODSW:	LD DE,UMODL	;IO-Modul
 	CALL MOSW
 	LD (0B7E1H),A	;IO-Modul 0/1?
@@ -1686,9 +1699,6 @@ MOSW:	LD BC,680H	;ab Steckplatz 7
 MOSW1:	XOR A
 	INC B		;Steckplatz+1
 	RET Z		;alles durchsucht
-	LD A,B
-	CP (IX+4)
-	JR Z,MOSW1
 	IN A,(C)
 	CP E		;gesuchte Modulkennung?
 	JR NZ,MOSW1
@@ -1699,7 +1709,7 @@ MOSW2:	LD H,0B8H	;Steuerbytetabelle im IRM
 	LD (HL),D	;in Tabelle eintragen
 	RET
  
-;*** Druckertreiber (V24) ***
+;*** Druckertreiber (V.24 bzw. CEN) ***
  
 PRZK:	;folgt TAB, 1.Byte Laenge
 	EX (SP),HL
@@ -1714,7 +1724,7 @@ PRZK1:	LD A,(HL)	;Datenbyte
  
 ECHO:	PUSH AF
 	PUSH HL
-	LD HL,0B7A2H
+	LD HL,0B7A2H	;STBT
 	BIT 4,(HL)
 	CALL CRT
 	JR NZ,ECH4
@@ -1737,26 +1747,36 @@ ECH4:	POP HL
 	DEFB 0EDH	;NOP-BYTE
 	;
 PRINT:	PUSH AF
+IF V24
 	NOP		;Freihalte-Bytes
 	NOP		; f. CENTR.Vers.
-;	OUT (4),A	; M001 PIO Port A (Daten)
 WT:	CALL BRKT
 	JR C,PRT
 	IN A,(SIO+2)
-;	IN A,(5)	; M001 PIO Port B (Steuersignale)
 	BIT 2,A
 	JR Z,WT
-;	JR NZ,WT	; Centr. BUSY?
 	POP AF
 	OUT (SIO),A
 	RET
-	NEG
-	NEG
+	NEG		; Fuell-Bytes?
+	NEG		; Fuell-Bytes?
+ELSE
+	OUT (4),A	; M001 PIO Port A (Daten)
+WT:	CALL BRKT
+	JR C,PRT
+	IN A,(5)	; M001 PIO Port B (Steuersignale)
+	BIT 2,A
+	JR NZ,WT	; Centr. BUSY?
+	RES 0,A
+	OUT (5),A	; /STROBE-Impuls PIO-B
+	SET 0,A
+	OUT (5),A
+ENDIF
 PRT:	POP AF
 	RET
  
 SHCLX:	;Reaktion auf SH+CLR
-	LD A,(0B7E1H)
+	LD A,(0B7E1H)	;HCPZ
 	DEC A
 	JR NZ,HCPX	;IO-Modul vorhanden
 	LD HL,(0B7B9H)	;OUTAB
@@ -1772,7 +1792,7 @@ SHX2:	LD (0B7BEH),HL	;UOUT1+1
 	LD (0B7B9H),BC	;OUTAB
 	RET
  
-ESC6:	LD A,(0B7E1H)	;HCOPY
+ESC6:	LD A,(0B7E1H)	;HCPZ
 	OR A
 	RET Z		;kein IO-Modul
 	JR HCPX0
@@ -1838,12 +1858,19 @@ RDX2:	LDI
 	JR NZ,RDX2
 	RET
  
+IF V24
 	DEFW 7F7FH	;>V24><
 	DEFM 'V24'
 	DEFB 1		; als Parameter 0 oder 1 eingeben
 	;		; (fuer V.24-Modul nutzen oder nicht)
+ELSE
+	DEFW 7F7FH	;>CEN><
+	DEFM 'CEN'
+	DEFB 1		; als Parameter 0 oder 1 eingeben
+	;		; (fuer DIO-Modul nutzen oder nicht)
+ENDIF
 	LD A,L
-	LD (0B7E1H),A	;IO-Modul
+	LD (0B7E1H),A	;HCPZ: IO-Modul
 	RET
  
 	DEFW 7F7FH	;>SEND<
@@ -2107,12 +2134,17 @@ ISRTAB:	DEFW ISRPA
  
  
 KCTAB0:
-	DEFB 88H	;PIO A D
-	DEFB 1		;Anz.
-	DEFB 1EH	;/NMI=H! (CAOS-E aus)
+	DEFB	8AH	;PIO A Steuerwort
+	DEFB	2	;2 Parameter
+	DEFB	0E4H	;Interruptvektor
+	DEFB	4FH	;Byte-Ausgabe
 	;
+	DEFB 88H	;PIO A Daten
+	DEFB 1		;Anzahl
+	DEFB 1FH	;/NMI=H! (interner ROM mit CAOS 3.1 aus)
+IF V24
 	DEFB CTC	;SIO-CTC
-	DEFB 2
+	DEFB 2		;Anzahl
 	DEFB 47H	;9600 Bd
 	DEFB 5BH
 	;
@@ -2124,6 +2156,22 @@ KCTAB0:
 	DEFB 20H
 	DEFB 5
 	DEFB 6AH
+ELSE
+	DEFB 05H	;M001 PIO-B
+	DEFB 1		;Anzahl
+	DEFB 1		;/STROBE=1
+	;
+	DEFB 06H	;M001 PIO-A Steuerwort
+	DEFB 2		;Anzahl
+	DEFB 0FH	;Byte-Ausgabe
+	DEFB 03H	;DI
+	;
+	DEFB 07H	;M001 PIO-B Steuerwort
+	DEFB 3		;Anzahl
+	DEFB 0CFH	;Bit-Modu
+	DEFB 0FEH	;E/A-Maske
+	DEFB 03H	;DI
+ENDIF
 KCTAB1:
 	DEFB 8AH	;PIO A C
 	DEFB 3		;Anz.
@@ -2162,7 +2210,7 @@ SYSTAB:	DEFW SHCLX	;HCADR
 	DEFW 01C4H	;SYSP
 	DEFW SUTAB	;SUTAB
 	DEFW CRTTAB	;CTAB
-	OUT (C),A	;JUMP IN NEUES
+	OUT (88H),A	;JUMP IN NEUES
 	JP 0F012H	; CAOS
 	DEFW ZEI0	;OUTAB
 	DEFW ZEI4	;INTAB

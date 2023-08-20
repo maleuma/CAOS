@@ -1,16 +1,18 @@
 ; Zusammensetzen der Einzeldateien zu CAOS 3.4
-; (C) Mario Leubner, 31.05.2021-04.06.2021
+; (C) Mario Leubner, 31.05.2021-19.08.2023
 ;-------------------------------------------------
 ; CAOS-Vorblock:
 	ORG	0E000H-128
-	DB	'CAOS34  KCC'
+	DB	'CAOS34V KCC'
 	DS	5,0
 	DB	2		; 2 Adressen
 	DW	4000H		; AADR
 	DW	8000H		; EADR+1
 	DS	107,0
 ;-------------------------------------------------
+V24	EQU	1		; 0 erzeugt Centronics-Version (M001)
+				; 1 erzeugt V.24-Version (M003)
 include	caose.asm		; ROM-E
-include zsgross.inc
-include	caosfv.asm		; ROM-F
-include zsklein.inc
+include zsgr34.inc		; Zeichensatz Grossbuchstaben
+include	caosf.asm		; ROM-F
+include zskl34.inc		; Zeichensatz Kleinbuchstaben

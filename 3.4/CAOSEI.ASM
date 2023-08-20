@@ -195,23 +195,24 @@ WPIX4:	POP BC
 	POP DE
 	RET
  
-CPIX:	CALL CPIX1
+;8 Byte in Pixel-IRM schreiben
+CPIX:	CALL CPIX1	; 4 Byte schreiben
 	SET 5,E
 	RES 0,D
-CPIX1:	CALL CPIX2
+CPIX1:	CALL CPIX2	; 2 Byte schreiben
 	SET 0,D
 CPIX2:	RES 7,E
-	LD A,(HL)
-	INC HL
+	LD A,(HL)	; Zeichencode
+	INC HL		; naechstes Byte
 	JR Z,CPIX3
 	CPL		; Pixel invertieren
-CPIX3:	LD (DE),A
+CPIX3:	LD (DE),A	; IRM schreiben
 	SET 7,E
-	LD A,(HL)
-	INC HL
+	LD A,(HL)	; Zeichencode
+	INC HL		; naechstes Byte
 	JR Z,CPIX4
-	CPL
-CPIX4:	LD (DE),A
+	CPL		; Pixel invertieren
+CPIX4:	LD (DE),A	; IRM schreiben
 	RET
  
 RSPALT:	;Berechne BC,DE:Fenstergrenzen
