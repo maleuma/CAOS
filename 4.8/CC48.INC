@@ -3,64 +3,64 @@
 ;**					**
 ;**	Adresse:  C000h bis CFFFh	**
 ;**					**
-;**	letzte Aenderung: 19.02.2023	**
+;**	letzte Aenderung: 05.03.2023	**
 ;*****************************************
 
 ;	ORG	0C000H
 
 ;
-; IRM-Defaulttabelle:
+; IRM-Defaulttabelle:						IRM-Adresse
 ;
 KCTAB1:	DW	NOOP		; Hardcopy-Adresse		B799
-WIN0:	DB	0		; WINNR
-	DW	0		; WINON
-	DW	2028H		; WINLG
-	DW	0		; CURSO
+WIN0:	DB	0		; WINNR				B79B
+	DW	0		; WINON				B79C
+	DW	2028H		; WINLG				B79E
+	DW	0		; CURSO				B7A0
 	DB	80H		; STBT		(2-Monitor-Bit 7 gesetzt ab CAOS 4.8)
-	DB	39H		; COLOR
-	DW	SCRLPG		; WEND
-WIN1:	DW	LARGE		; CCTL0
-	DW	SMALL		; CCTL1
-	DW	LARGE		; CCTL2
-	DW	SMALL		; CCTL3
+	DB	39H		; COLOR				B7A3
+	DW	SCRLPG		; WEND				B7A4
+WIN1:	DW	LARGE		; CCTL0				B7A6
+	DW	SMALL		; CCTL1				B7A8
+	DW	LARGE		; CCTL2				B7AA
+	DW	SMALL		; CCTL3				B7AC
 	DW	STACK		; SYSP				B7AE
-	DW	SUT_IRM		; SUTAB
-	DW	CRTTAB		; CTAB
-	OUT	(PIOAD),A	; NCAOS
+	DW	SUT_IRM		; SUTAB				B7B0
+	DW	CRTTAB		; CTAB				B7B2
+	OUT	(PIOAD),A	; NCAOS				B7B4
 	JP	0F012H
-	DW	OUTT1		; OUTAB = CRT (0)
-	DW	INTT1		; INTAB = KBD (4)
-	JP	NOOP		; UOUT1
-	JP	NOOP		; UIN1
-	JP	NOOP		; UOUT2
-	JP	NOOP		; UIN2
-	DW	IOERR		; IOERR (BASIC)
-	DW	VRAM0		; VRAM=0B200H (Bild 0)		B7C8
+	DW	OUTT1		; OUTAB = CRT (0)		B7B9
+	DW	INTT1		; INTAB = KBD (4)		B7BB
+	JP	NOOP		; UOUT1				B7BD
+	JP	NOOP		; UIN1				B7C0
+	JP	NOOP		; UOUT2				B7C3
+	JP	NOOP		; UIN2				B7C6
+	DW	IOERR		; IOERR (BASIC)			B7C9
+	DW	VRAM0		; VRAM=0B200H (Bild 0)		B7CB
 
 KCTAB2:	DB	47H,0CH		; CTC2 (blinken)		B7DB
 	DW	ESCTAB		; L3TAB (Tabelle der ESC-Routinen)
 	DB	(ESCX-ESCTAB)/2	; L3SIZ (Anzahl der ESC-Funktionen)
-	DB	5		; COUNT
-	DB	0		; HCPZ
-	DW	0A801H		; INTV1
-	DB	8		; INTV1L
-	DW	0A809H		; INTV2
-	DB	9		; INTV2L
-	DB	11101110b	; HCPZ2 (8 Bit, Senden ein)
+	DB	5		; COUNT				B7E0
+	DB	0		; HCPZ				B7E1
+	DW	0A801H		; INTV1				B7E2
+	DB	8		; INTV1L			B7E4
+	DW	0A809H		; INTV2				B7E5
+	DB	9		; INTV2L			B7E7
+	DB	11101110b	; HCPZ2 (8 Bit, Senden ein)	B7E8
 	JP	NOOP		; OFILT				B7E9
-	DB	'%'		; PROMPT
-	DB	0FFH		; LINTYP
-	DW	0EFD8H		; CUMUST
+	DB	'%'		; PROMPT			B7EC
+	DB	0FFH		; LINTYP			B7ED
+	DW	0EFD8H		; CUMUST			B7EE
 	DW	JOYIRM		; JOYTAB			B7F0
 
-; Modulschaltzustaende (interne Module):
+; Modulschaltzustaende (interne Module):			IRM-Adresse
 
-KCTAB3:	DB	3	; RAM0
-	DB	1	; IRM
-	DB	0	; USER-ROMC
-	DB	3	; RAM8
-	DB	3	; RAM4
-	DB	0	; CAOSC
+KCTAB3:	DB	3	; RAM0					B800
+	DB	1	; IRM					B801
+	DB	0	; USER-ROMC				B802
+	DB	3	; RAM8					B803
+	DB	3	; RAM4					B804
+	DB	0	; CAOSC					B805
 KCTAB4:
 ;
 ; Power-ON Initialisierung:
@@ -93,14 +93,21 @@ PWRC2:	PUSH	HL		; schnelles Speicher loeschen (rueckwaerts)
 	LD	(FTAST),HL	; vorbereiten fuer Abarbeitung
 
 ; 19.02.2023: alle Anwender-ISR bei POWER-ON mit IRET vorbelegen
-	LD	HL,STACK	; ISR-Tabelle beginnt nach dem Stack
-	LD	SP,HL		; System-Stack setzen
-	LD	B,14		; Anzahl ISR-Routinen bis 01E0H
-PWRC3:	LD	(HL),Low(IRET)
-	INC	HL		; alle Anwender-ISR mit der Adrersse IRET
-	LD	(HL),High(IRET)	; vorbelegen
-	INC	HL
-	DJNZ	PWRC3
+;	LD	HL,STACK	; ISR-Tabelle beginnt nach dem Stack
+;	LD	SP,HL		; System-Stack setzen
+;	LD	B,14		; Anzahl ISR-Routinen bis 01E0H
+;PWRC3:	LD	(HL),Low(IRET)
+;	INC	HL		; alle Anwender-ISR mit der Adrersse IRET
+;	LD	(HL),High(IRET)	; vorbelegen
+;	INC	HL
+;	DJNZ	PWRC3
+
+; 05.03.2023: alle Anwender-ISR bei POWER-ON mit IRET vorbelegen (optimiert)
+	LD	SP,STACK+28	; ISR-Tabelle liegt direkt oberhalb des Stak
+	LD	HL,IRET		; Dummy-ISR
+	LD	B,14		; Anzahl ISR-Routinen von 01C4H bis 01E0H		
+PWRC3:	PUSH	HL		; alle Anwender-ISR mit der Adresse IRET 
+	DJNZ	PWRC3		; vorbelegen
 
 ; 08.10.2020: SYSI nach der Portinitialisierung aufrufen, sodass der KOUT-
 ; Impuls zum Ruecksetzen der D005-Tastatur nur bei RESET kommt.
@@ -141,14 +148,14 @@ SYSI2:	LD	IX,1F0H
 	LD	BC,KCTAB2-KCTAB1; fuer IRM-Arbeitszellen
 	LDIR			; 1. Teil in IRM kopieren
 	LD	E,LOW(CTCMD)	; (D war 0B7h)
-	LD	C,KCTAB3-KCTAB2	; (B war 0)
+	LD	C,KCTAB3-KCTAB2	; (B war 0 vom vorherigen LDIR)
 	LDIR			; 2. Teil in IRM kopieren
 	INC	D		; D=B8H
 	LD	E,C		; E=00H
 ;	LD	DE,MODST	; Modulsteuerbytespeicher B800H
 	LD	A,(MODST+4)	; RAM4 aktueller Schaltzustand
 	AND	4		; RAM4-Ebene herausloesen
-	LD	C,KCTAB4-KCTAB3	; (B war 0)
+	LD	C,KCTAB4-KCTAB3	; (B war 0 vom vorherigen LDIR)
 	LDIR			; 3. Teil in IRM kopieren
 	LD	HL,MODST+4
 	OR	(HL)		; RAM4 bisherige Ebene wieder einbauen
@@ -729,13 +736,13 @@ STBFF:	EI
 IF CAOS2
 MODU6:	DJNZ	MODU7		; 5=CAOSC
 else
-MODU6:	DJNZ	STBFF		; 5=CAOSC
+MODU6:	DJNZ	STBFF		; 5=CAOSC (nur eintragen)
 endif
 	LD	A,D		; 4=RAM4
-	XOR	H
-	AND	4		; Aenderung?
+	XOR	H		; Vergleich Steuerbyte alt/neu
+	AND	4		; Aenderung der Ebene?
 ;	DI
-	JR	Z,RAM41
+	JR	Z,RAM41		; nein
 	LD	A,(IX+4)
 	OR	3
 	OUT	(PORT2),A	; RAM4 on
@@ -2650,7 +2657,7 @@ MTAB:	DB	000h,'VARIABEL',0	; M042 (Tim Henning)
 	DB	072H,'128K ROM',0	; M047
 	DB	073H,'256K ROM',0	; M048 (Mario Leubner)
 	DB	074H,'512K ROM',0	; M049 (Andreas Schlechte)
-;	DB	075H,'1M ROM',0	;	 M050 reserviert!
+;	DB	075H,'1M ROM',0		; M050 reserviert!
 	DB	076H,'4M ROM',0		; M044 (Bert Lange, Andreas Schlechte)
 	DB	077H,'64K RAM',0	; M032 - 64k-Variante
 	DB	078H,'128K RAM',0	; M036

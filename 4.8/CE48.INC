@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  E000h bis EDFFh	**
 ;**					**
-;**	letzte Aenderung: 14.06.2021	**
+;**	letzte Aenderung: 25.09.2023	**
 ;*****************************************
 
 ;	ORG	0E000H
@@ -30,9 +30,10 @@ BASIO:	JP	BASPV		; BASIC Programmverteiler
 ; Der Einsprung BASON ist bei allen CAOS-Versionen auf E02FH und kann deshalb
 ; innerhalb der mit BSAVE erzeugten KCB-Dateien zum Einschalten des BASIC-ROM
 ; genutzt werden.
-; Das gilt fuer alle CAOS-Versionen ab 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8
+; Das gilt fuer alle CAOS-Versionen ab 4.1 (ausser 4.6)
 
-BASON:	LD	D,0
+BASON:	LD	DE,(MODST+4)	; D = aktueller Schaltzustand CAOS-ROM-C
+	RES	0,D		; AUS
 	LD	L,5		; SWITCH 5 0
 	CALL	MODUSW		; CAOS-C aus
 	LD	D,0C1H		; SWITCH 2 C1
@@ -163,7 +164,9 @@ POP3:	POP	BC
 	RET
 
 ; Zeichen auf Grafikbildschirm sichtbar machen
-; PE:	DE, A, STBT
+; PE:	DE	Cursorposition im Fenster
+;	A	Zeichencode
+;	STBT	Steuerbyte
 
 WPIX:	PUSH	HL
 	PUSH	DE
@@ -973,12 +976,12 @@ MOFF:	PUSH	HL
 
 	LD	L,A		; Steckplatz in L
 	CP	5		; CAOS-ROM C?
-	jr	z,m4
+	JR	Z,M4
 	CALL	MODUSW		; Modul ausschalten (falls nicht CAOS-ROM C)
-	ld	a,(modst+5)	; vorheriger Schaltzustand CAOS-C
-	and	1		; ohne Merkbit 7
-	ld	d,a
-m4:	LD	HL,MODST+5	; SWITCH 5 n
+	LD	A,(MODST+5)	; vorheriger Schaltzustand CAOS-C
+	AND	1		; ohne Merkbit 7
+	LD	D,A
+M4:	LD	HL,MODST+5	; SWITCH 5 n
 	LD	A,(HL)		; vorheriger Schaltzustand in Bit 7
 	LD	(HL),D		; urspruenglicher Schaltzustand vor PV7
 	AND	80h		; nur Bit 7 betrachten
@@ -1024,9 +1027,9 @@ PV71:	EX	(SP),HL		;						RET  MOFF >HL<
 
 	LD	D,High(MODST)
 	LD	A,(DE)		; aktueller Schaltzustand
-	INC	L
-	LD	(HL),A		; als Schaltzustand AUS in DEVTAB+2 eintragen
-	INC	L		; DEVTAB+3
+	INC	L		; DEVTAB+2 = AUS
+	LD	(HL),A		; als Schaltzustand AUS in DEVTAB+2 merken
+	INC	L		; DEVTAB+3 = EIN
 
 	LD	A,(HL)		; Steuerbyte EIN
 	LD	(DE),A		; in MODST eintragen
@@ -1036,10 +1039,10 @@ PV71:	EX	(SP),HL		;						RET  MOFF >HL<
 	LD	E,0		; AUS fuer CAOS-C
 	CP	5		; CAOS-ROM-C?
 	JR	NZ,MO1
-	LD	E,80h		; EIN fuer CAOS-C
+	LD	E,80H		; EIN fuer CAOS-C
 MO1:	CP	7
 	JR	C,MO2		; intenes Modul
-	LD	C,80h
+	LD	C,80H
 	LD	B,A
 	OUT	(C),D		; Steuerbyte zu Modul senden
 

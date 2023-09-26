@@ -29,16 +29,20 @@ Y =
 Z =
 
 
-Speicherbelegung CAOS 4.8 (20.02.2023):
+Speicherbelegung CAOS 4.8 (26.09.2023):
 =========================
 
-CAOS-C:   31 Byte frei
-CAOS-E:    4 Byte frei
+CAOS-C:   34 Byte frei
+CAOS-E:    0 Byte frei
 CAOS-F:   12 Byte frei
 
 
 History:
 ========
+
+26.09.2023: (CAOS 4.8 Patch 5)
+- Beim Start von BASIC bleibt der alternative Zeichensatz jetzt erhalten
+- Initialisierung ISR-Tabelle optimiert
 
 19.02.2023: (CAOS 4.8 Patch 4)
 - SIXD optimiert, ISR-Tabelle wird komplett mit uebernommen auf neuen IX-Bereich
