@@ -29,7 +29,7 @@ Y =
 Z =
 
 
-Speicherbelegung CAOS 4.8 (26.09.2023):
+Speicherbelegung CAOS 4.8 (07.10.2023):
 =========================
 
 CAOS-C:   34 Byte frei
@@ -39,6 +39,9 @@ CAOS-F:   12 Byte frei
 
 History:
 ========
+
+07.10.2023: (CAOS 4.8 Patch 6)
+- BASIC-Kommando FILES korrigiert, funktionierte seit Patch 5 nicht mehr
 
 26.09.2023: (CAOS 4.8 Patch 5)
 - Beim Start von BASIC bleibt der alternative Zeichensatz jetzt erhalten
