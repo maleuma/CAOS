@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  E000h bis EDFFh	**
 ;**					**
-;**	letzte Aenderung: 25.09.2023	**
+;**	letzte Aenderung: 07.10.2023	**
 ;*****************************************
 
 ;	ORG	0E000H
@@ -2369,7 +2369,7 @@ FILES2:	CALL	IRMON		; IRM ein
 	JR	BD1
 	;
 FILES3:	PUSH	HL		; Kommandozeile
-	LD	DE,BASON+1	; zeigt auf eine 0
+	LD	DE,MASK0	; zeigt auf eine 0
 	JR	FILES2		; gesamtes Verzeichnis anzeigen
 
 ; BASIC: Verzeichnis wechseln
@@ -2545,7 +2545,8 @@ ESCTAB:	DW	ESC0		; Tabulatorsprung			ESC'0'
 ESCX:
 
 INIT:	DB	'INIT',cr,0	; CAOS 4.8: Autostart-Kommando
-UUU:	DB	'INITIAL.UUU',0	; Standard-Dateiname fuer %INIT
+UUU:	DB	'INITIAL.UUU'	; Standard-Dateiname fuer %INIT
+MASK0:	DB	0		; Maske fuer BASIC-Befehl FILES ohne Parameter
 
 	ABSFILL	0EDF7h,<ROM-E-Ende>
 
