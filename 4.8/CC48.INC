@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  C000h bis CFFFh	**
 ;**					**
-;**	letzte Aenderung: 05.03.2023	**
+;**	letzte Aenderung: 05.01.2024	**
 ;*****************************************
 
 ;	ORG	0C000H
@@ -60,8 +60,8 @@ KCTAB3:	DB	3	; RAM0					B800
 	DB	0	; USER-ROMC				B802
 	DB	3	; RAM8					B803
 	DB	3	; RAM4					B804
-	DB	0	; CAOSC					B805
-KCTAB4:
+	DB	0	; CAOSC	00H=duenner Zeichensatz		B805
+KCTAB4:			; CAOSC 10H=fetter Zeichensatz
 ;
 ; Power-ON Initialisierung:
 ;
@@ -171,7 +171,7 @@ SYSI2:	LD	IX,1F0H
 
 	LD	DE,SUT_IRM-1	; SUTAB im IRM (beginnend mit SULEN)
 	LD	HL,SUTB-1	; SUTAB im ROM
-	LD	BC,SUEND-SUTB+1	; Laenge
+	LD	C,SUEND-SUTB+1	; Laenge (B=0 von CALL WINC2)
 	LDIR			; SUTAB zur Nutzung in den IRM kopieren
 
 	LD	A,1		; Standardwert fuer IXH- und I-Register
@@ -223,8 +223,8 @@ DINIT:	LD	HL,DRV0		; zunaechst den Kassettentreiber
 ; Suche USB- bzw. GIDE-Modul mit Treiber:
 ;	DE	zeigt auf DEVTAB wo naechster Treiber hin kommt
 
-NODISK:	LD	B,8		; ab Steckplatz 8 suchen
-	LD	C,80H		; I/O-Adresse Modulsteuerung
+NODISK:	LD	BC,880H		; ab Steckplatz 8 suchen
+	;LD	C,80H		; I/O-Adresse Modulsteuerung
 USB1:	IN	A,(C)		; Kennbyte lesen
 	CP	0FDH		; Kennung M052?
 	JR	Z,USB2
@@ -546,7 +546,7 @@ M052N1:	JR	SLOT2		; Modulname anzeigen, Schaltzustaende regen.
 
 SWIC:	LD	D,E		; Steuerbyte
 	CP	1
-	PUSH	AF
+	PUSH	AF		; Z=1, wenn nur lesen
 	JR	Z,SWI3		; nur lesen
 	DEC	L
 	JR	NZ,SWI2		; nicht IRM
@@ -1351,7 +1351,7 @@ POINT:	PUSH	HL
 	PUSH	DE
 	PUSH	BC
 	PUSH	AF
-	CALL	CALXY		; Grafikposition berechnen
+	CALL	CALXY		; Grafikposition berechnen, D=FARB, A=Bitmaske
 	CALL	NC,PUSET	; Punkt setzen wenn OK
 	JP	POP4		; POP	AF,BC,DE,HL   RET
 	;
@@ -1372,21 +1372,12 @@ PUXOR:	XOR	(HL)		; alternierend
 PUCOL:	LD	(HL),A		; in Pixel-RAM eintragen
 	BIT	2,D		; Bit 2 in CAOS 3.4 und ab CAOS 4.7 benutzt
 	RET	NZ		; wenn Bit 2=1, dann Farbe nicht setzen
-	LD	A,(IX+1)
-	LD	E,A
-	XOR	2		; Farbebene
-;	 DI
-;	 OUT	(PORT1),A	; Umschaltung Farbebene
-	CALL	OUT84		; Umschaltung Farbebene (IX+1) und PORT1
+	CALL	ESC9		; Umschaltung zu Farbebene
 	LD	A,(HL)
 	AND	7		; alte vFarbe loeschen
 	OR	D		; neue vFarbe einbauen
 HIR2:	LD	(HL),A		; und in Color-RAM eintragen
-HIR3:	LD	A,E
-;	 OUT	(PORT1),A	; zurueck zu Pixelebene
-;	 EI
-	CALL	OUT84		; zurueck zu Pixelebene (IX+1) und PORT1
-	RET
+HIR3:	JP	ESC9		; zurueck zu Pixelebene
 
 ; Punkt loeschen:
 PUERA:	CPL
@@ -1401,13 +1392,8 @@ HIRES:	LD	B,A		; Bitmaske
 	JR	NZ,HIR1
 	XOR	B		; wieder loeschen
 HIR1:	LD	(HL),A
-	LD	A,(IX+1)
-	LD	E,A
-	XOR	2		; Farbebene
-;	 DI
-;	 OUT	(PORT1),A	; Umschaltung Farbebene
-	CALL	OUT84		; Umschaltung Farbebene (IX+1) und PORT1
-	LD	A,B
+	CALL	ESC9		; Umschaltung zu Farbebene
+	LD	A,B		; Bitmaske
 	OR	(HL)		; Bit setzen in
 	BIT	4,D		; Farbebene?
 	JR	NZ,HIR2
@@ -1439,15 +1425,12 @@ PUDEC:	PUSH	HL
 	AND	B		; Bit in Pixelebene gesetzt?
 	JR	Z,HIR4
 	SET	0,D
-HIR4:	LD	A,(IX+1)
-	LD	E,A
-	XOR	2		; Farbebene
-;	 DI
-;	 OUT	(PORT1),A	; Umschaltung Farbebene
-	CALL	OUT84		; Umschaltung Farbebene (IX+1) und PORT1
+HIR4:	CALL	ESC9		; Umschaltung zu Farbebene
 	LD	A,(HL)
+	PUSH	AF
+	CALL	ESC9		; zurueck zu Pixelebene
+	POP	AF
 	AND	B		; Bit in Farbebene gesetzt?
-	CALL	HIR3		; zurueck zu Pixelebene
 	JR	Z,HIR5
 	SET	1,D
 HIR5:	INC	B		; Z=0 (Bitmaske)
@@ -1458,17 +1441,9 @@ PUDEL:	LD	B,A		; Bitmaske
 	CPL			; Bitmaske invertieren
 	AND	C		; Bit loeschen
 	LD	(HL),A		; und in Pixel-RAM schreiben
-	LD	A,(IX+1)
-	LD	E,A
-	XOR	2
-;	 DI
-;	 OUT	(PORT1),A	; Umschaltung Farbebene
-	CALL	OUT84		; Umschaltung Farbebene (IX+1) und PORT1
+	CALL	ESC9		; Umschaltung zu Farbebene
 	LD	D,(HL)		; Color-RAM lesen
-	LD	A,E
-;	 OUT	(PORT1),A	; zurueck zu Pixelebene
-;	 EI
-	CALL	OUT84		; zurueck zu Pixelebene (IX+1) und PORT1
+	CALL	ESC9		; Umschaltung zu Farbebene
 	LD	A,B		; Bitmaske
 	AND	C		; Z=1: Punkt war geloescht
 HIR6:	LD	A,D		; Farbbyte
@@ -2477,7 +2452,7 @@ MCLOS:	BIT	1,(IX+7)	; steht noch INIT aus?
 ; nach Einlesen des letzten Datenbytes eine gewisse "Bedenkzeit" bevor das Close
 ; zum Lesen des Endebytes 03h folgt. Wird also der erste Ende-Block nicht
 ; erwischt, dann folgt noch ein weiterer. Ohne diesen zusaetzlichen Block bleibt
-; BASIC beim Lesen hengen und man muss zurueckspulen und den letzten Block
+; BASIC beim Lesen haengen und man muss zurueckspulen und den letzten Block
 ; nochmals abspielen.
 ; -> Also wird bei TAPE der Endeblock weiterhin 2x nacheinander ausgegeben.
 ;
@@ -2507,7 +2482,7 @@ MBRES:	RES	5,(IX+7)	; 'U'-Merker ruecksetzen (Blocknummern anzeigen)
 ;		Bit 6 = 1 Close (Block FF)
 ;	HL	Name nur bei INIT (Adresszeiger 11 Byte)
 ; PA:	A	Datenbyte
-;	CY=1	Fehler
+;	CY=1	Fehler (auch falscher Dateiname bei TAPE)
 ; VR:	AF, DE, HL
 ;
 MBIC:	LD	E,D		; Steuerbyte
@@ -2658,7 +2633,8 @@ MTAB:	DB	000h,'VARIABEL',0	; M042 (Tim Henning)
 	DB	073H,'256K ROM',0	; M048 (Mario Leubner)
 	DB	074H,'512K ROM',0	; M049 (Andreas Schlechte)
 ;	DB	075H,'1M ROM',0		; M050 reserviert!
-	DB	076H,'4M ROM',0		; M044 (Bert Lange, Andreas Schlechte)
+;	DB	076H,'4M ROM',0		; M044 (Bezeichnung bis CAOS 4.8)
+	DB	076H,'FLASH',0		; M044 (Bert Lange, Andreas Schlechte)
 	DB	077H,'64K RAM',0	; M032 - 64k-Variante
 	DB	078H,'128K RAM',0	; M036
 	DB	079H,'256K RAM',0	; M032 - 256k-Variante

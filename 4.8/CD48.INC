@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  D000h bis DAB7h	**
 ;**					**
-;**	letzte Aenderung: 19.02.2023	**
+;**	letzte Aenderung: 05.01.2024	**
 ;*****************************************
 
 ;	ORG	0D000H
@@ -1016,7 +1016,7 @@ TDUP1:	CALL	DEV		; DEVICE?
 	CALL	KPUFF		; Standardpuffer setzen
 	LD	A,(MODST+5)	; Schaltzustand Moduladresse 5 (ROM C)
 	LD	(ARGC),A	; hier merken (zeigt sonst USER-ROM-Zustand an)
-	LD	A,1		; und voruebergehend fest einschalten
+	SET	0,A		; und voruebergehend fest einschalten
 	LD	(MODST+5),A
 	RET
 ;

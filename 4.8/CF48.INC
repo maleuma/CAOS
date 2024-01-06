@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  F000h bis FDFFh	**
 ;**					**
-;**	letzte Aenderung: 20.02.2023	**
+;**	letzte Aenderung: 05.01.2024	**
 ;*****************************************
 
 ;	ORG	0F000H
@@ -49,7 +49,7 @@ PV1:	DI
 	EI
 	PUSH	AF
 	PUSH	DE
-	LD	E,(HL)
+PV23:	LD	E,(HL)
 PV22:	LD	D,0
 	LD	HL,(SUTAB)
 	ADD	HL,DE
@@ -71,15 +71,14 @@ PV21:	PUSH	HL
 	PUSH	DE
 	PUSH	BC
 	PUSH	HL
-	LD	HL,POP3		; Returnadresse
+	LD	HL,POP3		; Return-Adresse
 	EX	(SP),HL		; auf Stack legen
 	PUSH	HL
 	PUSH	AF
 	PUSH	DE
 	JR	C,PV22		; falls PV3
-	LD	A,(ARGC)	; sonst E
-	LD	E,A		; beschaffen
-	JR	PV22
+	LD	HL,ARGC		; sonst E beschaffen aus ARGC
+	JR	PV23
 ;
 ; IRM ein und Stack auf (SYSP) setzen
 ; aktuellen SP in IY merken
@@ -495,7 +494,8 @@ INPT3:	CALL	MODUL2		; USER-ROM-C Ebene ein
 	JR	ERR1		; invalid command
 	;
 INPT4:	 ld	hl,modst+5
-	 ld	(hl),0		; CAOS-C ausschalten
+;	 ld	(hl),0		; CAOS-C ausschalten
+	 res	0,(hl)		; CAOS-C ausschalten
 	 pop	hl
 INPT5:	INC	HL		; Epilogbyte uebergehen
 	PUSH	HL		; Startadresse
@@ -2169,7 +2169,10 @@ ISB6:	CALL	V24I
 	EX	DE,HL
 	JP	(HL)		; Programm jetzt starten
 
-; fuer MODIC, FLOAD
+; Datenbyte eintragen fuer MODIC, FLOAD
+; PE:	HL	Adresse
+;	A	Datenbyte
+;
 LDMAE:	CALL	COFF
 	PUSH	AF
 	LD	A,(MODST+1)
@@ -2193,7 +2196,7 @@ JCON:	CALL	SCRON		; IRM wieder ein
 ; PE:	A	HW-Teil der IX-Arbeitszellen
 
 SIXD:	LD	BC,SIXC
-	JR	CLROMC		; UP im CAOS-ROM C aufrufen
+;	reinlaufen in CLROMC
 ;-------------------------------------------------------------
 ; Aufruf eines UP im CAOS-ROMC
 ;  mit Einschalten des ROMC beim Aufruf
