@@ -1,0 +1,3860 @@
+TITLE	ASM V2.1
+PAGE	80
+;--------------------------------------------------------
+;	 Assemblerlisting von ASM Version 2.1		I
+;	 ------------------------------------		I
+;					(c) ML-Soft	I
+; ASM 2.1:						I
+; 02.01.2024: ORG-Fehlerpruefung nicht mehr im Pass 1	I
+; 26.03.2023: Fehlerpruefung bei MC-Ausgabe eingebaut	I
+; 18.02.2023: Adress-Ueberwachung bei Option 'O' und	I
+;	      POKE nur noch in Pass 2			I
+; 10.02.2023: bei fehlerhafter ORG-Anweisung wird	I
+;	      Adresse nicht neu gesetzt			I
+; 30.01.2023: Reihenfolge in HQTAB optimiert		I
+; 29.01.2023: EDITOR (EDAS 1.7) aus Quelltext entfernt,	I
+;	      weitere Fehlertests beim Befehl LD	I
+;	      Kurzformen von ADC und SBC implementiert	I
+; 23.01.2023: Fehlerauswertung EX verbessert		I
+;	      Befehle EX, PUSH/POP			I
+;	      LD-Befehl mit I- oder R-Register		I
+; 22.01.2023: Fehlerauswertung verbessert, weist jetzt	I
+;	      folgende Opcodes zurueck, welche bisher	I
+;	      falsch uebersetzt worden sind:		I
+;	      R, T, Y, JNZ				I
+; 18.09.2022: Code-Optimierung, z.B. Fehlerauswertung	I
+; 17.09.2021: Binaerzahlen erlaubt			I
+; ASM 2.0:						I
+; 21.03.2021: Test DEVICE=TAPE mit A=0FDH statt A=8	I
+; 07.03.2020: CLS beider Bilder bei Kaltstart ASM	I
+; 16.02.2019: F-Tasten fuer ext. Editor angepasst	I
+; 10.02.2019: QUIT mit Epilogbyte 1, damit ein normales	I
+;	      CAOS-Menu angezeigt wird			I
+; 28.07.2018: Assemblierpuffer in IRM (A880h) verlegt	I
+; 31.03.2018: Speichernutzung bis DFFFh eingebaut	I
+; 18.02.2018: ERROR bei ungueltigem DEVICE		I
+; 11.02.2018: QUIT schaltet den USER-ROM wieder ab	I
+; 29.01.2018: EDIT springt nun in MENU des ext. Editors	I
+; 19.01.2018: FIND, REPL und PRINT aus ext. Editor	I
+; 10.01.2018: Aufruf externer Editor (optional 1.7/2.0)	I
+;-------------------------------------------------------I
+; EDAS 1.7:						I
+; 03.02.2019: Anpassung wegen verlagertem Namenspuffer	I
+; 28.07.2018: Assemblierpuffer in IRM (A880h) verlegt	I
+; 05.01.2018: Code-Optimierung bei MBO/CSRO		I
+; 12.07.2017: mehrere Doppelpunkte bei Marken moeglich	I
+; 14.05.2017: Code-Optimierung bei FIND			I
+; 04.05.2017: KBD veraendert Register BC nicht		I
+; 12.04.2017: LOAD erkennt auch CP/M-Ende-Zeichen 1Ah	I
+; 10.04.2017: SAVE/LOAD angepasst fuer CAOS 4.7		I
+; 26.03.2017: CAOS-Programmteile hierher verlagert	I
+; 25.03.2017: Codeoptimierung				I
+; 11.03.2017: Code-Optimierung bei FREE/PERI		I
+; 05.05.2016: Anpassungen zu CAOS 4.7			I
+; 07.03.2014: DIR auf neues CAOS-UP umgestellt		I
+; 06.03.2014: Epilogbyte 1Fh zugelassen			I
+; 02.03.2014: IX+3 fuer erwartete Blocknummer		I
+; 16.02.2014: Marken uebernommen aus ASM1+2.ASM		I
+; 09.02.2014:						I
+;- Optionen DEP, IRM, CAOSNEU nicht mehr deaktivierbar	I
+;- Umstellung auf DEVICE-Umschaltung von CAOS 4.6	I
+;	1. Anzeige aktuelles DEVICE:		OK	I
+;	2. LOAD/SAVE ohne Unterscheidung	?	I
+;-------------------------------------------------------I
+; EDAS 1.6:						I
+; 17.11.2013: 2 Byte im Code optimiert (SBC HL,HL)	I
+; 26.07.2013: Deutsche Umlaute in Ersatzzeichen		I
+;	      konvertiert, Kommentare mit Space		I
+; 25.01.2009: Korrektur SAVE (alle 1 Block zu lang!)	I
+;	      nach Dateiende 00h im letzten Block	I
+; 27.04.1997:	Error-4 bei DB/DW..	,		I
+;							I
+;Fehlerbeseitigung:					I
+;- Arbeit mit Bild 0/1 des KC85/4 moeglich		I
+;- korrektes EDIT nach REPL und PDEL (entgegen EDAS/V4)	I
+;- BRK-Abfrage auch in PASS 1 des Assemblerlaufes	I
+;- Bei relativen Spruengen und nichtdefinierter Marke	I
+;  wird jetzt Fehler '3' statt '6' ausgegeben.		I
+;- CALL nn, JP nn und JR nn jetzt fehlerfrei		I
+;- Marken der Form "M..." bringen keine Fehler mehr	I
+;							I
+;Verbesserungen:					I
+;- Freie Wahl des Arbeitsspeichers (min. 200H bis max.	I
+;  0C000H, je nach RAM-Bestueckung) und Test auf	I
+;  korrekte Eingabewerte				I
+;- Benutzung des RAM unter IRM (wenn IRM=1!)		I
+;- automatische Disk-Erkennung und -Verwaltung		I
+;- Menueworte: KEY, LABEL, LBLIST, PSAVE, PPRINT, PDEL,	I
+;  PCOPY, REPL, (DIR, ERA, REN, DISK, TAPE, und		I
+;  DRIVE - zusaetzlich, wenn Floppy vorhanden)		I
+;- Bei Zeileneingabe jetzt auch INS moeglich		I
+;- Tape/Disk ohne Veraendern der SUTAB			I
+;- Tastatur D005 einbezogen (*KEY D5)			I
+;- BRK-Abfrage nach INLIN-Funktion vorbereitet		I
+;- Backup-Abfrage beim Abspeichern von Quelltexten auf	I
+;  Diskette						I
+;- CLEAR getrennt fuer Text und Labels (CLEAR Text	I
+;  loescht auch den gemerkten Dateinamen)		I
+;- schnelle Bildschirmroutine im EDIT-Modus		I
+;- *PRINT	Listing auf Bildschirm ausgeben		I
+;  *PRINT arg	Listing auf Drucker			I
+;		arg=Zeilen/Seite (dez.), 0=Endlosdruck	I
+;- Dateiname wird gemerkt, und als Typ wird 'ASM' bzw.	I
+;  'KCC' vorgegeben und kann ueberschrieben werden	I
+;- Beim Einlesen wird automatisch zwischen Dateien mit	I
+;  und ohne CAOS-Vorblock unterschieden			I
+;- bei LOAD von Kassette koennen Joker eingegeben	I
+;  werden: ? fuer ein beliebiges Zeichen		I
+;	   * fuer den Rest des Namens			I
+;- Bei EDIT-Funktionen CUU/CUD/Sh-CUU/Sh-CUD bleibt die	I
+;  Cursorposition erhalten bzw. geht hinter das letzte	I
+;  ASCII-Zeichen der Zeile.				I
+;- *HELP	listet Fehlermeldungen in Klartext auf	I
+;							I
+;- Assemblerlauf von Text 1 aus				I
+;- Grenze T2E/MTOP flexibel (je nach Groesse der Marken-I
+;  tabelle)						I
+;- Erzeugung selbststartender Programme ueber vordefi-	I
+;  nierte Marke 'START'					I
+;- Fehler '6' auch bei IM >3 und bei Bit >7!		I
+;- Fehler 'A' auch bei falschen Sprungbedingungen in	I
+;  relativen Spruengen und bei DJNZ			I
+;- Fehler 'C' bei Division durch Null			I
+;- Fehler 'D', an den Stellen, wo eine mehrfach defi-	I
+;  nierte Marke definiert wurde.			I
+;- Fehler 'E': Indexregister falsch verwendet		I
+;- Option '1' wenn nur Markentabelle erzeugt werde soll	I
+;- wenn Fehler bei Pass 2 auftreten, wird 'S'-Option	I
+;  des Assemblers unterdrueckt.				I
+;- Folgende Rechenoperationen zur Verknuepfung von Ope-	I
+;  randen sind zulaessig, Die Reihenfolge der Abarbei-	I
+;  tung ist dabei von links nach rechts ohne Berueck-	I
+;  sichtigung mathematischer Regeln:			I
+;  '+' Addition, '-' Subtraktion,'*' Multiplikation,	I
+;  '/' ganzzahlige Division, '%' Rest bei ganzzahliger	I
+;  Division)						I
+;- in DB koennen Bytes und Zeichenketten gemischt auf-	I
+;  treten (DB kann DEFM ersetzen)			I
+;- DEFB erzeugt immer nur ein Byte			I
+;- Bei DB und DEFB koennen mehrere mit Komma getrennte	I
+;  Argumente hintereinander aufgezaehlt werden.		I
+;- DW statt DEFW verwendbar				I
+;- neu:	DS anz		Anzahl Nullbytes		I
+;	DS anz,byte 	Anzahl Bytes			I
+;	SLS t		fehlender Rotationsbefehl	I
+;	INF		Eingabe in Flags		I
+;	OTCL		Ausgabe 0 an Adresse (BC)	I
+;	END		bewirkt Beenden der UebersetzungI
+;- 8-Bit-Indexregister (HX, HY, LX, LY) verwendbar	I
+;- erweiterte Index-Bit- und -Verschiebebefehle mit	I
+;  Transport in ein weiteres Register ueber die Befehle:I
+;	RLC (IX+off),B	...	SET n,(IY+off),A	I
+;- ASM-Option "2" loescht keine Markentabelle mehr	I
+;- bei DEP-Version ab 2.0:				I
+;	- Fehler als Klartext anzeigen			I
+;	- LW- und User-Steuerung (Menuewort *DRIVE)	I
+;--------------------------------------------------------
+	.Z80
+
+	INCLUDE	CAOS48.INC	; CAOS-Vereinbarungen
+	INCLUDE EDAS.INC	; EDAS-Arbeitszellen (auch fuer Editor)
+
+;-------
+IF1
+	.PRINTX	'ASM 2.1 mit HELP-Funktion.'
+ENDIF
+;-------
+
+; CAOS-Vorblock:
+	DB	'ASM21   KCC'	; 11 Byte Dateiname
+	DS	5,0
+	DB	2		; 2 Argumente
+	DW	ROMBEG		; Anfangsadresse
+	DW	ROMEND		; Endadresse
+	DW	0
+	DS	95,0
+	DB	'02.01.2024'	; Datum
+;---------------
+	.PHASE	0C000H
+;
+ROMBEG:	DW	TB		; String 1
+ITAB:	DB	T1A		; Wert 1
+	DW	TO		; String 2
+	DB	MTOP		; Wert 2
+	DW	MC		; String 3
+	DB	OBJ		; Wert 3
+	DW	AO		; String 4
+	DB	OFFS		; Wert 4
+;
+TB:	DB	'Top of Text: ',0
+TO:	DB	'End of Text: ',0
+MC:	DB	'Start of MC: ',0
+AO:	DB	'ASM-Offset : ',0
+;
+; IRM, LED und USER-ROM ausschalten
+;
+IRM_OF:	PUSH	AF
+	IN	A,(88H)
+	AND	5BH		; IRM, USER-ROM und LED off
+	OUT	(88H),A
+	POP	AF
+	RET
+;
+; Text kopieren mit LDIR
+;
+TLDIR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	LDIR
+	JR	IRM_ON
+;
+; Text kopieren mit LDDR
+;
+TLDDR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	LDDR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPIR
+;
+TCPIR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	CPIR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPDR
+;
+TCPDR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	CPDR
+	JR	IRM_ON
+;
+; Zeichen Vergleichen mit CP (HL)
+;
+TCPHL	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	CP	(HL)
+	JR	IRM_ON
+	NOP			; Ausgleichsbyte zu CPI
+;
+; Zeichen aus Textspeicher lesen
+;
+GET	EQU	$+RAMC-IRM_OF	; Adresse im RAM0
+	CALL	RAMC		; IRM OFF
+	LD	A,(HL)
+	JR	IRM_ON
+;
+; Zeichen aus Textspeicher lesen
+;
+GETDE	EQU	$+RAMC-IRM_OF	; Adresse im RAM0
+	CALL	RAMC		; IRM OFF
+	LD	A,(DE)
+	JR	IRM_ON
+;
+; Zeichen in Textspeicher schreiben
+;
+PUT	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	LD	(HL),A
+;
+; IRM, LED und USER-ROM einschalten
+;
+IRM_ON:	PUSH	AF
+	IN	A,(88H)
+	OR	0A4H		; IRM, USER-ROM und LED on
+	OUT	(88H),A
+	POP	AF
+	RET
+ENDC:
+;
+; 16K oder 64K RAM suchen und einschalten
+; Hilfsprogramme in den RAM0 kopieren
+;
+RAMSW:	LD	B,8		; ab Steckplatz 8 suchen
+NEXT:	LD	C,80H		; I/O-Adresse Modulsteuerung
+	IN	A,(C)		; Kennbyte lesen
+	CP	0F6h		; M011 = 64K RAM ?
+	JR	Z,FOUND
+	CP	0F4h		; M022 = 16K RAM ?
+	JR	Z,FOUND
+	INC	B		; naechster Steckplatz
+	JR	NZ,NEXT
+	JR	NORAM		; kein RAM-Modul gefunden
+	;
+FOUND:	LD	D,0C3h		; Steuerbyte fuer Adresse C000h
+	LD	L,B		; Steckplatz
+	LD	A,2		; Modul "schalten"
+	CALL	PV1
+	DB	MODU		; RAM-Modul zuschalten
+; Hilfsprogramme fuer Zugriff Textspeicher
+NORAM:	LD	HL,IRM_OF	; von hier aus dem ROM
+	LD	DE,RAMC		; in den RAM0 (hinter Assemblierpuffer)
+	LD	BC,ENDC-IRM_OF
+	LDIR			; kopieren
+	RET
+;---------------
+	DEFW	7F7FH
+	DB	'ASM',1Fh
+	CALL	WIN0		; volles Fenster einstellen
+	CALL	PV1
+	DB	OSTR
+	DB	ESC,'3',CLS	; Bild 1 loeschen
+	DB	ESC,'1',CLS	; Bild 0 loeschen
+	DB	LF,LF,">> CAOS-Assembler 2.1  ` ML 1997-2024 <<",0
+	CALL	RAMSW		; RAM zuschalten, Hilfsprogramm kopieren
+	LD	HL,2808H	; linker Rand=8, rechter Rand=40
+	LD	(RANDL),HL	; fuer Editor setzen
+; 1. Standardwerte ermitteln
+	LD	HL,0200h	; Standardwerte fuer
+	LD	(T1A),HL	; Textspeicher Anfang
+	LD	(OBJ),HL	; Beginn MC
+RAM1:	INC	H		; Jetzt ermitteln wie weit RAM vorliegt
+	LD	A,H
+	CP	0E0H		; E000H erreicht?
+	JR	Z,RAM2
+	CALL	GET		; Inhalt lesen
+	LD	C,A		; merken
+	CPL			; negieren
+	CALL	PUT		; negierten Wert einschreiben
+	CALL	GET		; und wieder zurueck lesen
+	CPL			; und nochmals negieren
+	CP	C		; wenn gleich, dann RAM
+	LD	A,C
+	CALL	PUT		; Originalwert zurueck schreiben
+	JR	Z,RAM1		; RAM vorhanden
+RAM2:	LD	(MBOT),HL	; RAM-Ende
+	LD	(MTOP),HL	; Textspeicher Ende
+	LD	H,0
+	LD	(OFFS),HL	; Assembler-Offset
+	CALL	IRM_ON
+; 2. Werte anzeigen
+INI1:	CALL	WIN0		; grosses Fenster
+	LD	A,6
+	LD	(CURSO+1),A	; Zeile 6
+	LD	DE,ROMBEG
+	LD	B,4		; 4 Zeilen
+INI2:	LD	A,(DE)
+	INC	DE
+	LD	L,A
+	LD	A,(DE)
+	INC	DE
+	LD	H,A		; Adresse Zeichenkette		
+	CALL	PV1
+	DB	ZKOUT		; Anzeige Zeichenkette
+	LD	A,(DE)
+	INC	DE
+	LD	L,A		; HL=Adresse
+	LD	H,0
+	LD	A,(HL)		; Wert-Low
+	INC	HL
+	LD	H,(HL)		; Wert-High
+	LD	L,A
+	CALL	HLCR		; Anzeige Wert hex und CR+LF
+	DJNZ	INI2
+; 3. Eingabe bzw. Bestaetigung der Werte und Ablage auf ARG1-ARG4
+	LD	HL,060DH	; Fenster begrenzen
+	LD	(WINON),HL
+	LD	HL,0404H
+	LD	(WINLG),HL
+	LD	A,11h		; PAGE-Modus
+	CALL	PV1
+	DB	CRT
+	LD	HL,0
+	LD	(CURSO),HL
+	CALL	PV1
+	DB	INLIN
+	LD	DE,0		; Cursorposition erster Wert
+INI3:	PUSH	DE
+	CALL	PV1
+	DB	DABR		; VRAM-Adresse berechnen
+	EX	DE,HL
+	CALL	PV1
+	DB	RHEX		; Hex-Wert lesen
+	POP	DE
+	JR	C,INI1		; Formatfehler
+	LD	HL,ARG1
+	LD	A,D		; Zeile
+	ADD	A,A		; *2
+	ADD	A,L
+	LD	L,A
+	LD	BC,(NUMVX)	; eingegebener Wert
+	LD	(HL),C		; Low
+	INC	L
+	LD	(HL),B		; High
+	INC	D		; naechste Zeile
+	LD	A,D
+	CP	4		; letzter Adresse?
+	JR	NZ,INI3		; nein
+; 4. Diese beiden Werte muessen nicht kontrolliert werden:
+	LD	HL,(ARG3)
+	LD	(OBJ),HL	; Start of MC
+	LD	HL,(ARG4)
+	LD	(OFFS),HL	; ASM-Offset
+; 5. Test auf korrekte Werte und Uebernahme in die Arbeitszellen:
+	LD	HL,(ARG1)
+	LD	BC,0200H
+	AND	A
+	SBC	HL,BC		; RAM-Beginn nicht unter 200h?
+INI4:	JP	C,INI1
+	LD	HL,(MBOT)	; ermitteltes RAM-Ende
+	LD	DE,(ARG2)
+	SBC	HL,DE		; RAM-Ende nicht nach tatsaechlichem RAM-Ende?
+	JR	C,INI4
+	LD	HL,(ARG1)
+	EX	DE,HL
+	SBC	HL,DE		; RAM-Ende groesser als RAM-Beginn?
+	JR	C,INI4
+	SBC	HL,BC		; Textgroesse mindestens 200h?
+	JR	C,INI4
+	EX	DE,HL
+	LD	A,CR		; fuer Markensuche in 1. Zeile!
+	CALL	PUT
+	INC	HL
+	LD	(T1A),HL	; Top of Text
+	LD	(T1E),HL	; kein Text im Teil 1
+	LD	HL,(ARG2)
+	LD	(MBOT),HL	; Speicherende neu setzen
+	CALL	MMTOP		; Textende setzen
+; EDAS vorbereiten:
+;	LD	HL,(OBJ)	; wird waehrend Assemblerlauf eingetragen...
+;	LD	(MPC),HL
+	SBC	HL,HL		; HL:=0, da CY=0 (ersetzt LD HL,0)
+	LD	(COL),HL
+	CALL	KEY0		; F-Tasten F1 und F2 belegen
+	CALL	NACLR		; Dateiname loeschen
+	JR	REEDAS
+;-------
+	DEFW	7F7FH
+	DB	'REASM',1Fh
+	CALL	RAMSW		; RAM zuschalten, Hilfsprogramme kopieren
+REEDAS:	XOR	A
+	LD	(M4A),A		; 'no memory' ruecksetzen
+	LD	BC,83F1H
+	OUT	(C),A		; DEP-Version ruecksetzen!
+
+; Ein eventuell vorhandenes Menuewort ab 00h (z.B. FLOAD oder ASM) deaktivieren:
+	LD	H,A
+	LD	L,A		; ab Adresse HL=0000H
+	LD	B,0FFH		; bis zu Adresse 00FFH
+REE1:	LD	A,(HL)
+	INC	HL
+	CP	7FH		; CAOS-Prolog?
+	JR	Z,REE2		; gefunden
+	CP	0DDH		; EDAS/Editor-Prolog?
+	JR	NZ,REE3
+REE2:	CP	(HL)		; 2 mal?
+	JR	NZ,REE3
+	LD	(HL),0		; 2. Vorkommen loeschen
+REE3:	DJNZ	REE1
+	;
+	CALL	WIN0		; grosses Fenster
+	LD	A,CLS
+	CALL	PV1
+	DB	CRT
+	LD	HL,STBT
+	SET	1,(HL)		; Schreiben Farbe aus (geht schneller!)
+	LD	HL,STAT
+	LD	(HL),40h	; Starte EDIT mit CAOS-Zeichensatz
+
+	LD	BC,0FC80H
+	IN	A,(C)
+	CP	0A7H		; Floppy?
+	JR	NZ,MAIN		; nein
+	INC	(HL)		; Floppy vorhanden
+
+	LD	BC,83F1H
+	IN	A,(C)
+	INC	A
+	CP	21H		; DEP ab V2.0?
+	JR	C,MAIN		; nein
+	SET	1,(HL)
+MAIN:	LD	BC,EDIT-0BA00H	; kurzes Menue
+	JR	MEN0
+;-------
+	DEFW	0DDDDH
+	DB	'MENU',1Fh
+MEN:	POP	HL		; Stack reinigen
+	LD	BC,2600H	; langes Menue BA00 bis E000h
+MEN0:	PUSH	BC		; Menuelaenge
+	CALL	WIN0		; grosses Fenster
+	CALL	PV1
+	DB	OSTR
+	DB	CLS,LF,LF,0	; Bildschirm komplett loeschen
+	LD	B,40
+ULIN:	CALL	PV1
+	DB	OSTR
+	DB	'_',0		; unterstreichen
+	DJNZ	ULIN
+	CALL	TNAME		; Anzeige Dateiname (oder Titel)
+	CALL	PERI		; Anzeige DEVICE-Name
+	CALL	FREE		; freier Speicher
+	LD	A,28		; 28 Zeilen
+	LD	(WINLG+1),A	; Fensterlaenge verkuerzen
+	CALL	PV1
+	DB	HOME
+	LD	HL,0BA00H	; Beginn Menuewortsuche
+	POP	BC		; Menuelaenge
+MEN1:	CALL	PV1
+	DB	OSTR
+	DB	2,'*',0		; Prompt
+	CALL	PV1
+	DB	BRKT
+	JR	C,MEN7
+	LD	A,0DDH		; EDAS-Prolog (fest codiert, nicht ueber IX+9)
+MEN2:	CPIR
+	JP	PO,MEN7		; Suchbereich fertig
+	CPI
+	JR	NZ,MEN2		; nicht 2 * Prologbyte
+MEN3:	LD	A,(HL)
+;	CP	2		; Epilog (0..1) ?
+	CP	20h		; Epilog (0..1Fh)?
+	JR	C,MEN4		; Epilog
+	CP	30H
+	JR	C,MEN1		; < '0'
+	CP	5FH
+	JR	NC,MEN1		; > 'Z'
+	CALL	CHR
+	INC	HL
+	DEC	BC
+	JR	MEN3
+	;
+MEN4:	CALL	LFCR
+	JR	MEN1		; weitersuchen
+;
+; 26.03.2023: Fehler-Abbruch bei Ausgabe MC auf Datentraeger
+LOOPE:	LD	HL,(SYSP)	; CAOS-Stackpointer
+	DEC	HL
+	DEC	HL		; CAOS-Return-Adresse lassen
+	LD	SP,HL
+	CALL	TOP		; Text an Speicherende verschieben
+	JR	LOOP1		; Sprung zu Eingabeschleife
+	; Fehlerhafte Argumente
+NLP1:	POP	HL		; Fehler
+	; Menuewort nicht gefunden
+NLP2:	CALL	DERR		; CAOS-UP "ERRM"
+	JR	LOOP1
+	;
+LOOP0:	LD	A,0BH		; Zeile hoch
+	CALL	PV1
+	DB	CRT
+LOOP1:	LD	A,2		; Zeile loeschen
+	CALL	PV1
+	DB	CRT
+LOOP2:	CALL	PV1
+	DB	NOUT		; Normalausgabe
+	CALL	TNAME
+	CALL	FREE
+	CALL	PERI
+MEN6:	CALL	PV1
+	DB	OSTR
+	DB	CR,'*',0
+MEN7:	CALL	PV1
+	DB	INLIN		; Eingabe im Menuebild
+	JR	C,LOOP0		; BRK
+	INC	DE
+	LD	A,(DE)
+	CP	' '
+	JR	Z,MEN6		; Beginn mit Space
+	AND	A
+	JR	Z,MEN6
+	LD	A,0DDH		; EDAS-Prolog
+	LD	HL,0BA00H
+	LD	BC,2600H	; bis E000H
+	CALL	PV1
+	DB	ZSUCH		; Menuewort suchen
+	JR	NC,NLP2		; nicht gefunden
+	LD	A,(HL)		; Epilog
+	INC	HL
+	PUSH	HL		; Startadresse auf Stack
+	CP	1FH
+	JR	Z,MEN9		; bei Epilog 1Fh ohne Argumente
+	CALL	PV1
+	DB	GARG		; Arg's erfassen
+	JR	C,NLP1		; Fehler in Arg's
+	LD	HL,LOOP2	; RET-Adresse
+	EX	(SP),HL
+	PUSH	HL
+	CALL	PV1
+	DB	LARG
+	RET			; Ansprung Kommando
+	;
+MEN9:	LD	HL,LOOP2	; RET-Adresse
+	EX	(SP),HL
+	JP	(HL)		; Ansprung Kommando
+;-------
+; Fenster gross (ganzer Bildschirm):
+WIN0:	LD	HL,0
+	LD	(WINON),HL
+	LD	HL,2028H	; 32 Zeilen
+	JR	WIN1
+;-------
+; Fenster einstellen, Normalausgabe, Scroll-Modus:
+WINI:	LD	HL,100H
+	LD	(WINON),HL
+	LD	HL,1F28H	; 31 Zeilen!
+WIN1:	LD	(WINLG),HL
+	CALL	PV1
+	DB	NOUT		; Normalausgabe (CRT)
+	CALL	PV1
+	DB	OSTR
+	DB	12H,0		; Scroll-Modus
+	RET
+;-------
+NAME1:	LD	A,(HL)		; gemerkter Name
+	AND	7FH		; wegen BASIC UUU
+	INC	HL
+	CALL	PV1
+	DB	CSTBT		; zur Sicherheit!
+	DJNZ	NAME1
+	RET
+;-------
+; Anzeige Dateiname in Titelzeile
+TNAME:	LD	HL,(CURSO)
+	PUSH	HL		; aktuelle Cursorposition merken
+	LD	A,1
+	LD	(WINON+1),A	; Zeile 1
+	LD	HL,0001H	; Spalte
+	LD	(CURSO),HL
+	LD	HL,NAMP		; aktueller Dateiname
+	LD	A,(HL)
+	CP	21h		; Dateiname vorhanden?
+	JR	C,NONAM		; nein
+	CALL	PV1
+	DB	OSTR
+	DB	'ASM: ',0
+	LD	B,8
+	CALL	NAME1		; 8 Zeichen Dateiname
+	LD	A,'.'
+	CALL	PV1
+	DB	CRT
+	LD	B,3
+	CALL	NAME1		; 3 Zeichen Dateityp
+	JR	FRE2
+	;
+NONAM:	CALL	PV1
+	DB	OSTR
+	DB	'>> KC-ASM 2.1 << ',CR,LF,0
+	JR	FRE2		; Fenster regenerieren
+;-------
+; Anzeige des freien Speicherplatzes,
+; Ausgabekanal und Menue-Fenster einstellen:
+FREE:	LD	HL,(CURSO)
+	PUSH	HL		; aktuelle Cursorposition merken
+	LD	A,1
+	LD	(WINON+1),A	; Zeile 1
+	LD	HL,001DH	; Spalte
+	LD	(CURSO),HL
+	CALL	PV1
+	DB	OSTR
+	DB	'Frei:',0
+	LD	HL,(T2A)	; Beginn Teiltext 2
+	LD	DE,(T1E)	; Ende Teiltext 1
+	XOR	A
+	SBC	HL,DE		; das was dazwischen liegt, ist frei
+	CALL	PV1
+	DB	HLHX		; hexadezimal anzeigen
+	CALL	PV1
+	DB	OSTR
+	DB	8,'H',0		; HEX-Kennung anhaengen
+FRE2:	LD	A,4
+	LD	(WINON+1),A
+	POP	HL		; aktuelle Cursorposition
+	LD	(CURSO),HL	; regenerieren
+	RET
+;-------
+; Anzeige des aktuellen Devices von CAOS 4.6+:
+PERI:	;LD	A,(CAOSNR)	; CAOS-Version
+	;CP	46h		; CAOS 4.6 oder hoeher?
+	;RET	C		; bis CAOS 4.5 gab es das noch nicht...
+	LD	HL,(CURSO)
+	PUSH	HL		; aktuelle Cursorposition merken
+	LD	A,1
+	LD	(WINON+1),A	; Zeile 1
+	LD	HL,0013H
+	LD	(CURSO),HL	; Pos. fuer Anzeige des DEVICE
+	LD	A,'('
+	CALL	PV1
+	DB	CRT
+	LD	B,9
+PER1:	CALL	PV1
+	DB	SPACE		; alte Anzeige loeschen
+	DJNZ	PER1
+	LD	A,14H
+	LD	(CURSO),A	; Position regenerieren
+	LD	A,0FEh		; aktuellen Treiber anzeigen
+	CALL	PV1
+	DB	DEVICE		; 49H - neue Funktion ab CAOS 4.6
+
+; falls Diskette und DEP 2.0 dann Laufwerk anzeigen...
+
+	LD	DE,14H		; Cursorposition von DEVICE-Name
+	CALL	PV1		; umrechnen in VRAM-Adresse
+	DB	DABR		; HL = VRAM
+	LD	DE,DISKN	; Vergleichsname DISK
+	LD	BC,4		; 4 Zeichen kontrollieren
+LWA0:	LD	A,(DE)
+	INC	DE
+	CPI			; Diskette?
+	JR	NZ,LWA3		; nein
+	JP	PE,LWA0
+	LD	HL,STAT
+	BIT	1,(HL)		; DEP ab Version 2.0?
+	JR	Z,LWA3		; nein
+	CALL	PV1
+	DB	OSTR
+	DB	':',0
+	LD	A,1		; Lw anfordern
+	LD	BC,80F1H
+	OUT	(C),A
+LWA1:	IN	A,(C)
+	BIT	0,A		; Rueckmeldung?
+	JR	NZ,LWA1		; nein, warten
+	INC	B		; 81F1H
+	IN	A,(C)		; Laufwerk
+	CALL	CHR
+	INC	B		; 82F1H
+	IN	A,(C)		; akt. User
+	ADD	A,90H
+	DAA			; Hex-Umrechnung
+	ADC	A,40H
+	DAA
+	CALL	CHR		; Userbereich
+LWA3:	LD	A,')'
+	CALL	PV1
+	DB	CRT
+	JR	FRE2		; Fenster regenerieren
+	;
+DISKN:	DB	'DISK'
+;-------
+; MTOP und Text-2-Grenzen aktuell setzen
+;
+MMEND:	LD	HL,(MBOT)	; Speicherende
+MMTOP:	LD	(MTOP),HL	; Beginn Markentabelle
+	DEC	HL
+	LD	(T2E),HL	; Textende direkt vor MTAB
+	LD	(T2A),HL	; kein Text im Teil 2
+	LD	A,3
+	JP	PUT		; Ende-Kennung
+;-------
+	DEFW	0DDDDH
+	DB	'QUIT',1
+	CALL	WIN0		; grosses Fenster
+	LD	HL,CURSO+1
+	LD	A,(HL)
+	ADD	A,4		; Zeile korrigieren
+	LD	(HL),A
+	INC	HL		; STBT
+	RES	1,(HL)		; Schreiben Farbe ein
+	POP	HL		; Stack reinigen
+
+; Beenden und USER-ROM abschalten
+
+EXIT2:	LD	DE,(ARGC-1)	; D = urspruenglicher Schaltzustand USER-C
+	LD	A,2		; USER-ROM
+	LD	L,A		; schalten
+	LD	E,MODU
+	JP	PV3		; zuerst USER-ROM schalten, dann RET zu CAOS
+;-------
+	DEFW	0DDDDH
+	DB	'CLEAR',1Fh
+	LD	HL,(T1E)
+	LD	DE,(T1A)
+	AND	A
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L
+	LD	HL,(T2E)
+	LD	DE,(T2A)
+	SBC	HL,DE
+	ADD	HL,BC		; Laenge Text 1 + 2
+	LD	A,H
+	OR	L
+	JR	Z,CLEA1		; kein Text
+	CALL	PV1
+	DB	OSTR
+	DB	CR,'Delete Text',0
+	CALL	YESNO
+	JR	C,CLEA1		; nein
+	CALL	NACLR		; Dateiname loeschen
+	LD	HL,(T1A)
+	LD	(T1E),HL	; Text 1 loeschen
+	LD	HL,(T2E)
+	LD	(T2A),HL	; Text 2 loeschen
+	CALL	FREE		; Free aktualisieren
+	CALL	HOM		; EDIT-Cursor Home
+CLEA1:	LD	HL,(MBOT)	; Speicherende
+	LD	DE,(MTOP)
+	AND	A
+	SBC	HL,DE
+	RET	Z		; keine Labels vorhanden
+	CALL	PV1
+	DB	OSTR
+	DB	CR,'Delete Labels',0
+	CALL	YESNO
+	RET	C		; nein
+	CALL	TXANF		; Text an Speicheranfang
+	CALL	MMEND		; Textende auf Speicherende setzen
+	JP	TOP		; Text an Speicherende
+;
+; Dateiname loeschen:
+;
+NACLR:	LD	HL,NAMP		; Namenpuffer
+	LD	B,11		; 11 Zeichen lang
+NACL1:	LD	(HL),' '	; Leerzeichen eintragen
+	INC	HL
+	DJNZ	NACL1
+	RET
+;-------
+HOM:	LD	DE,0
+	LD	(COL),DE	; EDIT-Cursor home
+	RET
+;-------
+	DEFW	0DDDDH
+	DB	'SAVE',1Fh
+	CALL	TOP		; Text an Speicherende
+SAV1:	LD	DE,(T2A)
+	LD	HL,(T2E)	; Ende Text 2
+	XOR	A
+	SBC	HL,DE		; Text vorhanden?
+	RET	Z		; nein
+	CALL	NA_ASM		; Dateiname *.ASM eingeben
+	RET	C		; BRK
+	CALL	LFCR
+	CALL	KPINI		; Kassettenpuffer initialisieren
+	;
+	LD	HL,NAME0	; Dateiname
+	CALL	PV1
+	DB	ISRO		; Vorblock ausgeben
+	RET	C		; Fehler -> Abbruch
+	LD	DE,(T2A)	; Beginn
+SAV2:	LD	HL,CASS+80H
+	LD	B,L		; 1 Block
+	LD	A,1Ah		; Puffer mit 1Ah vorbelegen (Endezeichen CP/M)
+SAV3:	DEC	L
+	LD	(HL),A		; Kassettenpuffer loeschen (mit 1Ah)
+	JR	NZ,SAV3
+SAV4:	CALL	GETDE		; Datenbyte aus Textspeicher holen
+	INC	DE
+	LD	(HL),A		; in IRM (Kassettenpuffer) ablegen
+	CP	3
+	JR	Z,SAV5		; Ende-Kennung erkannt
+	INC	HL
+	DJNZ	SAV4
+SAV5:	LD	A,(IX+2)	; Blocknummer
+	CALL	PV1
+	DB	AHEX		; Blocknr. anzeigen
+	CALL	PV1
+	DB	OSTR
+	DB	8,8,0		; Cursor zurueck vor Blocknr.
+	CALL	PV1
+	DB	BRKT
+	LD	BC,160		; kurzer Vorton
+	JR	C,SAV8		; BRK
+	LD	HL,(T2E)	; Textende
+	SBC	HL,DE		; letzter Block?
+	JR	C,SAV8
+	PUSH	DE		; Textpointer
+	CALL	PV1
+	DB	MBO		; Daten-Block ausgeben
+	POP	DE
+	RET	C		; Error -> Abbruch
+	JR	SAV2		; naechster Block
+	;
+SAV8:	CALL	PV1
+	DB	CSRO		; Close (Ausgabe letzter Block)
+	CALL	NC,LOA13	; Dateiname uebernehmen
+LFCR:	CALL	PV1
+	DB	CRLF
+	RET
+;-------
+CHR:	CALL	PV1
+	DB	OCHR
+	RET
+;-------
+	DEFW	0DDDDH
+	DB	'LOAD',1Fh
+	LD	A,0FDH		; Treiber abfragen
+	CALL	PV1
+	DB	DEVICE		; Kassette?
+	JR	Z,CON0		; bei Kassette Dateiname nicht abfragen
+	CALL	NA_ASM		; Dateiname *.ASM eingeben -> NAME0
+	RET	C		; BRK
+	CALL	LFCR
+CON0:	CALL	HOM		; EDIT-Cursor Home
+	LD	HL,CASS		; Kassettenpuffer
+	LD	(IX+5),L
+	LD	(IX+6),H
+	SET	0,(IX+7)	; Read, nicht Verify
+	LD	HL,NAME0	; Name an ISRI uebergeben
+	CALL	PV1
+	DB	ISRI
+	JR	NC,LOA0		; kein Fehler
+	RET
+	;
+LOA0:	XOR	A		; Z=1 (Daten aus Puffer entnehmen!)
+LOA1:	CALL	BLRD		; (Vor-) Block lesen
+	JR	C,LOA9		; BRK oder Fehler
+	LD	A,0FDH		; Treiber abfragen
+	CALL	PV1
+	DB	DEVICE
+	JR	NZ,LOA4D	; nicht Kassette
+; Bei Kassette, Name aus Vorblock anzeigen und speichern:
+	LD	A,2		; Zeile loeschen
+	CALL	CHR
+	LD	DE,NAME0	; Name hier zwischenspeichern
+	LD	HL,CASS
+	LD	BC,11
+LOA3A:	LD	A,(HL)		; Zeichen aus Kassettenpuffer
+	CP	' '
+	CALL	NC,CHR		; anzeigen
+	LDI			; und in Puffer kopieren
+	JP	PE,LOA3A	; bis alle 11 Zeichen abgearbeitet sind
+	CALL	LFCR
+LOA4D:	LD	(IX+3),2	; Block Nr. 2 erwarten (1. Datenblock)
+	LD	DE,(T1E)	; Ladebeginn
+LOA5:	LD	HL,(T2A)	; max. Endadresse
+	AND	A
+	SBC	HL,DE
+	JR	Z,LOA10		; no Memory
+	PUSH	HL
+	CALL	BLRD		; Block lesen
+	POP	HL
+	JR	C,LOA8		; BRK oder Fehler
+	LD	BC,128
+	SBC	HL,BC
+	JR	NC,LOA6		; voller Block
+	ADD	HL,BC
+;	LD	B,H		; B ist bereits 0
+	LD	C,L		; BC=restliche Anzahl
+LOA6:	LD	HL,CASS
+LOA7:	LD	A,(HL)		; Zeichen aus Puffer entnehmen
+	CP	3		; CAOS-Ende?
+	JR	Z,LOA8		; ja
+	CP	1Ah		; CP/M-Ende?
+	JR	Z,LOA8		; ja
+	LD	A,(HL)		; aus IRM
+	INC	HL
+	EX	DE,HL
+	CALL	PUT		; Datenbyte in Textspeicher schreiben
+	EX	DE,HL
+	INC	DE
+	DEC	C		; Anzahl-1
+	JR	NZ,LOA7
+	INC	(IX+3)		; naechste Blocknummer
+	JR	LOA5
+	;
+LOA8:	LD	HL,(T1E)	; Textende vor Laden
+	EX	DE,HL
+	CALL	TXE5		; Text verschieben
+	LD	HL,(T2E)
+	DEC	HL
+	LD	A,LF
+	CALL	PUT
+	DEC	HL
+	LD	A,CR
+	CALL	PUT
+LOA9:	;POP	HL		; Name vergessen
+	CALL	PV1
+	DB	CSRI		; Datei schliessen
+	CALL	LFCR		; CAOS 4.6: Zeilenvorschub nicht mehr in CSRI
+LOA11:	LD	A,(M4A)
+	OR	A
+	JP	NZ,MEM		; no Memory
+; nach erfolgreichem LOAD/SAVE: Dateiname jetzt uebernehmen
+LOA13:	LD	HL,NAME0	; benutzter Dateiname
+	LD	DE,NAMP		; als aktuelle Datei
+	LD	BC,11		; im Format 8.3
+	LDIR			; jetzt uebernehmen
+	RET
+;
+LOA10:	INC	A
+	LD	(M4A),A
+	JR	LOA8
+;-------
+; Block einlesen:
+; PE:	(IX+3)	erwarteter Block
+;	Z=1	1. Block (nur Puffer entnehmen!)
+;	Z=0	folgenden Block lesen
+; PA:	CY=1	BRK betaetigt oder Fehler bei Diskette
+; VR:	HL,AF
+BLRD:	LD	L,4		; 4 Versuche
+	JR	NZ,BLRD1
+	SET	7,(IX+7)	; Init merken, wenn Vorblock
+	JR	BLRD2		; Daten uebernehmen
+	;
+BLRD1:	CALL	PV1
+	DB	BRKT
+	RET	C		; BRK
+	LD	A,(IX+3)	; 1. Datenblock erwartet?
+	CP	2
+	JR	NZ,BLRD0	; nein
+	BIT	7,(IX+7)	; war vorher Init?
+	JR	Z,BLRD0		; nein
+	RES	7,(IX+7)	; Init ruecksetzen
+	LD	A,(CASS+10H)
+	AND	A		; echter CAOS-Vorblock?
+	JR	Z,BLRD0		; ja
+	DEC	(IX+3)		; Blocknummer wie vorher
+	JR	BLRD2		; als Daten einlesen!
+	;
+BLRD0:	CALL	PV1
+	DB	MBI		; Block einlesen
+	RET	C		; Fehler
+BLRD2:	LD	A,1
+	DEC	A		; Z=1, CY unveraendert!
+	LD	A,(IX+2)	; Blocknummer
+	PUSH	AF
+	CP	(IX+3)		; richtige Blocknummer?
+	JR	Z,BLRD3		; ja
+	INC	A		; Z=0
+	JR	NZ,BLRD5	; nicht Block FF
+	LD	A,L
+	CP	4		; Block FF im 1. Versuch?
+	JR	NZ,BLRD5	; nein
+BLRD3:	POP	AF
+	JR	C,BLRD4		; Lesefehler
+	PUSH	AF
+	LD	A,2
+	CALL	PV1		; Zeile loeschen
+	DB	CRT
+	POP	AF
+BLRD4:	PUSH	AF
+	CALL	PV1
+	DB	AHEX		; Blocknr.
+	POP	AF
+	JR	C,BLRD6		; Lesefehler
+	CALL	PV1
+	DB	OSTR
+	DB	'> ',0		; ok
+	AND	A		; CY=0
+	RET
+	;
+BLRD5:	POP	AF
+	SCF			; CY=1, Lesefehler setzen
+	INC	L
+	DEC	L		; Z=0, falscher Block
+	JR	BLRD4
+	;
+BLRD6:	JR	Z,BLRD7		; Blocknr. richtig
+	CALL	PV1
+	DB	OSTR
+	DB	'*',8,8,8,0	; falsche Blocknr.
+	JR	BLRD1		; weiterversuchen
+	;
+BLRD7:	LD	H,A
+	DEC	L		; Leseversuche zaehlen
+	JR	Z,BLRD8		; letzter Versuch
+	CALL	PV1
+	DB	OSTR
+	DB	'? ',7,0	; Lesefehler!
+	JR	BLRD1
+	;
+BLRD8:	CALL	PV1
+	DB	OSTR
+	DB	'!',LF,CR,0	; Block fehlerhaft uebernommen
+	AND	A		; CY=0
+	RET
+;-------
+	DEFW	0DDDDH
+	DB	'VERIFY',1Fh
+	CALL	PV1
+	DB	VERIF
+	RET
+;-------
+; KEY		KEYLIST
+; KEY 0		Defaultbelegung fuer KC-Tastatur
+; KEY D5	Defaultbelegung fuer D005-Tastatur
+; KEY 1-F	F-Taste belegen
+;
+	DEFW	0DDDDH
+	DB	'KEY',1
+	OR	A
+	JR	NZ,KEYL
+	CALL	PV1
+	DB	KEYLI		; KEYLIST
+	RET
+	;
+KEYL:	LD	A,L
+	OR	A
+	JR	Z,KEY0		; KEY 0
+	CP	0D5H
+	JR	Z,KEYD5		; KEY D5
+	CALL	PV1
+	DB	KEY		; F-Taste belegen
+	RET
+	;
+KEY0:	LD	HL,KEB		; KC-Tastatur
+	LD	B,3		; 3 Tasten bei ext. Editor
+	JR	KEYBEL
+	;
+KEYD5:	LD	HL,KEA		; D005-Tastatur
+	LD	B,11		; 11 Tasten
+KEYBEL:	LD	DE,FTASTE	; 0B900H
+	XOR	A
+KEYNEU:	LD	(DE),A		; Trennung
+	INC	DE
+	LDI			; Tastencode
+	INC	BC		; BC unveraendert
+	DJNZ	KEYNEU
+	EX	DE,HL
+KCL:	LD	(HL),0		; Rest loeschen
+	INC	HL
+	LD	A,L
+	CP	9CH
+	JR	NZ,KCL
+	RET
+;
+; Funktionstastencodes:
+;
+KEA:	DB	'['	; F1	D005-Tastatur
+	DB	'\'	; F2
+	DB	']'	; F3
+	DB	'~'	; F4
+	DB	5	; F5	TAB
+	DB	6	; F6	weitersuchen
+	DB	'{'	; F7
+	DB	'|'	; F8
+	DB	'}'	; F9
+	DB	'`'	; F10
+	DB	''	; F11
+;
+KEB:	DB	ESC	; F1	ESC
+	DB	5	; F2	TAB
+	DB	6	; F3	weitersuchen
+;-------
+;	Bit	 76543210	Bit-Position in Speicherzelle OPT
+OPTAB:	DB	'2OBS1+PL'	; Assembler-Optionen
+;
+	DEFW	0DDDDH
+	DB	'ASM',1Fh
+ASM:	CALL	PV1
+	DB	OSTR
+	DB	'Options(+,1,2,B,L,O,P,S)?:',0
+	LD	BC,1A22H
+	CALL	INPUT
+	RET	C		; wenn BRK-Taste
+	LD	DE,OPTAB
+	LD	B,8		; 8 Bit
+ASM1:	PUSH	HL		; eingeg. Optionen
+	PUSH	BC
+	LD	A,(DE)		; OPTAB
+	INC	DE
+	LD	BC,9		; Breite Eingabefenster
+	CPIR			; Option dabei?
+	SCF			; setzen
+	JR	Z,ASM2		; ja
+	CCF			; ruecksetzen
+ASM2:	LD	HL,OPT		; Speicherzelle fuer die Assembler-Optionen
+	RL	(HL)		; Bit einschieben
+	POP	BC
+	POP	HL
+	DJNZ	ASM1		; fuer 8 Bit wiederholen
+	CALL	LFCR
+	LD	A,(OPT)
+	AND	88H		; nur Option '1' und '2' testen
+	CP	88H		; beide dabei?
+	JP	Z,DERR		; ja (Unsinn!) -> ERROR
+	CALL	HOM
+	CALL	TXANF		; an Textanfang verschieben
+	LD	HL,TOP
+	PUSH	HL		; RET-Adresse nach ASM!
+	CALL	LFCR
+	LD	HL,(T1E)	; Ende Quelltext
+	LD	A,3		; Textende markieren
+	CALL	PUT
+	LD	HL,(T1A)	; Beginn Quelltext
+	PUSH	HL		; Anfangsadresse merken
+	LD	HL,OPT
+	LD	A,(HL)
+	RES	4,(HL)		; Option '3' ruecksetzen
+	CP	(HL)
+	DEC	HL		; HL=STAT
+	RES	3,(HL)		; Option 'S' ruecksetzen
+	JR	Z,ASM4		; 'S' war auch nicht dabei
+	SET	3,(HL)		; Option 'S' setzen
+ASM4:	AND	84H		; Option '+' oder '2'?
+	CALL	Z,MMEND		; nein, Textende auf Speicherende setzen
+	JP	ASMII
+;-------
+;
+; Umschaltroutine zu ext. Editor und zurueck
+;
+	DEFW	0DDDDH
+	DB	'EDIT',1Fh
+EDIT:	LD	HL,SWITCH	; Hilfsprogramme
+	LD	DE,0C000H-SWI2+SWITCH
+	PUSH	DE
+	LD	BC,SWI2-SWITCH
+	LDIR			; Umschaltroutine in den IRM kopieren
+	RET			; und dort abarbeiten
+;
+SWITCH:	LD	HL,0C55AH	; Einsprungadresse Editor
+	LD	D,0F1h		; zu Editor-Ebene
+	JR	SWI1
+;-------
+; Menuewort im Editor, wird aus EDAS kopiert bei Wechsel von ASM zu EDIT
+; (steht im IRM, deshalb vor dem gleichnamigen Menuewort im Editor)
+;
+QM:	DW	0DDDDH
+	DB	'QUIT ',1	; nicht sichtbar durch Leerzeichen am Ende
+	LD	HL,SWI2		; RET-Adresse
+SWI0:	LD	(0C000H+QM-SWI2),A	; Menuewort QUIT im IRM loeschen
+	LD	(0C000H+AM-SWI2),A	; Menuewort ASM im IRM loeschen
+	LD	D,0E1h		; zu EDAS-Ebene
+SWI1:	EX	(SP),HL		; RET-Adresse austauschen
+	LD	A,2		; schalten
+	LD	L,A		; Steckplatz 2
+	CALL	PV1
+	DB	MODU
+	LD	HL,0C000H+AM-SWI2	; Menuewort ASM im IRM
+	LD	A,(HL)		; Prologbyte Low
+	INC	HL		; Prologbyte High
+	LD	(HL),A		; Menuewort im IRM aktivieren
+	RET
+;-------
+; Menuewort im Editor, wird aus EDAS kopiert bei Wechsel von ASM zu EDIT
+;
+AM:	DW	0DDH		; Prolog wird erst im RAM komplett aktiviert
+	DB	'ASM',1FH
+	LD	HL,SWI3		; RET-Adresse zu ASM
+	JR	SWI0		; Ebene umschalten
+	;
+SWI2:	CALL	NORAM		; Hilfsprogramme fuer EDAS regenerieren
+	JP	MAIN		; zum kurzen Menu
+	;
+SWI3:	CALL	NORAM		; Hilfsprogramme fuer EDAS regenerieren
+	CALL	ASM		; Kommando ASM direkt aufrufen
+	JP	LOOP2		; dann zum Menu
+;-------
+; Abfrage BRK und STOP (bei STOP auf naechste Taste warten):
+; PA:	CY=1	BRK betaetigt
+BRKS:	CALL	PV1
+	DB	KBDS
+	RET	NC		; keine Taste gedrueckt
+	CP	3		; BRK?
+	SCF
+	RET	Z
+STOP:	CP	13H		; STOP?
+	SCF
+	CCF
+	RET	NZ		; nicht STOP
+	CALL	KEYB		; auf Taste warten
+	RET	C		; BRK
+	JR	STOP
+KEYB:	CALL	PV1
+	DB	KBD		; Eingabe abwarten
+	CP	3
+	SCF			; BRK -> CY=1
+	RET	Z
+	CCF
+	RET
+;-------
+; Anzeige "no Memory":
+MEM:	CALL	PV1
+	DB	OSTR
+	DB	CR,'>>> No Memory <<<',7,LF,0
+	XOR	A
+	LD	(M4A),A		; Fehler loeschen
+	RET
+;-------
+; Abfrage ja/nein:
+; PA:	CY=1	BRK oder 'N' gedrueckt
+;	CY=0	'Y' gedrueckt
+YESNO:	CALL	PV1
+	DB	OSTR
+	DB	' (Y/N) ? ',0	; Entscheidung
+YES1:	CALL	KEYB
+	JR	C,YES2		; BRK
+	CALL	LETTR
+	CP	'Y'
+	JR	Z,YES2
+	CP	'N'
+	JR	NZ,YES1
+	SCF			; nein -> CY=1
+YES2:	PUSH	AF
+	CALL	CHR
+	CALL	LFCR
+	POP	AF
+	RET
+;-------
+; Tastatureingabe in einer Zeile:
+; (bei CR wird kein Zeilenvorschub ausgegeben)
+; PE:	BC=min./max. Cursorspalte!
+; PA:	CY=1	BRK gedrueckt (und LF,CR ausgegeben)
+;	CY=0	Enter, HL=Adresse des Zeilenanfangs
+; VR:	AF,DE,HL
+INPUT:	LD	A,B
+	LD	(CURSO),A
+INP1:	CALL	KEYB		; Tasteneingabe
+	JR	NC,INP0		; nicht BRK
+	CALL	LFCR
+	SCF
+	RET
+	;
+INP0:	cp	'.'
+	jr	z,inp9		; Punkt trennt Dateiname + Typ
+	cp	5		; TAB
+	jr	z,inpp		; geht zu Dateityp
+	CP	' '
+	JR	NC,INP2		; darstellbares Zeichen
+	CP	8		; CUL
+	JR	Z,INP2
+	CP	9		; CUR
+	JR	Z,INP2
+	CP	CR
+	JR	NZ,INP1
+; Eingabe beenden
+INP7:	LD	A,(CURSO+1)
+	LD	D,A
+	LD	E,B
+	CALL	PV1
+	DB	DABR		; Berechnen VRAM-Adresse
+	AND	A		; CY=0
+	RET
+	;
+INP9:	LD	A,C		; max. Spalte
+	CP	10h		; sind wir bei der Eingabe Dateiname?
+	JR	NZ,INP10	; nein, dann als normales Zeichen zulassen
+; gehe zu Spalte von Dateityp
+inpp:	ld	a,b
+	add	a,8
+	ld	(curso),a
+	jr	INP3
+; Zeichen anzeigen
+INP10:	LD	A,'.'
+INP2:	CALL	PV1
+	DB	CRT		; Zeichen anzeigen
+INP3:	LD	HL,CURSO
+	LD	A,(HL)
+	CP	B		; zu klein?
+	JR	NC,INP4
+	LD	A,B
+INP4:	CP	C		; zu gross?
+	JR	C,INP5
+	LD	A,C
+INP5:	LD	(HL),A
+	JR	INP1
+;-------
+; Name (mit Typ) eingeben und zur Benutzung ablegen:
+; PE:	DE	Zeiger auf Zeichenkette, die Dateityp vorgibt. (LOAD/SAVE)
+;	E=0	nichts vorgeben und nicht eintragen (LABEL)
+; PA:	HL=NAME0 (eingegebener Dateiname dort abgelegt)
+;	CY=1	BRK
+NA_ASM:	LD	DE,ASMTXT	; Dateityp fuer LOAD/SAVE
+NAME:	CALL	PV1
+	DB	OSTR
+	DB	LF,0BH,'Name :',0
+	LD	A,E
+	AND	A		; CY=0
+	LD	C,11H
+	JR	Z,NAMI		; nichts vorgeben
+	DEC	C
+	LD	HL,NAMP		; aktueller Dateiname
+	LD	B,8		; 8 Zeichen Dateiname
+NAMRE:	LD	A,(HL)		; gemerkter Name
+	INC	HL
+	CALL	PV1
+	DB	CSTBT		; zur Sicherheit!
+	DJNZ	NAMRE
+	EX	DE,HL
+	CALL	PV1
+	DB	ZKOUT		; Typ vorgeben
+NAMI:	LD	B,6
+	PUSH	DE
+	CALL	INPUT		; Eingabe
+	POP	DE
+	RET	C		; BRK
+	LD	A,E
+	AND	A
+	JR	Z,NACU		; Name nicht eintragen
+	PUSH	HL
+	LD	DE,NAME0	; Dateiname hier ablegen
+	LD	BC,11		; 8.3
+	LDIR			; Zur Verwendung kopieren
+	POP	HL
+NACU:	LD	A,13H
+	LD	(CURSO),A	; zum Weiterschreiben
+	RET
+ASMTXT:	DB	'ASM',0
+KCCTXT:	DB	'KCC',0
+;-------
+; Kassettenpuffer initialisieren, Dateiname eintragen:
+; PE:	HL=Dateiname, 11 Zeichen lang
+; PA:	A=0
+KPINI:	LD	DE,CASS+80h	; Ende Kassettenpuffer+1
+	XOR	A
+KPIN2:	DEC	E		; rueckwaerts B77FH bis B700H
+	LD	(DE),A		; Kassettenpuffer loeschen
+	JR	NZ,KPIN2	; 00H noch nicht erreicht
+	LD	(IX+5),E	; DE=0B700h
+	LD	(IX+6),D
+	LD	BC,11		; 11 Zeichen (Name und Typ)
+	LDIR			; Name eintragen
+	RET
+;-------
+; Text an Speicheranfang verschieben:
+; PE:	DE=Zeilenzahl, 0=gesamter Text
+;
+TXANF:	LD	HL,(T2E)	; Ende Teiltext 2
+	LD	BC,(T2A)	; Anfang Teiltext 2
+	XOR	A		; CY=0
+	SBC	HL,BC
+	LD	B,H
+	LD	C,L		; Laenge Text 2
+	RET	Z		; kein Text 2
+;	LD	HL,(MEML)	; Zeilennummer
+;	PUSH	HL
+	LD	HL,(T2A)	; von hier verschieben
+TXA1:	LD	A,CR
+	CALL	TCPIR		; Zeilenende suchen
+	JR	NZ,TXA2		; ausgesucht, aber CR nicht gefunden
+	DEC	DE		; rueckwaerts zaehlen
+;	EX	(SP),HL
+;	INC	HL		; Zeilennummer +1
+;	EX	(SP),HL
+	JP	PO,TXA2		; ausgesucht und CR gefunden
+	LD	A,D
+	OR	E		; gewuenschte Anzahl erreicht?
+	JR	NZ,TXA1
+	CALL	GET
+	CP	LF		; folgt LF?
+	JR	NZ,TXA2		; nein
+	INC	HL		; LF noch mitnehmen
+TXA2:	CALL	TXA		; Text verschieben
+TXA4:	;POP	HL
+;	LD	(MEML),HL	; neue Zeilennummer
+	RET
+	;
+TXA:	LD	DE,(T2A)	; Anfang Text 2
+	PUSH	DE
+	XOR	A
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; BC=Laenge des zu verschiebenden Textes
+	POP	HL		; HL=Quelle
+	LD	DE,(T1E)	; DE=Ziel
+	JR	Z,TXA3		; nichts zu verschieben
+	CALL	TLDIR		; an Text 1 anhaengen
+TXA3:	LD	(T1E),DE
+	LD	(T2A),HL
+	RET
+;
+; Text an Speicherende verschieben:
+; PE:	DE=Zeilenzahl, 0=gesamter Text
+; PA:	Z=1 es wurde kein Text verschoben (Position ist bereits Textanfang)
+;
+TOP:	CALL	HOM
+TXEND:	LD	HL,(T1E)	; Ende Teiltext 1
+	LD	BC,(T1A)	; Anfang Teiltext 1
+	XOR	A		; CY=0
+	SBC	HL,BC
+	LD	B,H
+	LD	C,L		; Laenge Text 1
+	RET	Z		; kein Text 1
+	INC	BC		; bis zum CR am Textanfang suchen
+;	LD	HL,(MEML)	; Zeilennummer
+;	PUSH	HL
+	LD	HL,(T1E)	; von hier verschieben
+	DEC	HL		; letztes Zeichen
+	CALL	GET		; Zeichen aus Textspeicher
+	CP	LF		; LF am Zeilenende?
+	JR	NZ,TXE0
+	DEC	HL		; vor das LF gehen fuer Suchen
+	DEC	BC		; und Suchanzahl verringern
+TXE0:	CALL	GET		; Zeichen aus Textspeicher
+	CP	CR		; davor noch ein CR?
+	JR	NZ,TXE1
+	DEC	HL		; das auch uebergehen
+	DEC	BC
+TXE1:	LD	A,CR
+	CALL	TCPDR		; Zeilenende suchen
+	DEC	DE		; rueckwaerts zaehlen
+;	EX	(SP),HL
+;	DEC	HL		; Textzeile -1
+;	EX	(SP),HL
+	JR	NZ,TXE2		; ausgesucht, aber CR nicht gefunden
+	JP	PO,TXE2a	; ausgesucht und CR gefunden
+	LD	A,D
+	OR	E		; gewuenschte Anzahl erreicht?
+	JR	NZ,TXE1
+TXE2a:	INC	HL		; auf CR gehen
+TXE2:	INC	HL		; auf LF gehen
+	CALL	GET		; Zeichen aus Textspeicher
+	CP	LF		; folgt LF?
+	JR	NZ,TXE3
+	INC	HL		; das LF auch noch ubergehen
+TXE3:	EX	DE,HL		; DE=Beginn Verschiebebereich
+;	POP	HL
+;	LD	(MEML),HL	; neue Zeilennummer
+TXE4:	LD	HL,(T1E)	; HL=Ende Verschiebebereich
+TXE5:	PUSH	HL
+	XOR	A		; CY=0
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; BC=Laenge des zu verschiebenden Textes
+	POP	HL
+	LD	DE,(T2A)
+	DEC	DE		; DE=Quelle
+	DEC	HL		; HL=Ziel
+	CALL	NZ,TLDDR	; Text verschieben
+	INC	DE
+	LD	(T2A),DE
+	INC	HL
+	LD	(T1E),HL
+	RET
+
+;====================
+; HILFE-Funktion:
+;	*HELP	listet alle Fehlercodes auf
+;	*HELP <code> zeigt nur den einen Fehlercode
+;====================
+;
+	DW	0DDDDH
+	DB	'HELP',1Fh
+	ld	hl,htab		; Liste der Fehler-Erklaerungen
+help:	ld	a,(de)		; eingegebener Parameter
+	or	a
+	jr	z,help3		; nichts angegeben
+	CALL	LETTR		; upcase
+	cp	(hl)		; Fehlercode in Liste gefunden?
+	jr	z,help1		; ja, diesen Fehler anzeigen
+	xor	a
+	ld	b,a
+	ld	c,a
+	cpir			; Stringende-Null suchen
+	ld	a,(hl)
+	or	a		; Ende der Tabelle?
+	jr	nz,help		; nein, weitersuchen
+help3:	call	pv1
+	db	home		; HOME-Position
+	ld	hl,httl		; mit Titelzeile beginnen
+	ld	b,16		; 15 Fehlercodes + Titelzeile
+help2:	call	help1		; einzeln anzeigen
+	djnz	help2
+	ret
+	;
+help1:	ld	a,2		; aktuelle Zeile loeschen
+	call	chr
+	call	pv1		; Text ausgeben
+	db	zkout
+	jp	lfcr		; naechste Zeile
+	;
+HTTL:	DB	'Fehlercodes:',0
+HTAB:	DB	'1-Semikolon?'0
+	DB	'2-mehrfach definierte Marke benutzt',0
+	DB	'3-Marke fehlt',0
+	DB	'4-falsche Mnemonik',0
+	DB	'5-Zahlenformat?',0
+	DB	'6-au~erhalb zul{ssiger Bereich',0
+	DB	'7-EQU ohne Marke',0
+	DB	'8-Zeichenkette fehlerhaft',0
+	DB	'9-Operandenfehler',0
+	DB	'A-falsche Flagbedingung',0
+	DB	'B-Rechenzeichen oder Komma fehlt',0
+	DB	'C-Division/0',0
+	DB	'D-Marke mehrfach definiert',0
+	DB	'E-Indexregister',0
+	DB	'M-Adresse unzul{ssig bei Option O',0
+	DB	0	; zweite Null kennzeichnet Tabellenende
+
+;-------
+	DEFW	0DDDDH
+	DB	'LABEL',1Fh
+	LD	E,0		; keine Vorgabe anzeigen
+	CALL	NAME		; Eingabe
+	RET	C		; BRK
+	LD	DE,STRING	; Suchpuffer
+	LD	BC,8		; max. sign. Laenge
+	LDIR
+	LD	HL,STRING	; Assemblierpuffer
+	CALL	LSUCH		; suchen in MTAB
+	JR	C,LAB1		; nicht gefunden
+HLCR:	CALL	PV1
+	DB	HLHX
+LAB2:	JP	LFCR
+	;
+LAB1:	CALL	PV1
+	DB	OSTR
+	DB	'not found',0
+	JR	LAB2
+;-------
+	DEFW	0DDDDH
+	DB	'LBLIST',1
+	OR	A		; ARG angegeben?
+	LD	C,3		; Standardbreite
+	JR	Z,LBL1
+	LD	C,L		; eingegebene Spaltenzahl
+LBL1:	LD	HL,(MTOP)
+LBL2:	PUSH	BC
+LBL3:	EX	DE,HL
+	LD	HL,(MBOT)	; Speicherende
+	SCF
+	SBC	HL,DE
+	JR	C,LBL9		; MTAB zu Ende
+	EX	DE,HL
+	CALL	GET
+	LD	E,A		; Wert low
+	INC	HL
+	CALL	GET
+	LD	D,A		; Wert high
+	INC	HL
+	EX	DE,HL
+	CALL	PV1
+	DB	HLHX		; Wert
+	CALL	GETDE
+	INC	DE
+	DEC	A		; doppelt def.?
+	JR	NZ,LBL4		; nein
+	CALL	PV1
+	DB	OSTR
+	DB	8,'*',0		; nicht eindeutige Marke
+LBL4:	EX	DE,HL
+	LD	B,8		; max. 8 Zeichen lang
+LBL5:	CALL	GET		; Zeichen
+	INC	HL
+	CP	':'		; Marke zu Ende?
+	JR	Z,LBL7		; ja
+	CALL	CHR		; anzeigen
+	DJNZ	LBL5
+LBL6:	CALL	GET
+	INC	HL
+	CP	':'		; jetzt zu Ende?
+	JR	NZ,LBL6		; nein, Rest weglassen
+	JR	LBL8
+	;
+LBL7:	CALL	PV1
+	DB	SPACE		; Rest mit Space formatieren
+	DJNZ	LBL7
+LBL8:	CALL	BRKS		; BRK/STOP abfragen
+	JR	C,LBL9		; BRK
+	DEC	C		; Anzahl Spalten
+	JR	NZ,LBL3
+LBL9:	POP	BC
+	PUSH	AF
+	CALL	LFCR		; neue Zeile
+	POP	AF
+	JR	NC,LBL2		; weiter, wenn nicht BRK
+	RET
+
+;	*************************************************
+;	*	ENDE - EDITOR	BEGINN ASSEMBLER	*
+;	*************************************************
+;
+;		(C) J.Schwarz, Leipzig
+;		erweitert, korregiert &
+;		dokumentiert:
+;		(C) F.Klemm, Gera
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Ueberlesen von Leerzeichen
+;
+SPCTB:	CALL	GET
+	CP	' '		; Space?
+	JR	Z,SPCT1
+	CP	TAB		; CUR?
+	RET	NZ
+SPCT1:	INC	HL
+	JR	SPCTB
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; zwei Marken vergleichen
+;
+; PE:	HL	Markentabellen-Adresse
+;	DE	Quelltextadresse
+; PA:	CY=0	Marke gefunden
+;	DE	Adresse nach Marke
+; VR:	AF, DE
+LOOK:	CALL	GET
+	CP	' '		; Anfang einer Marke?
+	JR	NC,LOOK5	; nein -> Error
+	INC	HL
+LOOK1:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+LOOK2:	INC	HL		; Marken-Pointer
+	INC	DE		; Quelltext-Pointer
+	CALL	GETDE
+	CALL	LABEL		; gueltiges Zeichen?
+	JR	C,LOOK3		; nein
+	LD	B,A
+	CALL	GET
+	CALL	LABEL		; gueltiges Zeichen?
+	CP	B
+	JR	NZ,LOOK4	; ungleich -> Error
+	JR	LOOK2		; weiter
+;
+LOOK3:	CALL	GET
+	CALL	LABEL		; gueltiges Zeichen?
+	JR	NC,LOOK4	; weiteres guelt. Zeichen -> Error
+	POP	BC
+	POP	HL
+	POP	HL
+	OR	A		; CY=0
+	RET
+;
+LOOK4:	POP	BC
+	POP	DE
+	POP	HL
+	DEC	HL
+LOOK5:	SCF			; Error
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Anzeige der assemblierten Zeile auf Bildschirm oder Drucker
+;
+OUTLN:	LD	A,(NERR)
+	CP	' '		; Fehler?
+	JR	Z,OUTL1
+	LD	A,'*'
+	LD	(NERR+1),A	; 1. Zeichen
+	LD	HL,(ERRNO)
+	INC	HL		; Fehler zaehlen
+	LD	(ERRNO),HL	; neue Fehlerzahl
+OUTL1:	LD	HL,NERR		; aufbereitete Assemblerzeile
+	LD	DE,96*256	; max. 96 Spalten bei 'Drucker'
+	LD	A,(OPT)
+	AND	20H		; Option 'B' ?
+	JR	Z,OUTL2		; nein
+	LD	D,39		; max. 39 Spalten bei 'Bildschirm'
+OUTL2:	LD	A,(HL)
+	INC	HL
+	CP	CR		; Zeilenende?
+	JR	Z,OUTL3
+	CALL	PRCHR		; anzeigen
+	LD	A,E
+	CP	D		; Zeilenende erreicht?
+	JR	C,OUTL2
+OUTL3:	LD	A,CR
+	CALL	PRCHR		; neue Zeile
+OUTL4:	LD	HL,NERR
+	LD	B,16
+OUTL5:	LD	(HL),' '
+	INC	HL
+	DJNZ	OUTL5		; Assemblierpuffer loeschen
+	LD	(HL),CR
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; HEX-Zahlen in Puffer eintragen
+; Wandlung Hex-Zahl in ASCII-Format (4 Zeichen) und in Puffer ab ADR eintragen:
+;
+; PE:	DE	Hex-Zahl
+;
+PDEHX:	LD	HL,ADR		; Puffer fuer Ablage der Hex-Zahl
+	LD	A,D		; High
+	CALL	PAHEX
+	LD	A,E		; Low
+PAHEX:	PUSH	AF
+	RRA
+	RRA
+	RRA
+	RRA
+	CALL	PTETR
+	POP	AF
+PTETR:	AND	0FH
+	ADD	A,90H
+	DAA			; Hex-Korrektur
+	ADC	A,40H
+	DAA
+	LD	(HL),A		; Ablage
+	INC	HL
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; MAIN INTERPRET LOOP
+; Eigentlicher Assemblerlauf, Start auf ASSEM:
+; (BRK-Abfrage nach jeder uebersetzten Zeile)
+;
+; PE:	HL	Zeiger auf Quelltextbeginn
+;	(OPT)	Optionen
+INT00:	CALL	ASLN		; Zeile uebersetzen
+ASSEM:	LD	A,(STAT)
+	BIT	2,A		; NO-MEMORY - Error?
+	JR	Z,INT01		; nein
+	POP	HL		; Stack reinigen
+	JP	LFCR		; -> Menue
+	;
+INT01:	LD	A,(OPT)
+	RLA			; Pass '2'?
+	JR	NC,INT03	; nein, nichts anzeigen
+	PUSH	HL		; akt. Quelltextadresse merken
+	PUSH	AF
+	RRA
+	RRA
+	CALL	C,OUTLN		; Anzeige bei Option 'L'
+	POP	AF
+	BIT	5,A		; Option '3'?
+	JR	NZ,INT02	; ja -> nicht nochmal anzeigen
+	LD	A,(NERR)
+	CP	' '		; Fehler?
+	CALL	NZ,OUTLN	; ja -> Zeile anzeigen
+INT02:	CALL	OUTL4		; Assemblierpuffer loeschen
+	LD	DE,(MPC)	; akt. MC-Adresse
+	CALL	PDEHX		; Wandlung in ASCII
+	INC	HL
+	LD	(PBL),HL	; Pointer (Byte-Liste)
+	POP	HL
+	PUSH	HL		; akt. Quelltextadresse
+	LD	DE,TEXT
+	LD	B,80		; Quelltextzeile kann max. 80 Zeichen breit sein
+INT02a:	CALL	GET
+	LD	(DE),A		; Quelltext in Puffer umladen
+	CP	CR
+	JR	Z,INT02b
+	INC	DE
+	INC	HL
+	DJNZ	INT02a
+INT02b:	POP	HL
+INT03:	CALL	PV1
+	DB	BRKT
+	JR	NC,INT04	; kein BRK
+	LD	A,(OPT)
+	BIT	4,A		; Option '3'?
+	JR	NZ,INTSV	; Beenden MB-Ausgabe
+	POP	HL		; Stack reinigen
+	RET			; -> Menue
+;
+INT04:	CALL	GET		; 1. Zeichen der neuen Zeile
+	CP	3		; Textende?
+	JR	NZ,INT00	; nein -> weiteruebersetzen
+	CALL	OUTL4		; Assemblierpuffer loeschen
+	LD	HL,OPT
+	LD	A,(HL)
+	RLA			; war das Pass 2?
+	JR	NC,PASS2	; nein, dann jetzt Pass 2
+	AND	20H		; Option '3'?
+	JR	NZ,INTSV	; ja -> Close
+
+	CALL	PV1
+	DB	OSTR
+	DB	CR,LF,'Errors: ',0
+	LD	HL,(ERRNO)	; Anzahl Fehler
+	PUSH	HL
+	CALL	PV1
+	DB	HLDEZ		; dezimal anzeigen
+
+	CALL	TSTART		; Startadresse?
+	JR	C,INT05
+	CALL	PV1
+	DB	OSTR
+	DB	CR,LF
+VERGL:	DB	'Start : ',0
+	CALL	PV1
+	DB	HLHX		; Startadresse hexadezimal anzeigen
+INT05:	CALL	PV1
+	DB	OSTR
+	DB	CR,LF,'End+1 : ',0
+	PUSH	IY
+	POP	HL		; akt. Befehlszaehler
+;	LD	HL,(MPC)	; akt. Adresse
+	CALL	HLCR		; Endadresse hexadezimal anzeigen
+	POP	HL		; Anzahl Fehler
+	LD	A,H
+	OR	L
+	JR	NZ,INTEN	; bei Fehler kein Save!
+	LD	HL,STAT
+	BIT	3,(HL)		; Option 'S'?
+	JR	Z,INTEN		; nein -> Ende
+	INC	HL		; OPT
+	LD	(HL),90H	; Setzen Optionen '2'und '3'
+	CALL	SHEAD		; Name eingeben, Vorblock erzeugen
+	JR	PASS3		; Pass 3 einleiten, Kassettenausgabe
+
+; MB-Ausgabe beenden:
+INTSV:	LD	BC,160		; kurzer Vorton
+	CALL	PV1
+	DB	CSRO		; Close (Ausgabe letzter Block)
+	CALL	LFCR
+INTEN:	POP	HL		; Stack reinigen
+	RET
+;-------
+PASS2:	SET	7,(HL)		; Pass 2 setzen
+	CALL	PV1
+	DB	OSTR
+	DB	'End Pass 1',CR,LF,LF,0
+	BIT	3,(HL)		; nur Pass 1?
+	JR	NZ,INT05	; ja, dann Endadresse noch anzeigen
+PASS3:
+ASMII:	LD	HL,STAT
+	RES	7,(HL)		; END-Bit ruecksetzen
+	RES	2,(HL)		; Error-Bit ruecksetzen
+	CALL	OUTL4		; Assemblierpuffer loeschen
+	LD	HL,0
+	LD	(ERRNO),HL	; Fehlerzahl und
+	LD	(MCL),HL	; MC-Laenge ebenfalls ruecksetzen
+	LD	A,(OPT)
+	AND	82H
+	CP	82H		; Option 'P' und Pass 2?
+	JR	NZ,INT06	; nein
+	LD	HL,ZEI2
+	CALL	PV1		; Zeichenausgabe auf
+	DB	SOUT		; Drucker umstellen
+INT06:	POP	HL		; Anfangsadresse
+	PUSH	HL		; regenerieren
+	LD	IY,(OBJ)
+	LD	(MPC),IY	; akt. MC-Adresse voreinstellen
+	JP	ASSEM		; Start Assemblerlauf
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Assemblieren einer Quelltextzeile
+;
+; PE:	HL	Anfangsadresse der Zeile
+;
+ASLN:	LD	A,(STAT)
+	AND	A
+	JP	M,ASSEN		; END erkannt
+	CALL	GET		; 1. Zeichen
+	LD	C,0FFH
+	CALL	LETTR		; Buchstabe?
+	JR	NC,ASSL		; ja (Marke)
+
+; Hier war Inline-Assembler fuer TEMO...
+
+ASS2:	CALL	SPCTB		; naechstes ASCII-Zeichen
+	CP	CR
+	JR	Z,ASS3		; Zeilenende
+	CP	';'
+	JR	Z,ASS3		; Kommentar
+	CALL	LETTR		; Buchstabe?
+	JP	NC,ASS8		; ja -> Op-Code analysieren
+	CALL	ERRX
+	DB	'1'		; Fehler 1 (Syntax-Error), da ungueltiges Zeichen gefunden
+ASS3:	JP	ASSEN		; zum Zeilenende
+
+; Marke behandeln:
+ASSL:	INC	C		; C=0 (Marke vorhanden, fuer EQU)
+	LD	D,H
+	LD	E,L
+	CALL	LOOK1		; Marke uebergehen
+	EX	DE,HL
+ASSP:	CP	':'		; Doppelpunkte nach Markenname ueberlesen
+	JR	NZ,ASS4
+	INC	HL
+	CALL	GET
+	JR	ASSP
+	;
+ASS4:	PUSH	HL		; Quelltext nach Marke
+	PUSH	DE		; Zeilenanfang
+	AND	A		; CY=0
+	SBC	HL,DE		; HL=Markenlaenge
+	INC	HL		; + 1 Byte Kennung
+	INC	HL		; + 2 Byte Wert
+	INC	HL
+	PUSH	HL
+	LD	HL,(T2A)
+	LD	DE,(T1E)
+	SBC	HL,DE		; HL=FREE
+	POP	DE
+	SCF			; 1 Byte fuer Doppelpunkt
+	SBC	HL,DE		; FREE-Markenlaenge
+	POP	HL		; Zeilenanfang
+	JR	NC,ASL1
+	CALL	MEM		; no Memory
+	LD	HL,STAT
+	SET	2,(HL)		; Fehler setzen
+	POP	HL		; Quelltextpointer (nach Marke)
+	JP	ASSEN
+;
+ASL1:	PUSH	BC
+	CALL	MARKE		; Marke suchen
+	POP	BC
+	POP	DE		; Quelltextpointer (nach Marke)
+	JR	C,ASS5		; noch nicht vorhanden
+	DEC	HL
+	LD	A,(OPT)
+	RLA			; Option '2'?
+	JR	NC,ASL2		; nein
+	CALL	GET
+	DEC	A		; doppelt definiert?
+	JR	NZ,ASL3		; nein
+	CALL	ERRX
+	DB	'D'		; Fehler 'D'
+	JR	ASL3
+;
+ASL2:	LD	A,1		; Kennung fuer doppelt definierte Marken
+	CALL	PUT
+ASL3:	EX	DE,HL		; HL = Quelltextpointer
+	JR	ASS2		; weiter
+
+; Marke eintragen, in PASS 1:
+ASS5:	LD	A,(OPT)
+	RLA			; Option '2'?
+	JR	C,ASL3		; ja
+	PUSH	DE		; Quelltextpointer (nach Marke)
+	LD	A,':'		; einen Doppelpunkt eintragen
+	CALL	PUT		; als Trennung Marke/Wert
+	DEC	HL
+ASS6:	DEC	DE		; letztes Zeichen der Marke
+	CALL	GETDE
+	CP	':'		; mit Doppelpunkt(en) beendet?
+	JR	Z,ASS6		; ja, davor gehen
+ASS7:	CALL	LETTR		; Wandlung gross
+	CALL	PUT		; Zeichen in Markentabelle eintragen
+	DEC	HL
+	CP	' '		; Steuerzeichen?
+	JR	NC,ASS6		; nein, weitermachen
+	LD	DE,(MPC)	; akt. Adresse
+	LD	A,D	; Adresse High
+	CALL	PUT		; Quelltextadresse der Marke
+	DEC	HL
+	LD	A,E	; Adresse Low
+	CALL	PUT
+	CALL	MMTOP		; MTOP neu setzen mit HL
+	CALL	FREE		; FREE aktualisieren
+	POP	HL		; Quelltextpointer (nach Marke)
+	JP	ASS2		; Marke eingetragen
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Befehl suchen, Op-Code analysieren (neue Variante, 22.01.2023):
+; PE:	HL	Zeiger auf Quelltext
+;
+
+; 1. Hochsumme und Quersumme ueber die Zeichen eines Befehls berechnen
+;    dabei alles -40H, weil es nur Buchstaben sind
+
+ASS8:	LD	DE,0
+ASS9:	SUB	40H
+	LD	B,A
+	ADD	A,E
+	LD	E,A		; E:= Summe der Zeichen
+	LD	A,D
+	ADD	A,D		; D:= Hochsumme:
+	ADD	A,B		;	1 * letztes Zeichen
+	LD	D,A		;	2 * vorletztes Zeichen
+	INC	HL		;	4 * vorvorletztes Zeichen ...
+	CALL	GET		; naechstes Zeichen aus Quelltext
+	CALL	LETTR		; Buchstabe?
+	JR	NC,ASS9		; ja, weiter
+	PUSH	HL		; Quelltextpointer
+	CP	' '
+	JR	Z,ASS10		; Leerzeichen
+	CP	TAB
+	JR	Z,ASS10		; Tabulator
+	CP	';'
+	JR	Z,ASS10		; Kommentar
+	CP	CR
+	JR	NZ,ERR4		; anderes Zeichen -> Fehler 4
+
+; 2. separater Test auf EQU
+
+ASS10:	AND	A
+	LD	HL,4B2BH	; EQU?
+	SBC	HL,DE
+	JR	NZ,ASN		; nein
+
+; EQU-Markenwertaenderung:
+ASS16:	LD	A,C		; Marke vorhanden?
+	OR	A
+	JR	Z,ASS20
+	CALL	ERRX
+	DB	'7'		; Fehler 7
+	JR	ASS21		; nicht vorhanden!
+	;
+ASS20:	POP	HL
+	CALL	ARITH		; Wert der Marke berechnen
+	LD	A,(OPT)
+	RLA			; Option '2'?
+	JR	C,ASSEN		; ja
+	PUSH	HL
+	LD	HL,(MTOP)
+	LD	A,E
+	CALL	PUT		; Aenderung der
+	INC	HL		; Adresse der Marke
+	LD	A,D		; in der Markentabelle
+	CALL	PUT
+	POP	HL
+	JR	ASSEN
+
+; 22.01.2023
+; Befehl pruefen durch Vergleich der Hoch- und Quersumme anhand
+; der hinterlegten Vergleichstabelle (mit Kontrolle beider Summen!)
+; PE:	D=Hochsumme, E=Quersumme
+ASN:	LD	HL,HQTAB-3	; Vergleichstabelle der Befehlssummen
+	LD	B,(HQTABE-HQTAB)/4	; Anzahl Befehle
+ASN1:	INC	HL
+	INC	HL		; Zeiger vor auf
+	INC	HL		; naechsten Befehlscode
+	LD	A,(HL)
+	INC	HL
+	CP	D		; Hochsumme korrekt?
+	JR	NZ,ASN2		; nein
+	LD	A,(HL)
+	CP	E		; Quersumme auch korrekt?
+	JR	Z,ASN3		; gefunden
+ASN2:	DJNZ	ASN1		; weitersuchen
+ERR4:	CALL	ERR_4		; Fehler 4 (Befehlscode unbekannt)
+ASS21:	POP	HL		; Quelltextpointer
+	JR	ASSEN		; bei Fehler
+
+; Befehl in Vergleichstabelle gefunden:
+ASN3:	INC	HL
+	LD	B,(HL)		; vorbereiteter Opcode
+	INC	HL
+	LD	C,(HL)		; Kontrollbyte
+
+	POP	HL		; Quelltextpointer
+	PUSH	BC		; Tabellenwerte (B=Opcode / C=Kontrollbyte)
+	XOR	A
+	LD	(M78),A		; Index ruecksetzen
+	LD	A,C		; Kontrollbyte
+	AND	0FH		; UP-Nummer (Bit 0-3)
+	CP	13		; DB,DEFB,DEFS,DEFW,DS,DW... ?
+	JR	Z,ASS22		; ja
+	CP	14		; DEFM?
+	JR	Z,ASS22
+	PUSH	HL		; Quelltextpointer
+	CALL	TFLAG		; Bedingungscode holen
+	CALL	C,EDU40		; wenn keine Bedingung, dann als Operand analysieren
+	DEC	HL
+	CALL	GET
+	INC	HL
+	CP	','		; Komma?
+	CALL	Z,EDU40		; nach Komma weiteren Operanden analysieren
+	LD	A,(M78)
+	OR	A		; Indexbefehl?
+	CALL	NZ,A_OUT	; Vorbyte fuer Indexbefehl ausgeben
+	POP	HL		; Quelltextpointer
+ASS22:	POP	AF		; A=B, F=C!
+	PUSH	AF
+	CALL	M,ED_OUT	; Vorbyte ED ausgeben, wenn (C)7=1
+	POP	BC		; Tabellenwerte (B=Opcode / C=Kontrollbyte)
+	CALL	OPPV		; PV (Code verarbeiten)
+ASSEN:	LD	(MPC),IY	; akt. Adresse (Ende ueberlesen)
+	LD	A,CR
+	PUSH	BC
+	LD	BC,100H
+	CALL	TCPIR		; Zeilenende (CR) suchen
+	CALL	GET
+	CP	LF		; LF uebergehen
+	JR	NZ,ASS24
+	INC	HL
+ASS24:	POP	BC
+	RET
+;-------
+; Programmverteiler:
+; PE:	C	UP-Nummer 0-15 in Bit 0..3
+;	B	Befehlsbyte in vorbereiteter Form
+; VR:	DE, AF
+OPPV:	PUSH	HL
+	PUSH	BC
+	LD	A,0FH		; max. 00..0FH
+	AND	C
+	LD	HL,UP0		; 1. Adresse
+	LD	DE,UPTAB	; Adressdifferenz-Tabelle
+	INC	A
+	LD	B,0
+OPPV1:	PUSH	AF
+	LD	A,(DE)		; Abstand zu naechster Routine
+	INC	DE
+	LD	C,A
+	ADD	HL,BC		; Adresse naechster Routine
+	POP	AF
+	DEC	A
+	JR	NZ,OPPV1	; wdh. bis A=0
+	POP	BC
+	EX	(SP),HL		; Ansprung
+	RET
+;-------
+; 16 Unterprogramme ueber Programmverteiler:
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; END
+;
+UP0:	LD	A,(STAT)
+	SET	7,A		; END erkannt
+	LD	(STAT),A
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; BIT, RES, SET
+;
+UP1:	LD	A,0CBH		; Vorbyte 'CB' ausgeben
+	CALL	A_OUT		; Code ausgeben
+	CALL	EDU40		; 1. Operand analysieren
+	LD	A,E		; Bitnummer
+	CP	8
+	JP	NC,UP50		; Bit > 7
+	RLCA
+	RLCA
+	RLCA
+	ADD	A,B		; + Code
+	LD	B,A
+BIT1:	CALL	EDU40		; 2. Operand analysieren
+	JR	Z,BIT2		; kein Register erkannt!
+	LD	C,A		; Registercode
+	CALL	IOFFS		; Offset fuer Indexbefehl
+	JR	NC,BIT3	; kein Indexbefehl
+	LD	A,6
+	CP	C		; Register M
+	JR	NZ,BIT2	; nein
+	LD	A,B		; vorber. Befehlsbyte
+	AND	0C0H
+	CP	40H
+	JR	Z,BIT3		; BIT-Befehl
+	DEC	HL
+	CALL	GET
+	INC	HL
+	CP	','
+	JR	NZ,BIT3	; kein weiterer Operand
+	CALL	EDU40		; 3. Operand analysieren
+	JR	Z,BIT2		; kein Register
+	CP	6
+	JR	Z,BIT2		; nochmal M
+	LD	C,A		; Registercode
+	LD	A,(DDFD)
+	AND	A
+	JR	Z,BIT3		; nicht noch mal Indexreg.
+BIT2:	CALL	ERR_E		; sonst Fehler 'E'
+BIT3:	LD	A,C		; Registercode
+	JP	ABOUT		; einarbeiten und ausgeben
+;-------
+; Fehlertest fuer Ladebefehle mit 2x Register M bzw. (HL):
+MM:	ld	a,6
+	cp	c		; 1. Register = M/(HL)?
+	RET	nz
+	cp	e		; 2. Register auch M/(HL)?
+	ret	nz
+ERR_9:	CALL	ERRX		; Fehlercode eintragen
+	DB	'9'		; Operandenfehler (waere sonst HALT)
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; CCF, NEG, SCF, DAA, RLA, DI, EI, RLD, LDD, LDDR, CPD, POP, PUSH ...
+;
+UP2:	PUSH	BC
+EDU14:	CALL	EDU40		; Operand analysieren
+	JR	Z,UP31		; kein Register erkannt
+	CP	31H		; AF?
+	JR	Z,UP32		; Korrektur 31H -> 30H
+	CP	30H		; SP?
+	JR	NZ,UCBEB	; anderes Register erkannt!
+	POP	BC
+	LD	A,B		; vorbereiteter Opcode
+	AND	0FBH
+	CP	0C1H		; PUSH oder POP?
+	JR	Z,ERR_9		; nicht mit SP erlaubt!
+	PUSH	BC
+	LD	E,31H		; ergibt wieder A=30H fuer Register SP
+UP31:	LD	A,E		; Wert
+UP32:	DEC	A		; -1 (fuer RST n)
+UCBEB:	POP	BC
+	JP	ABOUT		; einarbeiten und ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Logik- und Arithmetikbefehle
+; CP, ADC, ADD, DEC, AND, SBC, INC, OR, XOR, SUB
+;
+UP3:	CALL	EDU40		; Operand analysieren
+	JR	NZ,EDU11	; Register erkannt
+; Wert direkt nach Logikbefehl, also
+; CP n, ADC n, ADD n, DEC n, AND n, SBC n, INC n, OR n, XOR n, SUB n
+	LD	A,B		; vorbereiteter OpCode
+	CP	80H
+	JP	C,ERR_9		; INC n oder DEC n nicht zulaessig
+	ADD	A,46H		; Offset zu Code CP n, ADC n, usw.
+	CALL	A_OUT		; Code ausgeben
+	JP	E_OUT		; 8-Bit-Wert in E ausgeben
+	;
+EDU11:	CP	31H		; AF?
+	JR	NC,ERR_9	; keine Logikbefehle mit Register AF, I oder R
+	CP	6		; (HL)?
+	JR	Z,EDU12		; als 8-Bit-Register behandeln
+	LD	A,(REGNR)	; Registerkennbyte
+	CP	12
+	JR	NC,EDU13	; 16Bit-Register oder Register I
+EDU12:	DEC	HL
+	CALL	GET
+	INC	HL
+	CP	','
+	JR	Z,UP3		; Komma danach, dann 2. Operanden benutzen
+	LD	A,5
+	CP	B
+	LD	A,(REGC)	; Registercode
+	JR	C,EDU15
+	CALL	ASBOT
+	JR	EDU34
+;
+EDU15:	CALL	ABOUT
+EDU34:	JP	IOFFS		; Offset fuer Indexbefehl
+
+; 16Bit-Logikbefehle
+EDU13:	EX	DE,HL		; Quelltextpointer in DE merken
+	LD	HL,TABARI	; Arithmetikbefehle
+	LD	A,B		; vorbereiteter 8Bit-Opcode (ADC=88H, ADD=80H, usw.)
+	CPIR			; in Tabelle suchen
+	LD	B,(HL)		; vorbereiteter 16Bit-Opcode
+	EX	DE,HL		; Quelltext zurueck nach HL
+	DEC	HL
+	CALL	GET
+	INC	HL
+	CP	','		; Komma danach?
+	JR	NZ,EDUX1	; nein, Kurzform
+; Langform
+	LD	A,(REGC)
+	CP	20H		; dann muss es mit HL beginnen!
+	JP	NZ,ERR_9
+	LD	A,B		; vorbereiteter OpCode
+	CP	40H		; SBC=42H, ADC=4AH
+	CALL	NC,ED_OUT	; Vorbyte ED ausgeben bei ADC und SBC
+	JR	UP2
+; Kurzform
+EDUX1:	LD	A,B		; vorbereiteter OpCode
+	CP	40H		; INC=03H, ADD=09H, DEC=0BH
+	CALL	NC,ED_OUT	; Vorbyte ED ausgeben, ausser bei ADD, INC, DEC
+	LD	A,(REGC)	; Registercode mitgeben
+	JP	ABOUT
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; IM
+;
+UP4:	CALL	ARITH		; Wert berechnen (IM 0 ... 2)
+	LD	A,E
+	CP	3
+	JR	C,UP51
+UP50:	CALL	ERRX
+	DB	'6'		; IM 3 und groesser!
+	XOR	A
+	JR	EDU17
+	;
+UP51:	LD	DE,IMTAB	; Codes fuer IM-Befehle
+	ADD	A,E
+	LD	E,A
+	LD	A,(DE)
+	JR	EDU17		; Code ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; IN
+;
+UP5:	CALL	EDU40		; 1. Operand analysieren
+	LD	C,A		; Registercode fuer ED-Befehl
+	LD	A,(REGC)	; Registercode
+	INC	A		; Register erkannt?
+	JR	Z,EDU16		; nein, Wert direkt angegeben
+	CALL	EDU40		; 2. Operand analysieren
+	LD	A,(REGC)	; Registercode
+	INC	A		; Register erkannt?
+	JR	NZ,EDU19	; IN r,(C)
+EDU16:	LD	A,0DBH		; IN A,n
+	CALL	A_OUT		; Code ausgeben
+E_OUT:	LD	A,E
+EDU17:	JP	A_OUT		; Code ausgeben
+;
+EDU18:	LD	C,E
+EDU19:	CALL	ED_OUT		; Vorbyte ED ausgeben
+	LD	A,C		; Registercode
+	JP	ASBOT		; einbauen und ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; OUT
+;
+UP6:	CALL	EDU40		; 1. Operand analysieren
+	LD	A,(REGC)	; Registercode
+	CP	0FFH		; Register erkannt?
+	PUSH	AF
+	LD	C,E
+	CALL	EDU40		; 2. Operand analysieren
+	LD	E,A		; Registercode fuer ED-Befehl
+	POP	AF
+	JR	NZ,EDU18	; OUT (C),r
+	LD	A,0D3H		; OUT n,A
+	CALL	A_OUT		; Code ausgeben
+	LD	A,C
+	JP	A_OUT		; ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; RLC, RRC, RL, RR, SLA, SRA, SLS, SRL
+;
+UP7:	LD	A,0CBH		; Vorbyte CB
+	CALL	A_OUT		; Code ausgeben
+	JP	BIT1		; weiter wie bei Bitbefehle
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; EX	EX AF,AF'	EX DE,HL
+;	EX (SP),HL	EX (SP),IX	EX (SP),IY
+;
+UP8:	CALL	EDU40		; 1. Operand analysieren
+	CP	'('		; Klammer erkannt?
+	JR	NZ,UP91		; nein
+	LD	A,(REGC)	; Register in der Klammer
+	CP	30H		; SP?
+	JR	NZ,ERR9		; Registerfehler
+	CALL	EDU40		; 2. Operand analysieren
+	LD	B,0E3H		; EX (SP),HL
+	CP	20H		; HL, IX oder IY?
+	JR	Z,EDU1C
+ERR9:	JP	ERR_9		; Registerfehler
+;
+UP91:	CP	10H		; DE?
+	JR	NZ,UP92		; nein
+	CALL	EDU40		; 2. Operand analysieren
+	CP	20H		; HL?
+	LD	B,0EBH		; EX DE,HL
+	JR	Z,EDU1C
+	JR	ERR9
+	;
+UP92:	CP	31H		; AF?
+	JR	NZ,ERR9		; sonst Fehler 9
+	CALL	EDU40		; 2. Operand?
+	LD	B,8		; EX AF,AF'
+	INC	A
+	JR	Z,EDU1C		; EX AF (Kurzform)
+	CP	32H		; nochmals AF?
+	JR	NZ,ERR9
+EDU1C:	JP	B_OUT		; Code in B ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; JP, CALL
+;
+UP9:	CALL	TFLAG		; Bedingungscode holen
+	JR	C,SKIP1		; nicht gefunden
+	CP	7		; M?
+	JR	NZ,SKIP4	; nein
+	DEC	HL
+	LD	C,A		; merken
+	CALL	GET
+	INC	HL
+	CP	','		; M, ?
+	LD	A,C
+	JR	Z,SKIP4		; ja
+	JR	SKIP2		; JP M
+;
+SKIP1:	CALL	EDU40		; Operand analysieren
+	JR	Z,SKIP5		; kein Register
+	LD	A,(REGNR)	; Registerkennbyte
+	CP	3AH		; M, (HL), (IX) oder (IY)?
+	JR	NZ,ERR_A
+SKIP2:	LD	B,0E9H		; JP (HL)
+	JR	EDU1C
+;
+ERR_A:	CALL	ERRX		; in (NERR) eintragen
+	DB	'A'		; Fehler 'A'
+	RET
+;
+SKIP4:	CALL	ASBOT		; Bedingungscode einarbeiten
+	CALL	ARITH		; Wert berechnen
+	JP	BCOUT		; Wert ausgeben
+;
+SKIP5:	LD	A,B
+	LD	B,0C3H		; JP (cc),nn
+	CP	0C2H
+	JR	Z,SKIP6
+	LD	B,0CDH		; CALL
+SKIP6:	LD	A,B
+	JP	EDU30
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; RET, RET (cc)
+;
+UP10:	CALL	TFLAG		; Bedingungscode holen
+	JP	NC,ASBOT	; einschieben und ausgeben
+	CALL	ARITH		; Wert berechnen
+	JR	NZ,ERR_A	; Fehler 'A', da Wert gefunden!
+	LD	A,0C9H		; unbedingtes RET
+	JP	A_OUT		; Code ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; JR, DJNZ
+;
+UP11:	CALL	TFLAG		; Bedingungscode holen
+	JR	NC,JR1		; gueltiger Bedingungscode
+	CALL	B_OUT		; unbedingten Code ausgeben
+	JR	JR2
+;
+JR1:	BIT	2,A
+	JR	NZ,ERR_A	; Fehler 'A', weil falsche Sprungbed.
+	BIT	3,B
+	JR	Z,ERR_A		; Fehler 'A', weil DJNZ mit Sprungbed.
+	LD	B,20H
+	CALL	ASBOT		; Bedingung einbauen
+JR2:	CALL	EDU40		; Operand analysieren
+	JR	NZ,ERR_A	; Fehler 'A' (Register erkannt)
+	PUSH	HL
+	PUSH	IY
+	EX	DE,HL
+	POP	DE		; Adresspointer
+	SCF
+	SBC	HL,DE		; Differenz berechnen
+	LD	E,L
+	LD	A,H
+	RLC	E
+	ADC	A,0
+	JR	Z,JR3		; Sprungweite zu gross?
+	CALL	ERRX		; Fehlercode eintragen
+	DB	'6'		; Fehler 6
+JR3:	LD	A,L
+	POP	HL
+	JP	A_OUT		; Code ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; DEFB, DEFW, DEFS, DB, DW, DS
+;
+UP12:	call	SPCTB		; naechstes Zeichen holen
+	cp	' '
+	jr	nc,DB1
+ERR_4:	CALL	ERRX		; in (NERR) eintragen
+	DB	'4'		; Syntexfehler
+	RET
+;
+DB1:	PUSH	BC
+	DEC	B
+	JR	NZ,DEFWS	; nicht DB
+	CP	27H		; Zeichenkette?
+	JR	NZ,DEFWS	; nein
+	CALL	STR		; String bearbeiten
+	POP	BC
+	RET	C		; Fehler
+DB2:	CP	','		; folgt Operand?
+	RET	NZ		; nein
+	INC	HL		; nach Komma
+	JR	UP12		; und noch einmal
+;
+DEFWS:	CALL	EDU40		; Operand analysieren
+	POP	BC
+	LD	A,B
+	CP	4
+	JR	Z,DEFS		; DS/DEFS
+	PUSH	BC
+	DEC	B
+	JR	NZ,DB3
+	INC	B		; DB bleibt 1!
+DB3:	LD	A,E		; Low
+DB4:	CALL	A_OUT		; Code ausgeben
+	LD	A,D		; High
+	DJNZ	DB4		; nur bei DW/DEFW
+	POP	BC
+	DEC	HL
+	CALL	GET
+	jr	DB2		; Kommatest
+;
+DEFS:	LD	B,D
+	LD	C,E		; Anzahl
+	DEC	HL
+	CALL	GET
+	INC	HL
+	CP	','		; Komma?
+	LD	E,0
+	JR	NZ,DS0
+	CALL	EDU40		; Operanden analysieren
+DS0:	LD	A,E		; Low = Code
+	CALL	A_OUT		; Code ausgeben
+	DEC	BC
+	LD	A,B
+	OR	C
+	JR	NZ,DS0		; wiederholen
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; DEFM
+;
+UP13:	CALL	SPCTB		; naechstes ASCII-Zeichen
+	CP	27H
+	JR	NZ,ERR_8
+	CALL	STR		; String auswerten
+	CP	','
+	RET	NZ
+ERR_8:	CALL	ERRX
+	DB	'8'		; Fehler 8
+	RET
+;
+; Eintragen Fehlercode
+; PE:	Fehlercode direkt nach CALL ERRX als DB ..
+; PA:	Z=0
+;
+ERRX:	EX	(SP),HL		; HL auf Stack, Fehlercode in (HL)
+	LD	A,(NERR)
+	CP	' '		; bereits ein Fehlercode eingetragen?
+	JR	NZ,ERRY		; ja
+	LD	A,(HL)		; Fehlercode holen
+	LD	(NERR),A	; und eintragen
+ERRY:	INC	HL		; Fehlercode uebergehen
+	EX	(SP),HL		; HL regenerieren
+	OR	A		; Z=0
+	RET
+;
+; Sting auswerten
+;
+STR:	INC	HL		; nach '
+STR1:	CALL	GET
+	CP	' '		; Steuerzeichen?
+	JR	C,ERR_8		; ja -> Fehler
+	INC	HL
+	CP	27H
+	JR	Z,STR2
+	CALL	A_OUT		; Code ausgeben
+	JR	STR1
+;
+STR2:	CALL	SPCTB
+	CP	','
+	RET	Z
+	CP	';'
+	RET	Z
+	CP	CR
+	RET	Z
+	SCF			; Fehler
+	JR	ERR_8
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; ORG
+;
+UP14:	CALL	ARITH		; Wert berechnen
+;02.01.2024: Fehlerpruefung nicht mehr in Pass 1
+	LD	A,(OPT)
+	RLA			; Pass '2'?
+	JR	NC,UP14A	; nein, Fehler noch nicht auswerten
+ 	LD	A,(NERR)
+	CP	' '		; Fehler?
+	RET	NZ		; ja, Abbruch
+UP14A:	PUSH	DE		; ermittelter Wert
+	POP	IY		; als neuer Befehlszaehlerstand
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; LD
+;
+UP15:	PUSH	HL
+	XOR	A		; Indexspeicher
+	LD	(M78),A
+	CALL	EDU40		; 1. Operand analysieren
+	JR	Z,EDU1		; Klammer oder kein Register
+	LD	C,A		; 1. Register merken
+	LD	A,(DDFD)
+	LD	B,A		; Index merken
+	CALL	EDU40		; 2. Operand analysieren
+	JR	Z,EDU2		; Klammer oder kein Register
+	LD	E,A		; 2. Register
+	ADD	A,C		; + 1. Register
+	CP	0FH
+	JP	NC,EDU31	; Doppelregister oder Register I bzw. R dabei!
+	POP	HL
+	LD	A,E		; 2. Register
+	ADD	A,40H		; Befehle ab 40H
+	PUSH	BC		; Index
+	LD	B,A		; vorbereiteter Befehl
+	LD	A,C		; Register einbauen
+	CALL	ASBOT		; und ausgeben
+	POP	BC
+	CALL	MM		; Test auf 2x Register M/(HL)?
+	LD	A,(M78)
+	OR	A		; Indexbefehl?
+	RET	Z		; nein
+	LD	A,6
+	CP	E
+	JR	Z,LD02		; Register M/(HL) dabei
+	CP	C
+	JR	NZ,LD03		; Register M/(HL) nicht dabei
+LD02:	LD	A,(M79)		; Offset fuer Indexbefehl
+	JR	EDU3		; Code ausgeben
+;-------
+; Fehlertest fuer Ladebefehle mit 8-Bit-Indexregistern:
+LD03:	LD	A,(DDFD)
+	SUB	B
+	RET	Z		; 2* der selbe Index
+	AND	0FH
+	JR	Z,ERR_E		; 2 versch. Indexregister!
+	LD	A,C
+	XOR	E
+	AND	4
+	RET	NZ		; nur 1* H oder L
+	LD	A,7
+	CP	C		; Akku dabei
+	RET	Z
+	CP	E		; Akku dabei
+	RET	Z
+ERR_E:	CALL	ERRX
+	DB	'E'		; Fehler 'E'
+	RET
+;
+EDU1:	POP	DE
+	LD	A,(REGC)	; Registercode
+	INC	A		; Register erkannt?
+	JR	Z,EDU4		; nein
+	INC	A
+	JR	EDU3		; Code ausgeben
+;
+EDU4:	LD	A,(KLAM)
+	CP	'('		; Wert in Klammern?
+	JP	NZ,ERR_9
+	LD	BC,(NUMB)	; Wert des 1. Operanden
+	CALL	EDU40		; 2. Operand analysieren
+	LD	(NUMB),BC
+	CP	7		; Register A?
+	JR	NZ,EDU5
+	LD	A,32H		; LD (nn),A
+EDU30:	CALL	A_OUT		; Code ausgeben
+	JR	EDU6		; Wert ausgeben
+;
+EDU5:	CP	31H		; AF?
+	JP	Z,ERR_9
+	CP	20H		; (HL)?
+	LD	B,22H		; LD (nn),HL
+	JR	Z,EDU7
+	CALL	ED_OUT		; Vorbyte ED ausgeben
+	ADD	A,43H
+	LD	B,A
+EDU7:	CALL	B_OUT		; Code ausgeben
+	JR	EDU6		; Wert ausgeben
+
+; LD Register,n
+; LD Register,(nn)
+; LD Register,(dd)
+; LD Doppelregister,nn
+; LD Doppelregister,(nn)
+EDU2:	POP	HL
+	CP	'('		; Klammer?
+	JR	NZ,EDU8
+	LD	(M78),A
+	LD	A,(REGC)	; Registercode
+	CP	0FFH		; Register erkannt?
+	JR	Z,EDU8		; nein
+	CP	20H
+	JR	NC,ERRR
+	ADD	A,0AH		; LD A,(BC) oder LD A,(DE)
+EDU3:	JP	A_OUT		; Code ausgeben
+
+; LD Register,n
+; LD Doppelregister,nn
+EDU8:	CALL	ARITH		; Wert berechnen
+	LD	A,(REGC)	; Registercode
+	CP	7		; A?
+	JR	NZ,EDU9		; nein
+	LD	A,(M78)
+	CP	28H		; "("
+	JR	NZ,EDU9
+	LD	A,3AH		; LD A,(nn)
+	CALL	A_OUT		; Code ausgeben
+	CALL	ARITH		; Wert berechnen
+EDU6:	JP	BCOUT		; Wert ausgeben
+;
+EDU9:	CP	31H		; AF?
+	JR	Z,ERRR
+	CP	6		; M?
+	JR	Z,EDU0A
+	LD	A,(REGNR)	; Registerkennbyte
+	CP	12H
+	LD	A,(REGC)	; Registercode
+	JR	NC,EDU0B
+EDU0A:	LD	B,6
+	CALL	ASBOT
+	CALL	EDU34
+	CALL	ARITH		; Wert berechnen
+	LD	A,E
+EDU33:	JR	EDU3		; Code ausgeben
+	;
+EDU0B:	PUSH	AF
+	CALL	EDU40		; Operand analysieren
+	CP	28H
+	LD	C,1
+	JR	NZ,EDU0C
+	LD	C,4BH
+	POP	AF
+	PUSH	AF
+	CP	20H
+	JR	NZ,EDU0D
+	LD	C,0AH
+	JR	EDU0C
+;
+EDU0D:	CALL	ED_OUT		; Vorbyte ED ausgeben
+EDU0C:	LD	A,C
+	POP	BC
+	CALL	ABOUT
+	JR	EDU6		; Wert ausgeben
+
+; Doppelregister oder I oder R bei LD-Befehl dabei:
+EDU31:	POP	HL		; nochmals von vorn beginnen
+	CALL	EDU40		; 1. Operand analysieren
+	CP	30H		; Register SP?
+	JR	NZ,EDU0E	; nein
+	CALL	EDU40		; 2. Operand analysieren
+	CP	20H		; Register HL?
+	JR	NZ,ERRR		; Operandenfehler
+	LD	A,0F9H		; LD SP,HL
+	JR	EDU33		; Code ausgeben
+
+; Ladebefehl mit I- oder R-Register:
+EDU0E:	CP	7		; A-Register?
+	JR	Z,EDUNA		; 1. Operand = Register A
+	BIT	6,A		; R- oder I-Register?
+	JR	NZ,EDU0F	; 1. Operand = Register R oder I
+ERRR:	JP	ERR_9		; alles andere sind Fehler
+
+; LD A,I und LD A,R
+EDUNA:	CALL	EDU40		; 2. Operand analysieren
+	BIT	6,A		; R- oder I-Register?
+	JR	Z,ERRR		; nein -> Fehler 9
+	ADD	A,10H		; 47H -> 57H	4FH -> 5FH
+EDU1F:	CALL	ED_OUT		; Vorbyte ED ausgeben
+EDU10:	JR	EDU33		; Code ausgeben
+
+; LD I,A und LD R,A
+EDU0F:	LD	C,A		; 1. Operand
+	CALL	EDU40		; 2. Operand analysieren
+	CP	7		; A?
+	JR	NZ,ERRR
+	LD	A,C		; Code 47 oder 4FH
+	JR	EDU1F		; mit Vorbyte ED ausgeben
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Operanden analysieren
+;
+; PE:	HL	Quelltextadresse
+; PA:	Z=1	wenn Klammer oder kein Reg. erkannt
+;	Z=0	Register erkannt, dann:
+;	A	Registercode oder '('
+;	HL	Quelltextadresse nach dem Operanden
+;	DE	Wert eines Ausdrucks
+; VR:	AF, DE, HL
+;
+EDU40:	CALL	ARITH		; Wert berechnen
+	LD	A,(DDFD)
+	OR	A		; Index-Befehl?
+	JR	Z,EDR1		; nein
+	LD	(M78),A
+	LD	A,(NUMB)	; Offset fuer Index-Befehl
+	LD	(M79),A
+EDR1:	LD	A,(KLAM)
+	CP	'('		; Klammer?
+	RET	Z		; ja
+	LD	A,(REGC)	; Registercode
+	CP	-1		; Register erkannt?
+	RET
+;-------
+; Offset fuer Indexbefehl ausgeben:
+; PA:	CY=0	kein Indexbefehl
+IOFFS:	LD	A,(DDFD)
+	OR	A		; Index-Befehl?
+	RET	Z		; nein (CY=0)
+	LD	A,(REGC)
+	CP	6		; (IX) oder (IY)?
+	SCF			; Indexbefehl
+	RET	NZ		; nein
+	LD	A,(NUMB)	; Offset fuer Index-Befehl
+	CALL	A_OUT		; ausgeben
+	SCF			; Indexbefehl
+	RET
+;-------
+; Vorbyte 0EDH ausgeben
+ED_OUT:	PUSH	AF
+	LD	A,0EDH
+	CALL	A_OUT
+	POP	AF
+	RET
+;-------
+; Code in Bits 3 bis 5 einschieben und ausgeben
+; PE:	A	Code
+;	B	Rest des Befehlsbytes
+; VR:	AF,IY
+ASBOT:	RLCA
+	RLCA
+	RLCA
+ABOUT:	ADD	A,B
+	JR	A_OUT		; Code ausgeben
+;-------
+; Wert mit 2 Bytes ausgeben:
+BCOUT:	LD	BC,(NUMB)
+	LD	A,C
+	CALL	A_OUT		; Code ausgeben
+B_OUT:	LD	A,B
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Ausgabe eines assemblierten Bytes auf die versch.
+; Ausgabekanaele (RAM, Kassette, Anzeigezeile):
+; PE:	A	Byte
+;	IY	Adresse
+; PA:	IY	naechste Adresse
+; VR:	AF,IY
+;
+A_OUT:	EXX
+	LD	C,A		; Datenbyte
+	LD	A,(OPT)
+	BIT	4,A		; Pass 3 = Save?
+	JR	NZ,OUT2	; ja
+	RLA			; Pass 2?
+	JR	NC,OUTE	; nein, im Pass 1 nichts machen
+	RLA			; Option 'O'?
+	JR	NC,OUT1	; nein, nur Anzeigezeile erzeugen
+	; in MC in Speicher schreiben (Pass 2)
+	PUSH	IY		; Befehlszaehler
+	POP	DE
+	LD	HL,(OFFS)	; Assembleroffset
+	ADD	HL,DE		; HL=Adresse+Offset
+	EX	DE,HL		; DE=Adresse, wo MC geschrieben wird
+	LD	HL,8000H
+	SCF
+	SBC	HL,DE
+	JR	C,POKE1		; groesser als 7FFFH, also IRM
+; im RAM zugelassen:
+;	0000H bis 00FFH
+;	0200H bis T1A		(T1A bis MBOT von ASM genutzt)
+;	MBOT  bis 7FFFH
+	LD	HL,0FFH
+	SBC	HL,DE
+	JR	NC,POKE		; kleiner als 100H > OK
+	LD	HL,0200H
+	SBC	HL,DE
+	JR	NC,MERR		; kleiner als 200H > Error
+	LD	HL,(T1A)	; Quelltextbeginn
+	DEC	HL
+	SBC	HL,DE
+	JR	NC,POKE		; kleiner als T1A > OK
+	LD	HL,(MBOT)
+	SBC	HL,DE
+	JR	NC,MERR		; kleiner als MBOT > Error
+	JR	POKE
+; im IRM zugelassen:
+;	AB00H bis ACFFH		anwenderspezifische Systemerweiterungen
+;	BA00H bis BFFFH		Anwender-IRM
+POKE1:	LD	HL,0AB00H
+	SBC	HL,DE
+	JR	NC,MERR		; kleiner als AB00H > Error
+	LD	HL,0AD00H
+	SBC	HL,DE
+	JR	NC,POKE		; kleiner als AD00H > OK
+	LD	HL,0BA00H
+	SBC	HL,DE
+	JR	NC,MERR		; kleiner als BA00H > Error
+	LD	HL,0C000H
+	SBC	HL,DE
+	JR	NC,POKE		; kleiner als C000H > OK
+MERR:	CALL	ERRX		; Fehlercode eintragen
+	DB	'M'		; Quelltext wuerde ueberschrieben
+	DB	21H	; LD HL,nn
+POKE:	EX	DE,HL
+	LD	(HL),C		; MC poken (IRM ist dabei EIN)
+	; Anzeigezeile (Pass 2)
+OUT1:	LD	HL,(PBL)	; Zeiger auf Byte-Liste
+	LD	A,Low(ADR+13)	; Stelle nach 3 Bytes Code
+	CP	L		; Byteliste voll?
+	JR	Z,OUTE	; ja, nichts weiter eintragen
+	LD	A,C		; Datenbyte
+	CALL	PAHEX		; HEX-Zeichen in Puffer eintragen
+	LD	(PBL),HL	; neuer Zeiger
+	JR	OUTE
+	; Datentraeger (Pass 3)
+OUT2:	CALL	BLWR		; Byte auf Kass/Disk ausgeben
+OUTE:	LD	HL,(MCL)
+	INC	HL		; Programmlaenge +1
+	LD	(MCL),HL
+	INC	IY		; naechste Adresse
+	EXX
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Code der Sprungbedingung holen (Flagtest):
+; PE:	HL	Quelltextadresse
+; PA:	HL	Quelltextadresse (nach Bedingung, wenn Komma, dann danach)
+;	A	cc-Code
+;	CY=1	ohne Bedingung (nichts gefunden)
+; VR:	AF, DE, (HL nur wenn Sprungbedingung, dann danach)
+;
+TFLAG:	PUSH	BC
+	PUSH	HL
+	CALL	SPCTB		; naechstes ASCII-Zeichen
+	CALL	LETTR		; Buchstabe?
+	JR	C,TFL6		; nein -> Fehler
+	LD	D,A
+	LD	E,' '
+	INC	HL
+	CALL	GET		; naechstes Zeichen
+	CALL	LABEL		; weiteres gueltiges Zeichen?
+	JR	C,TFL1		; nein, Bedingung aus nur 1 Zeichen
+	LD	E,A		; zweites Zeichen
+	INC	HL
+	CALL	GET		; naechstes Zeichen
+	CALL	LABEL		; weiteres gueltiges Zeichen?
+	JR	NC,TFL6		; ja, 3 Zeichen -> Fehler
+TFL1:	CALL	SPCTB		; naechstes ASCII-Zeichen
+	CP	','
+	JR	NZ,TFL2		; kein Komma
+	INC	HL		; Komma uebergehen
+TFL2:	PUSH	HL
+	LD	HL,TAB_F+15	; Ende Bedingungstabelle
+	LD	BC,16		; Laenge
+TFL3:	LD	A,E		; 2. Zeichen
+	CPDR			; suchen
+	JR	NZ,TFL5		; nicht gefunden -> Fehler
+	LD	A,D		; 1. Zeichen
+	CP	(HL)		; Vergleich
+	JR	Z,TFL4		; richtig
+	LD	A,C
+	OR	A		; Null?
+	JR	NZ,TFL3		; nein, weitersuchen
+TFL4:	SRL	C		; /2
+	JR	NC,TFL5		; zwischen den Zeilen!
+	LD	A,C		; Bedingungscode
+	POP	HL		; neue Adresse
+	POP	DE		; alte Adresse in DE!
+	POP	BC
+	CCF			; CY=0 (gefunden)
+	RET
+	;
+TFL5:	POP	HL		; neue Adresse
+TFL6:	POP	HL		; alte Adresse
+	POP	BC
+	SCF			; Fehler setzen
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Arithmetikroutine (EDAS-Arithmetik mit Registererkennung)
+; Berechnen des Wertes eines Operanden:
+;
+; PE:	HL	Pointer auf Operanden
+; PA:	Z=1	wenn kein Operator gelesen wurde
+;	DE	Wert
+;	HL	nach Operand
+; VR:	AF,DE,HL
+;
+ARITH:	PUSH	BC
+	XOR	A
+	EXX
+	LD	B,8
+	LD	HL,NUMB-1
+ARI01:	INC	HL
+	LD	(HL),A
+	DJNZ	ARI01		; loeschen NUMB...REGNR
+	DEC	(HL)		; Registercode=-1
+	EXX
+	LD	A,'+'
+	LD	(VORZ),A	; Rechenzeichen-Speicher
+	DEC	HL
+;
+ARI02:	INC	HL
+ARI03:	CALL	SPCTB		; naechstes ASCII-Zeichen
+	CP	';'		; Kommentar?
+	JR	Z,ARI06		; ja
+	CP	' '		; Steuerzeichen?
+	JR	C,ARI06		; ja
+	LD	(M84),A		; Zeichen merken
+	CP	27H		; Hochkomma?
+	JP	Z,ZAHL8		; Zeichenkette
+	CP	','
+	JR	Z,ARI05		; Komma beendet Operanden
+	CP	'('
+	JR	Z,ARI07		; Klammer auf merken
+	CP	')'
+	JR	Z,ARI02		; Klammer zu uebergehen
+	CP	'-'
+	JR	Z,ARI08		; Rechenzeichen merken
+	CP	'+'
+	JR	Z,ARI08		; Rechenzeichen merken
+	CP	'*'
+	JR	Z,ARI08		; Rechenzeichen merken
+	CP	'/'
+	JR	Z,ARI08		; Rechenzeichen merken
+	CP	'%'
+	JR	Z,ARI08		; Rechenzeichen merken
+	CP	'$'
+	JR	Z,ARI04		; '$'='#'
+	CP	'#'		; Befehlszaehlerstand
+	JR	NZ,ARINX	; anderes Zeichen
+ARI04:	LD	BC,(MPC)	; akt. Adresse
+	JP	ZAHL11
+
+; Operand zu Ende:
+ARI05:	INC	HL
+ARI06:	LD	DE,(NUMB)	; Berechneter Wert
+	POP	BC
+	LD	A,(M84)		; Operator gefunden?
+	OR	A
+	RET
+
+; Klammer auf:
+ARI07:	LD	(KLAM),A	; Klammer-Speicher
+	JR	ARI02
+
+; Rechenzeichen merken:
+ARI08:	LD	(VORZ),A	; Rechenzeichen-Speicher
+	JR	ARI02
+
+; Jedes andere ASCII-Zeichen:
+ARINX:	CALL	LETTR		; Buchstabe?
+	JP	NC,REG		; ja (Marke oder Register)
+	PUSH	HL
+; zunaechst Test, ob erste Stelle eine Ziffer 0-9 ist:
+	LD	C,10		; Dezimalsystem
+	CALL	DIGIT		; erstes Zeichen dezimal?
+	JR	C,ZAHL1		; OK
+	POP	HL
+	INC	HL		; 1. Zeichen uebergehen
+	PUSH	HL
+	CALL	ERRX
+	DB	'5'		; Fehler 5 "Zahl beginnt nicht mit Ziffer"
+; Bis zum Ende der Zahl und Test ob Hex- oder Binaer-Zahl:
+ZAHL1:	LD	C,16		; zunaechst Hexadezimalsystem annehmen
+ZAHL2:	CALL	DIGIT		; Test Hexzahl
+zahl21:	jr	nc,zahl20	; keine Hex-Zahl
+zahl22:	cp	0Bh
+	jr	nz,ZAHL2	; nicht 'B', dann weiter testen
+	call	digit		; war 'B' das letzte Zeichen der Zahl?
+	jr	c,ZAHL22	; nein, es folgen weitere HEX-Zahlen
+	CP	11h		; folgt danach  ein 'H'?
+	pop	hl
+	jr	z,zahl3		; dann ist es eine Hexzahl
+	ld	c,2		; ansonsten ist es eine Binaerzahl!
+	jr	zahl3
+	;
+zahl20:	POP	HL
+	CP	11H		; folgt noch ein Suffix 'H'?
+	JR	Z,ZAHL3		; ja, dann bleibt es beim Hex-System
+	LD	C,10		; kein Suffix -> Dezimalsystem
+ZAHL3:	PUSH	HL
+; jetzt die Zahl berechnen auf Zahlenbasis in Register C:
+	LD	HL,0		; Startwert=0
+ZAHL4:	EX	(SP),HL		; Zahl auf Stack / HL=Zeiger
+	CALL	DIGIT		; Test/Konvertierung Zahl
+	EX	(SP),HL		; HL=Zahl / Zeiger auf Stack
+	JR	C,ZAHL6		; OK, Zahl aufsummieren
+
+	ld	b,a		; Zeichen merken, welches folgt
+	ld	a,c		; Zahlenbasis
+	cp	10		; Dezimalzahl?
+	jr	z,zahld		; ja, dann kein Suffix
+	cp	2		; Binaerzahl?
+	JR	NZ,ZAHL5	; Suffix 'H' gehoert noch mit zur Zahl
+	ld	a,b
+	cp	0Bh		; Suffix 'B'?
+	jr	z,ZAHL5		; ja, dieses gehoert noch mit zur Zahl
+	CALL	ERRX		; Fehler Zahlenformat bei Binaerzahlen!
+	DB	'5'
+	JR	ZAHL5
+	;
+zahld:	EX	(SP),HL
+	DEC	HL		; zurueck zum letzten Zeichen
+	EX	(SP),HL
+ZAHL5:	PUSH	DE		; neu berechneter Wert
+	POP	BC		; in BC an CALC uebergeben
+	JR	CALC
+;-------
+; Zahl berechnen: (Hex.- oder Dez.)
+; PE:	HL	alter Wert
+;	A	zu addierender Wert
+;	C	Basis des Zahlensystems
+; PA:	HL = C * (HL+A)
+ZAHL6:	LD	E,A		; zu addierender Wert
+	XOR	A
+	LD	D,A		; DE = zu addierender Wert
+	ADD	HL,DE		; HL = alter Wert + neuer Wert
+	EX	DE,HL
+	LD	L,A		; HL=0
+	LD	B,C		; Zahlenbasis
+ZAHL7:	ADD	HL,DE
+	DJNZ	ZAHL7
+	JR	ZAHL4
+
+; Zeichenkette:
+ZAHL8:	LD	BC,0
+	LD	A,(REGNR)	; Registerkennbyte
+	CP	2DH
+	JP	Z,ARI02
+ZAHL9:	INC	HL
+	CALL	GET
+	CP	27H		; Ende Zeichenkette?
+	JR	Z,ZAHL11	; ja
+	CP	' '		; Steuerzeichen?
+	JR	C,ZAHL10	; ja -> Fehler 8
+	LD	B,C
+	LD	C,A
+	JR	ZAHL9
+;
+ZAHL10:	CALL	ERR_8		; Fehler 8
+	JR	ZAHL12
+;
+ZAHL11:	INC	HL
+ZAHL12:	PUSH	HL
+	JR	CALC
+;-------
+; Markensuche:
+MRK_2:	POP	AF
+	DEC	DE
+MRK_4:	DEC	DE
+	EX	DE,HL
+	CALL	MARKE		; Marke suchen
+	PUSH	DE
+	DEC	HL
+	CALL	GET
+	DEC	A		; doppelt definiert?
+	JR	NZ,MRK_5
+	CALL	ERRX
+	DB	'2'		; Fehler 2
+MRK_5:	DEC	HL
+	CALL	GET
+	LD	B,A
+	DEC	HL
+	CALL	GET
+	LD	C,A		; BC = Wert der Marke
+	JR	NC,CALC		; nicht definiert?
+	POP	HL
+	CALL	LOOK1
+	PUSH	DE
+	CALL	ERRX
+	DB	'3'		; Fehler 3
+	LD	BC,0		; Wert = 0
+CALC:	LD	HL,VORZ		; Rechenzeichen-Speicher
+	LD	A,(HL)
+	LD	(HL),0		; loeschen
+	LD	HL,(NUMB)	; mit bisherigen Wert
+	CP	'+'		; verrechnen:
+	JR	Z,PLUS
+	CP	'-'
+	JR	Z,MINUS
+	CP	'*'
+	JR	Z,MULTI
+	CP	'/'
+	JR	Z,DIVG		; ganzzahlige Division
+	CP	'%'
+	JR	Z,DIVR		; Rest der Divsion
+	CALL	ERRX
+	DB	'B'		; Fehler 'B'
+CALCP:	LD	(NUMB),HL	; neuberechneter Wert
+	POP	HL
+	JP	ARI03
+;
+PLUS:	ADD	HL,BC
+	JR	CALCP
+;
+MINUS:	SBC	HL,BC
+	JR	CALCP
+;
+MULTI:	EX	DE,HL
+	LD	HL,0
+	LD	A,10H
+	RR	D
+	RR	E
+MULT1:	JR	NC,MULT2
+	ADD	HL,BC
+MULT2:	RR	H
+	RR	L
+	RR	D
+	RR	E
+	DEC	A
+	JR	NZ,MULT1
+MULT3:	EX	DE,HL
+	JR	CALCP
+;
+DIVG:	CALL	DIV16
+	JR	MULT3
+;
+DIVR:	CALL	DIV16
+	JR	CALCP
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Division:
+; PE:	HL	Divident
+;	BC	Divisor
+; PA:	HL	Rest
+;	DE	Quotient
+;
+DIV16:	LD	DE,-1
+	LD	A,B
+	OR	C
+	JR	Z,ERR_C		; Division / 0
+DIV1:	INC	DE
+	SBC	HL,BC
+	JR	NC,DIV1
+	ADD	HL,BC
+	RET
+	;
+ERR_C:	CALL	ERRX
+	DB	'C'		; Fehler 'C' (Div/0)
+	RET
+;-------
+; Registererkennung:
+; PE:	A	erstes Zeichen
+;	HL	Zeiger auf Quelltext (Folgezeichen)
+; PA:	(REGC)	Registercode
+;	(REGNR)	Registerkennbyte	3AH = HL
+;
+REG:	PUSH	AF		; 1. Zeichen retten
+	INC	HL
+	CALL	GET		; Folgezeichen
+	EX	DE,HL
+	CALL	LABEL		; gueltiges Zeichen?
+	JR	NC,REG_2	; ja, Test Doppelregister
+	POP	AF		; 1. Zeichen
+	CP	'M'
+	JR	NZ,REG_1	; Test Einzelregister
+	CALL	GETDE
+	CP	'0'		; folgt Steuerbyte?
+	JP	NC,MRK_4	; nein -> Marke?
+	LD	A,'('		; M -> (HL)
+	LD	(KLAM),A	; Klammerspeicher
+	EX	DE,HL
+	JR	REG_7		; (HL) erzeugen
+
+;Test auf Einzelregister:
+REG_1:	LD	HL,RGTAB1	; Registertabelle
+	LD	BC,9		; 9 Einzelregister
+	CPIR
+	JP	NZ,MRK_4	; nicht gefunden -> Marke?
+	SLA	C		; *2
+	JR	REG_3
+
+; Test auf Doppelregister:
+REG_2:	INC	DE
+	LD	HL,RGTAB2	; Registertabelle von hinten
+	LD	BC,22		; 11 Doppelregisterpaare
+REG1:	CPD			; Suche 2. Zeichen
+	JR	Z,REG2		; gefunden
+REG4:	CPD
+	JP	PO,MRK_2	; Tabellenende, Marke?
+	JR	REG1
+;
+REG2:	LD	B,A		; 2. Zeichen
+	CALL	GETDE		; 2. Folgezeichen
+	CALL	LABEL		; gueltiges Zeichen?
+	JP	NC,MRK_2	; ja, (3 Zeichen), Marke?
+	POP	AF		; 1. Zeichen
+	CP	(HL)		; auch richtig?
+	JR	Z,REG3		; ja
+	PUSH	AF		; 1. Zeichen
+	LD	A,B		; 2. Zeichen
+	LD	B,0
+	JR	REG4		; weitersuchen
+	;
+REG3:	ADD	A,B		; Erzeugen eines Doppel-
+	SUB	19H		; Registerkennbytes
+REG_3:	SUB	41H
+	LD	B,0
+	EX	DE,HL
+REG_4:	LD	(REGNR),A	; Registerkennbyte
+	CP	3AH		; (HL)?
+	JR	NZ,REG_6	; nein, kodieren
+	LD	A,(KLAM)
+	OR	A		; Klammer?
+	LD	A,20H
+	JR	Z,REG_5		; nein (HL, IX, IY ohne Klammer)
+	XOR	A
+	LD	(KLAM),A	; Klammer loeschen
+	LD	A,6
+REG_5:	LD	(REGC),A	; Registercode
+	JP	ARI03
+	;
+REG_6:	PUSH	HL
+	LD	HL,RGTAB3	; Registercodierungen
+	ADD	HL,BC
+	LD	A,(HL)		; Registercode
+	POP	HL
+	OR	A		; Bit 7 gesetzt?
+	JP	P,REG_5		; nein
+	PUSH	AF
+	OR	0DH		; DD oder FD erzeugen
+	LD	(DDFD),A	; und eintragen
+	POP	AF
+	AND	0FH
+	CP	0DH		; IX oder IY?
+	JR	Z,REG_7		; ja
+	OR	40H		; H oder L erzeugen
+	EX	DE,HL
+	JR	REG_1		; Test Einzelregister
+	;
+REG_7:	LD	A,3AH		; HL erzeugen
+	JR	REG_4
+
+;-------
+; Tabelle fuer IM-Befehl:
+IMTAB:	DB	46H	; IM 0
+	DB	56H	; IM 1
+	DB	5EH	; IM 2
+
+;-------
+; Tabelle fuer arithmet. Befehle:
+TABARI:	DB	5		; DEC B
+	DB	0BH		; DEC BC
+
+	DB	4		; INC B
+	DB	3		; INC BC
+
+	DB	80H		; ADD A,B
+	DB	9		; 09 ist OpCode fuer ADD HL,BC
+
+	DB	88H		; ADC A,B
+	DB	4AH		; ED 4A ist OpCode fuer ADC HL,BC
+
+	DB	98H		; SBC A,B
+	DB	42H		; ED 42 ist Opcode fuer SBC HL,BC
+
+;-------
+; Sprungbedingungen:
+TAB_F:	DB	'NZ'	; A=0
+	DB	'Z '	; A=1
+	DB	'NC'	; A=2
+	DB	'C '	; A=3
+	DB	'PO'	; A=4
+	DB	'PE'	; A=5
+	DB	'P '	; A=6
+	DB	'M '	; A=7
+
+;-------
+; Adressdifferenztabelle:		alt: TAB_3
+UPTAB:	DB	UP0-UP0		; 0	END
+	DB	UP1-UP0		; 1	BIT, RES, SET
+	DB	UP2-UP1		; 2	CCF, NEG, SCF, DAA, RLA, DI, EI, RLD, LDD, LDDR, CPD, ...
+	DB	UP3-UP2		; 3	CP, ADC, ADD, DEC, AND, SBC, INC, OR, XOR, SUB
+	DB	UP4-UP3		; 4	IM
+	DB	UP5-UP4		; 5	IN
+	DB	UP6-UP5		; 6	OUT
+	DB	UP7-UP6		; 7	RLC, RRC, RL, RR, SLA, SRA, SLS, SRL
+	DB	UP8-UP7		; 8	EX
+	DB	UP9-UP8		; 9	JP, CALL
+	DB	UP10-UP9	; 10	RET, RET cc
+	DB	UP11-UP10	; 11	JR, DJNZ
+	DB	UP12-UP11	; 12	DEFB, DEFW, DEFS, DB, DW, DS
+	DB	UP13-UP12	; 13	DEFM
+	DB	UP14-UP13	; 14	ORG
+	DB	UP15-UP14	; 15	LD
+
+;-------
+; Registertabelle:
+RGTAB1:	DB	'IRBCDEHLAFSPIXIYHXHYLXLY'
+RGTAB2	EQU	$-1
+
+;-------
+; Tabelle der Registercodierungen:
+RGTAB3:	DB	7	; 00=A		alt: TAB_7
+	DB	0	; 01=BC
+	DB	5	; 02=L
+	DB	10H	; 03=DE
+	DB	4	; 04=H
+	DB	20H	; 05=HL
+	DB	3	; 06=E
+	DB	31H	; 07=AF
+	DB	2	; 08=D
+	DB	30H	; 09=SP
+	DB	1	; 0A=C
+	DB	0DDH	; 0B=IX
+	DB	0	; 0C=B
+	DB	0FDH	; 0D=IY
+	DB	4FH	; 0E=R
+	DB	0D8H	; 0F=HX
+	DB	47H	; 10=I
+	DB	0F8H	; 11=HY
+	DB	0FFH	; 12 frei
+	DB	0DCH	; 13=LX
+	DB	0FFH	; 14 frei
+	DB	0FCH	; 15=LY
+
+; Hoch/Quersummentabelle aller Befehle (4x80 Byte)
+; zuerst die Befehle mit der haeufigsten Verwendung, der Rest alphabetisch
+;		Hochsumme
+;		 |   Quersumme
+;		 |	|  vorbereiteter OpCode
+;		 |	|   |   UP-Nummer (Bit 0-3), Vorbyte ED (Bit 7=1)
+HQTAB:	DB	 1CH, 10H, 00H, 15	; 40 LD		2522
+	DB	 0AH, 06H, 01H, 12	; 14 DB		1414
+	DB	 40H, 1CH,0C4H,  9	; 05 CALL	1265
+	DB	 26H, 1CH, 18H, 11	; 39 JR		1193
+	DB	 43H, 1AH, 04H,  3	; 32 INC	 655
+	DB	 16H, 13H,0B8H,  3	; 07 CP		 491
+	DB	 66H, 2BH,0C0H, 10	; 58 RET	 452
+	DB	 4BH, 2BH, 00H,  0	; 26 EQU	 450
+	DB	 2EH, 1FH, 40H,  1	; 04 BIT	 431
+	DB	 02H, 40H,0C5H,  2	; 56 PUSH	 463
+	DB	 6EH, 2FH,0C1H,  2	; 55 POP	 417
+	DB	 1FH, 1BH, 03H, 12	; 23 DW		 284
+	DB	 24H, 13H,0A0H,  3	; 03 AND	 237
+	DB	 24H, 1AH,0C2H,  9	; 38 JP		 221
+; ab hier in alphabetischer Reihenfolge
+	DB	 0FH, 08H, 88H,  3	; 01 ADC
+	DB	 10H, 09H, 80H,  3	; 02 ADD
+	DB	 18H, 0CH, 40H,  2	; 06 CCF
+	DB	 30H, 17H,0AAH,  2+80H	; 08 CPD
+	DB	 72H, 29H,0BAH,  2+80H	; 09 CPDR
+	DB	 38H, 1FH, 30H,  2	; 10 CPL
+	DB	 35H, 1CH,0A2H,  2+80H	; 11 CPI
+	DB	 7CH, 2EH,0B2H,  2+80H	; 12 CPIR
+	DB	 13H, 06H, 28H,  2	; 13 DAA
+	DB	 1DH, 0CH, 05H,  3	; 15 DEC
+	DB	 42H, 11H, 02H, 12	; 16 DEFB
+	DB	 4DH, 1CH, 00H, 13	; 17 DEFM
+	DB	 53H, 22H, 04H, 12	; 18 DEFS
+	DB	 57H, 26H, 03H, 12	; 19 DEFW
+	DB	 11H, 0DH,0F4H,  2	; 20 DI
+	DB	 7EH, 36H, 10H, 11	; 21 DJNZ
+	DB	 1BH, 17H, 04H, 12	; 22 DS
+	DB	 13H, 0EH,0FCH,  2	; 24 EI
+	DB	 34H, 17H, 00H,  0	; 25 END
+	DB	 22H, 1DH, 00H,  8	; 27 EX
+	DB	 5CH, 35H,0DAH,  2	; 28 EXX
+	DB	 70H, 29H, 77H,  2	; 29 HALT
+	DB	 1FH, 16H, 47H,  4+80H	; 30 IM
+	DB	 20H, 17H, 40H,  5	; 31 IN
+	DB	 44H, 1BH,0ABH,  2+80H	; 33 IND
+	DB	 9AH, 2DH,0BBH,  2+80H	; 34 INDR
+	DB	 46H, 1DH, 71H,  2+80H	; 35 INF
+	DB	 49H, 20H,0A3H,  2+80H	; 36 INI
+	DB	0A4H, 32H,0B3H,  2+80H	; 37 INIR
+	DB	 3CH, 14H,0A9H,  2+80H	; 41 LDD
+	DB	 8AH, 26H,0B9H,  2+80H	; 42 LDDR
+	DB	 41H, 19H,0A1H,  2+80H	; 43 LDI
+	DB	 94H, 2BH,0B1H,  2+80H	; 44 LDIR
+	DB	 49H, 1AH, 45H,  2+80H	; 45 NEG
+	DB	 66H, 2DH, 01H,  2	; 46 NOP
+	DB	 30H, 21H,0B0H,  3	; 47 OR
+	DB	 67H, 28H, 00H, 14	; 48 ORG
+	DB	0DAH, 32H, 72H,  2+80H	; 49 OTCL
+	DB	 7AH, 38H, 41H,  6	; 50 OUT
+	DB	0F8H, 3CH,0ACH,  2+80H	; 51 OUTD
+	DB	0FDH, 41H,0A4H,  2+80H	; 52 OUTI
+	DB	0E2H, 39H,0BCH,  2+80H	; 53 OTDR
+	DB	0ECH, 3EH,0B4H,  2+80H	; 54 OTIR
+	DB	 65H, 2AH, 80H,  1	; 57 RES
+	DB	0D5H, 34H, 4EH,  2+80H	; 59 RETI
+	DB	0DAH, 39H, 46H,  2+80H	; 60 RETN
+	DB	 30H, 1EH, 10H,  7	; 61 RL
+	DB	 61H, 1FH, 18H,  2	; 62 RLA
+	DB	 63H, 21H, 00H,  7	; 63 RLC
+	DB	0C7H, 22H, 08H,  2	; 64 RLCA
+	DB	 64H, 22H, 70H,  2+80H	; 65 RLD
+	DB	 36H, 24H, 18H,  7	; 66 RR
+	DB	 6DH, 25H, 20H,  2	; 67 RRA
+	DB	 6FH, 27H, 08H,  7	; 68 RRC
+	DB	0DFH, 28H, 10H,  2	; 69 RRCA
+	DB	 70H, 28H, 68H,  2+80H	; 70 RRD
+	DB	 82H, 39H,0C8H,  2	; 71 RST
+	DB	 53H, 18H, 98H,  3	; 72 SBC
+	DB	 58H, 1CH, 38H,  2	; 73 SCF
+	DB	 6AH, 2CH,0C0H,  1	; 74 SET
+	DB	 65H, 20H, 20H,  7	; 75 SLA
+	DB	 77H, 32H, 30H,  7	; 76 SLS
+	DB	 71H, 26H, 28H,  7	; 77 SRA
+	DB	 7CH, 31H, 38H,  7	; 78 SRL
+	DB	 78H, 2AH, 90H,  3	; 79 SUB
+	DB	 90H, 39H,0A8H,  3	; 80 XOR
+HQTABE:
+;-------
+; Test auf ASCII-Zeichen eines Zahlensystems:
+; PE:	C	Basis des Zahlensystems (2, 10 oder 16)
+;	HL	Zeiger auf ASCII-Zeichen
+; PA:	CY=1	OK
+;	A	Zahlenwert
+;	HL	HL+1
+DIGIT:	CALL	GET		; Zeichen holen
+	CALL	LETTR		; Wandlung gross
+	INC	HL		; naechstes Zeichen
+	CP	'0'+10		; Ziffer?
+	JR	NC,DIG_1	; nein
+	SUB	'0'		; wenn ja
+DIG_1:	CP	'A'		; Buchstabe?
+	JR	C,DIG_2
+	SUB	37H		; Hex-Korrektur
+DIG_2:	CP	C		; Zahlensystem?
+	RET
+;-------
+; Suchen einer Marke in der Markentabelle:
+; PE	HL	Adresse der Marke im Quelltext
+; PA:	HL	Adresse der Marke in Markentabelle
+;	DE	das, was vorher HL war
+;	CY=0	Marke gefunden
+;	CY=1	Marke nicht gefunden
+; VR:	AF,BC,DE,HL
+MARKE:	PUSH	HL
+	LD	HL,(MBOT)	; Ende Markentabelle
+	PUSH	HL
+	LD	DE,(MTOP)	; Anfang Markentabelle
+	DEC	DE
+	OR	A
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; Laenge Markentabelle
+	POP	HL		; Pointer auf Ende Markentabelle
+	POP	DE		; Pointer auf Quelltext
+UD023:	CALL	GETDE		; 1. Zeichen
+	CALL	LETTR		; Wandlung gross
+	CALL	TCPDR		; suchen rueckwaerts
+	SCF
+	RET	PO		; nicht gefunden
+	CALL	LOOK		; Vergleich gesamte Marke
+	JR	C,UD023		; stimmt nicht ueberein
+	RET
+;-------
+; Suchen der Marke 'START' und Wertuebergabe
+; (Bei Ansprung auf LSUCH, beliebige Marke!)
+; PE:	HL	Zeichenkette bzw. Markenname
+; PA:	CY=0	Marke gefunden
+;	CY=1	Marke nicht gefunden
+;	HL	Wert der Marke
+; VR:	AF,HL
+TSTART:	LD	HL,VERGL	; Vergleichskette "Start" im ROM
+	LD	DE,STRING	; in den Suchpuffer
+	LD	BC,6		; mit der Laenge 6 Byte
+	LDIR			; kopieren
+	LD	HL,STRING
+LSUCH:	CALL	MARKE		; Marke suchen
+	RET	C		; nicht gefunden
+	DEC	HL		; Adresse der Marke
+	CALL	GET
+	DEC	A		; doppelt definiert?
+	SCF
+	RET	Z		; ja (Fehler)
+	DEC	HL
+	CALL	GET		; A=H-Teil
+	PUSH	AF
+	DEC	HL
+	CALL	GET
+	POP	HL		; H=A
+	LD	L,A		; HL = Wert der Marke
+	AND	A		; CY=0
+	RET
+;-------
+; Test Register A auf ASCII-Zeichen (ist dieses Zeichen in Labels erlaubt?):
+; PE:	A	Zeichencode
+; PA:	CY=0	wenn in Marke zulaessiges Zeichen
+;	CY=1	Fehler
+LABEL:	CALL	LETTR		; Buchstabe?
+	RET	NC		; ja
+	CP	'0'
+	JR	C,LABL1		; keine Ziffer
+	CP	':'
+	CCF
+	RET	NC		; Ziffer 0..9
+LABL1:	CP	'.'
+	RET	Z		; Punkt
+	CP	'_'
+	RET	Z		; Underline
+	SCF
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Test auf gueltiges Zeichen (Buchstabe):
+; PE:	A	Zeichen
+; PA:	A	Zeichen (Kleinbuchstaben -> gross)
+;	CY=1	kein Buchstabe
+LETTR:	CP	'A'
+	RET	C		; 00...40H
+	CP	'Z'+1
+	CCF
+	RET	NC		; A...Z
+	CP	'a'
+	RET	C		; 5BH...60H
+	CP	'z'+1
+	CCF
+	RET	C		; 7BH...
+	AND	0DFH		; klein -> gross
+	RET
+;-------
+; Zeichenausgabe zum eingestellten Ausgabekanal (Bildschirm oder Drucker):
+; - 0Dh sendet CR+LF
+; - 0Ch ist Seitenwechsel
+; - 09h Tabulatoren werden in Leerzeichen gewandelt
+; - alle anderen Steuerzeichen werden ignoriert
+; PE:	A	Zeichen
+;	D	max. Spaltenbreite
+;	E	Zeichenzaehler
+; PA:	E	Zeichenzaehler entsprechend um Zeichenzahl
+;	CY=1	BRK gedrueckt
+; VR:	AF, E
+;
+PRCHR:	PUSH	BC		; B retten (Zeilenzaehler)
+	LD	B,1		; zunaechst 1 Zeichen annehmen
+	CP	' '
+	JR	NC,PRC5		; kein Steuerzeichen
+	CP	CLS
+	JR	Z,PRC1		; Blattwechsel/Seitenwechsel
+	CP	CR
+	JR	NZ,PRC2
+; CR druckt CR+LF
+	CALL	CHR		; CR zum Drucker
+	LD	A,LF
+PRC1:	LD	E,-1		; Zeilenzaehler ruecksetzen
+	JR	PRC5		; CLS
+	;
+PRC2:	CP	9		; Tab ?
+	JR	NZ,PRC6		; alle anderen Steuerzeichen ignorieren!
+; TAB in Leerzeichen umwandeln
+	LD	A,8		; TAB-Schrittweite
+	SUB	E		; minus Zeichenposition
+	AND	7		; modulo 8
+	JR	NZ,PRC3
+	LD	A,8		; kompletter TAB-Schritt
+PRC3:	LD	B,A		; Anzahl Leerzeichen
+PRC4:	LD	A,' '
+PRC5:	CALL	CHR		; ausgeben an eingestellten Ausgabekanal
+	INC	E		; Zeichen mit zaehlen
+	LD	A,E
+	CP	D		; Zeilenende erreicht?
+	JR	Z,PRC6
+	DJNZ	PRC4
+PRC6:	CALL	BRKS		; BRK/STOP abfragen
+	POP	BC
+	RET
+
+;-------
+; Vorbereitungen fuer Kassettenausgabe MC-Programm:
+; PA:	Iinitialisierter Kassettenpuffer (B700)
+SHEAD:	CALL	PV1
+	DB	NOUT
+	LD	DE,KCCTXT	; Dateityp .KCC vorgeben
+	CALL	NAME		; Name eingeben
+	JR	NC,SHEAD1	; nicht BRK
+	POP	HL		; Stack reinigen
+	POP	HL
+	RET			; zum Menue!
+	;
+SHEAD1:	CALL	KPINI		; Kassettenpuffer initialisieren
+	LD	A,2
+	LD	(CASS+10H),A	; 2 Argumente eintragen
+	LD	HL,(MCL)	; MC-Laenge eintragen statt
+	LD	(CASS+13H),HL	; Endadresse
+	CALL	TSTART		; Startadresse?
+	RET	C		; nein
+	LD	A,3
+	LD	(CASS+10H),A	; 3 Argumente
+	LD	(CASS+15H),HL	; Startadresse
+	RET
+;-------
+; Ausgabe eines erzeugten MC-Bytes auf Kassette/Diskette:
+; nach 80H Bytes wird ein Block abgespeichert
+; PE:	C	Byte
+;	(STAT)	Bit3 = 1 -> Init. ('S'-Option)
+; PA:	-
+; VR:	AF, AF', DE (nur bei Init.), HL 
+;
+BLWR:	PUSH	BC
+	LD	HL,STAT
+	BIT	3,(HL)		; Init?
+	JR	Z,BLWR6		; nein
+	RES	3,(HL)		; 'S'-Option ruecksetzen
+;	LD	HL,CASS		; Kassettenpuffer
+;	LD	(IX+5),L	; ist bereits eingestellt
+;	LD	(IX+6),H	; durch KPINI
+	PUSH	IY		; Befehlszaehler erstes Byte
+	POP	DE		; als Anfangsadresse verwenden
+	LD	HL,(CASS+13H)	; MC-Laenge von Pass 1
+	ADD	HL,DE
+	LD	(CASS+11H),DE	; Anfangsadresse
+	LD	(CASS+13H),HL	; Endadresse
+	EX	DE,HL
+	CALL	PV1
+	DB	HLDE		; Adressen anzeigen
+	LD	A,(CASS+10H)	; Args
+	CP	3
+	JR	C,BLWR1		; keine Startadresse
+	LD	HL,(CASS+15H)
+	CALL	PV1
+	DB	HLHX		; Startadresse
+BLWR1:	CALL	LFCR
+	LD	HL,CASS		; Dateiname aus Vorblock benutzen
+	CALL	PV1
+	DB	ISRO		; Vorblock ausgeben
+	JP	C,LOOPE		; Fehler -> Abbruch
+BLWR3:	 EX	AF,AF'
+BLWR4:	 LD	HL,CASS+80H	; Ende Kassettenpuffer+1
+	 XOR	A		; A'=0 (Bytezaehler)
+BLWR5:	 DEC	L
+	 LD	(HL),A		; Puffer loeschen
+	 JR	NZ,BLWR5
+	 EX	AF,AF'
+	LD	A,(IX+2)
+	CALL	PV1
+	DB	AHEX		; Blocknummer anzeigen
+	CALL	PV1
+	DB	OSTR
+	DB	8,8,0
+BLWR6:	LD	HL,CASS
+	 EX	AF,AF'
+	 CP	80H		; Block voll?
+	 JR	NZ,BLWR7	; nein
+	 LD	BC,160		; kurzer Vorton
+	 CALL	PV1
+	 DB	MBO		; Daten-Block ausgeben
+	 JP	C,LOOPE		; Fehler -> Abbruch
+	 JR	BLWR4		; weiter mit neuem Block
+	;
+BLWR7:	 LD	L,A
+	 INC	A		; Bytes zaehlen
+	 EX	AF,AF'
+	POP	BC
+	LD	(HL),C
+	RET
+
+;=======	eigentliches ENDE von EDAS	=======
+DEVEX	EQU	$
+;=======	DEVICE-Kommandos (CAOS 4.8) 	=======
+
+	DEFW	0DDDDH
+	DEFM	'DIR'
+	DB	1Fh		; In Register DE Maske uebergeben
+	CALL	PV7		; neue Funktion ab CAOS 4.7
+	DB	8		; Verzeichnis anzeigen
+	RET
+
+	DEFW	0DDDDH
+	DEFM	'CD'
+	DB	1Fh		; neues Laufwerk in Register DE uebergeben
+	CALL	PV7		; neue Funktion ab CAOS 4.7
+	DB	9		; Laufwerk wechseln
+	RET
+
+	DEFW	0DDDDH
+	DEFM	'REN'
+	DB	1Fh		; Textargument zulaessig (2 Dateinamen)
+	CALL	PV7
+	DB	11		; Datei umbenennen
+	RET
+
+	DEFW	0DDDDH
+	DB	'ERA'
+	DB	1Fh		; Textargument zulaessig (Dateiname)
+	CALL	PV7
+	DB	10		; Datei loeschen
+	RET
+
+;-------
+; Geraeteumschaltung und Anzeige
+; DEVICE	Auflisten der installierten Treiber
+; DEVICE n	Umschaltung Geraet n (0..7)
+;
+	DW	0DDDDH
+	DB	'DEVICE',1
+	AND	A		; Parameter angegeben?
+	JR	Z,DRLIST	; nein, Treiber auflisten
+	LD	A,L
+	CP	8
+	JR	NC,DERR		; n > 8
+	CALL	SETDRV		; Treiber einstellen
+	RET	NC		; kein Fehler
+DERR:	CALL	PV1
+	DB	ERRM		; Treiber nicht aktiv
+	RET
+	;
+DRLIST:	LD	A,0FFh		; Treiber auflisten
+SETDRV:	CALL	PV1
+	DB	DEVICE		; 49H - neue Funktion seit CAOS 4.6
+	RET
+
+; hier noch ein paar ausgelagerte CAOS-Programmteile:
+
+	INCLUDE	CAOSEX.INC	; SETRO, SETWR, TIME, PRINT
+
+	ABSFILL	0E000h,<USER-ROM-Ende (ASM)>
+
+ROMEND:
+	.DEPHASE
+	END

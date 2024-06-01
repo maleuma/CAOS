@@ -1,0 +1,4128 @@
+;-----------------------------------------------------------------------;
+;	80-Zeichen Text-Editor fuer CAOS - Version 0.5			;
+;	----------------------------------------------			;
+;	05.02.2018: EDIT 0.1 veroeffentlicht mit CAOS 4.7 beta5		;
+;	03.04.2018: EDIT 0.2 veroeffentlicht mit CAOS 4.7 beta6		;
+;	04.12.2018: EDIT 0.3 veroeffentlicht mit CAOS 4.7 beta7		;
+;	04.10.2019: EDIT 0.4 veroeffentliche mit CAOS 4.7 final		;
+;	07.08.2022: EDIT 0.5 veroeffentlicht mit CAOS 4.8 Patch 2	;
+;									;
+;				(c) ML-Soft 11.03.2017 - 07.08.2022	;
+;-----------------------------------------------------------------------;
+;
+; - Editor aehnlich EDAS (auch von ASM mit genutzt, gleiche Arbeitszellen!)
+; - 80-Zeichen-Modus aehnlich ZAS: 25 Zeilen => 2000 Zeichen / Bildschirm
+; - Zeile 1 = Statuszeile, Zeile 2 = Lineal, 23 Zeilen Text
+;	Zeichengroesse 4x10 Pixel (wie ZAS)
+;	Video-RAM von AD00h bis B4D0h (unabhaengig vom Bild)
+;	IRM von B4D0h bis B6FFh teilweise als Arbeitszellen benutzt!
+; - Menue zum Laden, Speichern, Blockfunktionen ...
+; - Laden von ASCII- und WordPro6-Dateien
+; - Importfilter nachladbar fuer TEXOR, WordPro'86, WordPro9 ...
+; Textspeicher 0200h bis BFFFh (oder bis DFFFh wenn RAM-Modul auf C000h steckt)
+;
+; Der Text liegt immer geteilt vor, Teiltext 1 - Bildschirminhalt - Teiltext 2
+;
+; Editieren erfolgt auf dem angezeigten Bildschirm. Nur beim Scrollen wird der
+; Text gespeichert und dann neu angezeigt. Dabei wird beruecksichtigt, was
+; bereits auf dem Bildschirm angezeigt ist - geht schneller
+;
+; Sonderfunktionen durch ESC-Aufrufe
+;-------------------------------------------------------------------------------
+	.Z80
+
+EXRAM	EQU	1		; RAM zur Textspeichererweiterung verwenden
+
+	INCLUDE	CAOS48.INC	; CAOS-Vereinbarungen
+	INCLUDE EDAS.INC	; EDAS-Arbeitszellen (auch fuer Editor)
+
+; IRM-Arbeitszellen im nicht genutzten VRAM-Bereich:
+
+CRT40	EQU	0B4D0h		; Merkzelle fuer UP 00h CRT-Routine
+CUCP40	EQU	CRT40+2		; Merkzelle fuer UP 25h CUCP-Routine
+L3T40	EQU	CUCP40+2	; Merkzelle fuer Adresse der ESC-Tabelle
+L3S40	EQU	L3T40+2		; Merkzelle fuer Laenge der ESC-Tabelle
+T1merk	EQU	L3S40+2		; Merkzelle fuer T1E beim Editieren
+T2merk	EQU	T1MERK+2	; Merkzelle fuer T2A beim Editieren
+Mmerk	EQU	T2MERK+2	; Merkzelle fuer Zeilennummer bei ESC-K
+GCURS	EQU	MMERK+2		; Cursorposition fuer ESC-G
+Cmerk	EQU	GCURS+2		; Zeichen aktuelle Cursorpos. fuer COPY/MOVE
+GTCR	EQU	Cmerk+1		; 10 Byte ein/aus-Merker fuer Druckersteuercodes
+L3EDIT	EQU	GTCR+10		; 34 Byte ESC-Tabelle fuer 80-Zeichen-Mode
+				; (17 Funktionen ESC-0 bis ESC-G)
+;-----------------------------------------------------------------------
+IF1
+	.PRINTX	'CAOS-Editor'
+ENDIF
+;-------
+
+; CAOS-Vorblock:
+
+	DB	'EDITOR  KCC'	; 11 Byte Dateiname
+	DS	5,0
+	DB	2		; 2 Argumente
+	DW	ROMBEG		; Anfangsadresse
+	DW	ROMEND		; Endadresse
+	DW	0
+	DS	95,0
+	DB	'07.08.2022'	; Datum
+;-------
+	.PHASE	0C000H
+;
+ROMBEG:	INCLUDE CCTL80.INC	; Zeichensatz 10*5 Pixel wie in ZAS
+;
+; Einsprungtabelle aus EDAS (Adresse C55Ah)
+;
+	CALL	NORAM		; Hilfsprogramme fuer Aufruf aus EDAS regenerieren
+;	JP	MAIN		; bis 07.08.2022: erst zum kurzen EDIT-Menu
+	PUSH	HL		; beliebige RET-Adresse auf Stack legen
+	JP	EDIT		; 07.08.2022: direkt zum Quelltext
+
+;
+; VRAM-Adresse der Cursorposition berechnen
+;	als Video-RAM wird der IRM von AD00h bis B4CFh genutzt
+;	keine Unterscheidung zwischen Bild 0 und Bild 1!
+; PE:	DE	Cursorposition
+; PA:	HL	VRAM-Adresse
+;	CY=1	ausserhalb des Fensters!
+; VR:	HL, F
+;
+DABR80:	PUSH	AF		; **32**
+	CALL	PV1
+	DB	TCIF		; Cursor im Fenster?
+	JR	C,IAD2		; Fehler
+	PUSH	DE
+	LD	A,(WINON)	; Fensterbeginn
+	ADD	A,E		; Cursor-Spalte + Fensterbeginn
+	LD	E,A		; Spalte absolut
+	push	de
+	LD	A,(WINON+1)
+	ADD	A,D		; Cursor-Zeile + Fensterbeginn
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A		; Zeile*8
+	LD	L,A
+	LD	H,0
+	ADD	HL,HL		; Zeile*16
+	LD	D,H
+	LD	E,L
+	ADD	HL,HL		; Zeile*32
+	ADD	HL,HL		; Zeile*64
+	ADD	HL,DE		; 64+16=80
+	pop	de		; E=Spalte
+	LD	D,0ADh		; D=Beginn Video-RAM (ASCII-Speicher)
+	ADD	HL,DE		; Position in Video-RAM
+	POP	DE		; Cursorposition
+	POP	AF
+	AND	A		; CY=0
+	RET
+	;
+IAD2:	POP	AF
+	SCF			; CY=1
+	RET
+;
+; Bildschirmadresse berechnen (fuer 10 Byte lange Zeichen!):
+; PE:	HL	Cursorposition
+; PA:	CY	0-links, 1-rechts
+;	HL	BS-Adresse
+; VR:	AF, HL, B
+;
+CUADR:	PUSH	DE
+	LD	DE,(WINON)	; Fensterbeginn dazu rechnen
+	ADD	HL,DE
+	POP	DE
+	SRL	L		; Spalte/2
+	PUSH	AF		; CY merken
+	LD	A,80H		; IRM-Adresse KC85/4
+	ADD	A,L
+	LD	B,H
+	LD	H,A		; H=80H+Spalte/2
+	LD	A,B
+	ADD	A,A
+	ADD	A,A
+	ADD	A,A
+	ADD	A,B
+	ADD	A,B
+	ADD	A,6		; erste Pixelzeile beginnt bei 6
+	LD	L,A		; L=10*Zeile + 6
+	POP	AF
+	RET
+;
+; Bildschirmausgabe, auch Steuerzeichen darstellen
+;
+CST80:	PUSH	HL		; **42**
+	LD	HL,STBT
+	SET	3,(HL)		; Steuerzeichen darstellen
+	CALL	CRT80		; Zeichenausgabe
+	RES	3,(HL)		; Normalzustand
+	POP	HL
+	RET
+;
+; Zeichenausgaberoutine mit VRAM-Test:
+; PE:	DE	Cursorposition
+;	HL	VRAM-Adresse
+;	A	Zeichen
+;
+WRZCH0:	XOR	A		; Nullcode (leer) anzeigen
+WRZCH:	CP	(HL)		; Vergleich mit VRAM
+	RET	Z		; Zeichen bereits richtig angezeigt
+	LD	(HL),A		; neuen Zeichencode eintragen
+	; and anzeigen mit WPIX
+;
+; Zeichen auf Grafikbildschirm sichtbar machen (nur Pixel)
+; PE:	DE	Cursorposition
+;	A	Zeichencode
+;	STBT	Bildschirmsteuerbyte
+; VR:	-
+;
+WPIX:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	PUSH	AF
+
+	ld	hl,stat		; Zeichensatz pruefen
+	bit	5,(hl)
+	jr	nz,wx1
+	bit	6,(hl)
+	jr	z,wp1		; Zeichensatz 0
+	ld	hl,cctl82	; alternativer Zeichensatz 2
+	jr	wx2
+	;
+wx1:	ld	hl,cctl81	; alternativer Zeichensatz 1
+wx2:	cp	40h
+	jr	z,wp3		; Klammeraffe
+	ld	bc,5
+	cp	5bh		; Eckige Klammer auf
+	jr	z,wp2
+	add	hl,bc
+	cp	5ch		; Backslash
+	jr	z,wp2
+	add	hl,bc
+	cp	5dh		; Eckige Klammer zu
+	jr	z,wp2
+	add	hl,bc
+	cp	60h		; (c)
+	jr	z,wp2
+	add	hl,bc
+	cp	7bh		; geschweifte Klammer auf
+	jr	z,wp2
+	add	hl,bc
+	cp	7ch		; senkr. Strich
+	jr	z,wp2
+	add	hl,bc
+	cp	7dh		; geschweifte Klammer zu
+	jr	z,wp2
+	add	hl,bc
+	cp	7eh		; Wellenlinie
+	jr	z,wp2
+
+wp1:	LD	H,0
+	LD	L,A
+	LD	B,H
+	LD	C,A		; DE=*1
+	ADD	HL,HL		; HL=*2
+	ADD	HL,HL		; HL=*4
+	ADD	HL,BC		; HL=*5, CCTL-Adr. fuer lange Zeichen
+	LD	BC,CCTL80	; Zeichenbildtabelle fuer 0..FFh
+wp2:	ADD	HL,BC
+wp3:	EX	DE,HL		; DE=Zeichenadresse / HL=Cursorpos.
+	CALL	CUADR		; BS-Adresse berechnen (HL=IRM, CY=rechts/links)
+;80-Zeichen-Routine fuer KC85/4:
+	LD	B,5		; Zeichenlaenge in CCTL80
+LAB1:	PUSH	BC		; Byteanzahl
+	PUSH	AF		; links oder rechts in CY merken
+	LD	A,(DE)		; Zeichencode
+	INC	DE
+	LD	B,A		; Pixelcode 2
+	RLCA
+	RLCA
+	RLCA
+	RLCA
+	LD	C,A		; Pixelcode 1
+	POP	AF
+	JR	C,LAB3		; rechts
+	;
+	RLD
+	LD	A,C		; erster Teil
+	RRD
+	INC	HL
+	RLD
+	LD	A,B		; zweiter Teil
+	RRD
+	JR	LAB4
+	;
+LAB3:	RRD
+	LD	A,C		; erster Teil
+	RLD
+	INC	HL
+	RRD
+	LD	A,B		; zweiter Teil
+	RLD
+	;
+LAB4:	INC	HL		; naechste BS-Zeile
+	POP	BC
+	DJNZ	LAB1		; bis Zeichen fertig
+	JR	POP4
+;
+; CRT-Routine mit 80-Zeichen-Ausgabe
+; VR:	-
+;
+CRT80:	PUSH	HL		; **00**
+	PUSH	DE
+	PUSH	BC
+	PUSH	AF
+	CALL	PCHR80		; Zeichen anzeigen
+	LD	(CURSO),DE	; neue Cursorposition setzen
+	JR	POP4
+;
+; Cursor komplementieren (fuer Blinken)
+;
+CUCP80:	PUSH	HL		; **25**
+	PUSH	DE
+	PUSH	BC
+	PUSH	AF
+	LD	DE,(CURSO)
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)		; Zeichencode auf Cursorposition
+	AND	A
+	PUSH	AF
+	EX	DE,HL		; HL jetzt Cursorposition
+	CALL	CUADR		; BS-Adresse berechnen
+;	INC	HL
+	LD	B,10		; Cursorhoehe
+	LD	C,0F0H		; Maske fuer Zeichen links
+	JR	NC,CUCP3
+	LD	C,0FH		; Maske fuer Zeichen rechts
+CUCP3:	POP	AF
+	JR	NZ,CUCP4	; Klotzcursor
+	LD	A,8
+	ADD	A,L
+	LD	L,A
+	LD	B,2		; 2 Byte Cursorhoehe
+CUCP4:	LD	A,(HL)
+	XOR	C		; mit Maske negieren
+	LD	(HL),A
+	INC	HL
+	DJNZ	CUCP4		; Cursorhoehe
+POP4:	POP	AF
+	POP	BC
+	POP	DE
+	POP	HL
+NOOP:	RET
+;
+; CRT-Grundprogramm (ohne Auswertung der ESC-Sequenzen)
+; PE:	A	Zeichencode
+;
+PCHR80:	LD	DE,(CURSO)
+	CP	20H		; Steuerfunktion?
+	JR	NC,PCHR5
+	LD	HL,STBT
+	BIT	3,(HL)		; darstellen?
+	JR	NZ,PCHR5
+	ADD	A,A		; *2
+	LD	HL,CTAB80	; Tabelle der Steuercodes
+	LD	C,A
+	LD	B,0
+	ADD	HL,BC
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	JP	(HL)		; anspringen
+
+PCHR5:	CALL	DABR80		; Adresse Video-RAM berechnen
+	RET	C		; ausserhalb
+	LD	(HL),A		; ASCII eintragen
+	CALL	WPIX		; Zeichen darstellen
+;
+; 09H = Cursor nach rechts
+; PA:	CY=1	nicht moeglich (Textende)
+;
+CUR80:	LD	A,(WINLG)	; Anzahl Spalten
+	DEC	A		; letzte Spalte
+	CP	E		; ganz rechts?
+	JR	Z,CUR1
+	INC	E		; eine Position nach rechts gehen
+	JR	CUR3
+	;
+CUR1:	LD	A,(WINLG+1)	; Anzahl Zeilen
+	DEC	A		; letzte Zeile
+	CP	D		; ganz unten?
+	JR	NZ,CUR2		; nein
+	CALL	CUD3		; scrollen
+	RET	C		; nicht gescrollt
+	DB	3Eh		; LD A,n (in Zeile 0 bleiben)
+	;
+CUR2:	INC	D		; eine Zeile nach unten gehen
+	LD	E,0		; Spalte 0
+CUR3:	LD	A,E		; neue Spalte
+	AND	7		; modulo 8
+	RET	Z		; wir stehen auf Tab-Stopp
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	OR	A		; Dummy?
+	RET	NZ		; nein -> fertig
+	DEC	HL
+	LD	A,(HL)
+	OR	A		; Dummy davor?
+	JR	Z,CUR80		; ja, dann weiter nach rechts
+	RET
+;
+; 18H = Wort nach rechts (Shift-CUR)
+;	- Leerzeichen suchen
+;	- nicht leeres Zeichen suchen
+;
+WRE0:	CALL	CUR80		; Cursor nach rechts
+	RET	C		; Textende erreicht
+WRIGH:	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	CP	21h		; Leerzeichen?
+	JR	NC,WRE0		; nein
+	;
+WRE1:	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	CP	21h		; Leerzeichen?
+	RET	NC		; nein
+	CALL	CUR80		; Cursor nach rechts
+	RET	C		; Textende erreicht
+	JR	WRE1		; bis wir auf einem Wort stehen
+;
+; 0AH = Cursor nach unten
+;
+CUD80:	LD	A,(WINLG+1)	; Anzahl Zeilen
+	DEC	A		; letzte Zeile
+	CP	D		; ganz unten?
+	JR	NZ,CUD0		; nein
+	CALL	CUD3		; scrollen
+	RET	C		; nicht gescrollt
+	DB	3Eh		; LD A,n (in Zeile 0 bleiben)
+	;
+CUD0:	INC	D		; eine Zeile runter
+CUD1:	CALL	DABR80		; HL=VRAM-Adresse
+	LD	A,(HL)
+	CP	' '
+	RET	NC		; Zeichen vorhanden
+CUD2:	LD	A,E
+	AND	A
+	RET	Z		; Spalte 0
+	DEC	HL
+	LD	A,(HL)		; Zeichen vor akt. Cursorposition
+	CP	' '
+	RET	NC		; Zeichen davor vorhanden
+	DEC	E		; eine Spalte zurueck gehen
+	JR	CUD2
+	;
+CUD3:	PUSH	DE		; Cursorposition
+	LD	HL,(T2E)
+	LD	DE,(T2A)
+	AND	A
+	SBC	HL,DE		; sind wir bereits am Textende?
+	POP	DE
+	SCF			; nicht gescrollt
+	RET	Z		; kein Text 2
+CUD4:	PUSH	DE
+	LD	DE,0		; Position links oben
+	CALL	DABR80		; VRAM-Adresse berechnen
+	CALL	MLINE		; 1. Zeile speichern
+	JR	C,CUD5		; No Memory!
+	CALL	UPSCRL		; Bild nach oben scrollen
+	LD	DE,(WINLG)
+	DEC	D		; letzte Zeile
+	LD	E,0		; Spalte 0
+	CALL	DABR80		; HL=VRAM-Adresse
+	LD	BC,(T2A)	; aus Teiltext 2 neu anzeigen
+	push	hl
+	ld	hl,(t2e)	; Ende Text 2
+	and	a
+	sbc	hl,bc		; sind wir am Textende angekommen?
+	pop	hl
+	CALL	NZ,WRZLE	; Letzte Zeile anzeigen
+	LD	HL,(MEML)
+	INC	HL		; Textzeile +1
+	LD	(MEML),HL
+	AND	A		; erfolgreich gescrollt
+CUD5:	POP	DE
+	RET
+;
+; 0Bh = Cursor nach oben
+;
+CUU80:	LD	A,D		; aktuelle Zeile
+	AND	A		; ganz oben?
+	JR	NZ,CUU2		; nein
+	CALL	CUU3		; scrollen
+	RET	C		; nicht gescrollt
+	DB	3Eh		; LD A,n (in Zeile 0 bleiben)
+	;
+CUU2:	DEC	D		; eine Zeile hoch
+	JR	CUD1		; hinter letztes Zeichen gehen
+	;
+CUU3:	PUSH	DE		; Cursorposition
+	LD	HL,(T1E)
+	LD	DE,(T1A)
+	AND	A
+	SBC	HL,DE		; sind wir bereits am Textanfang?
+	POP	DE
+	SCF			; nicht gescrollt
+	RET	Z		; kein Text 1
+	PUSH	DE
+	LD	HL,(T1E)	; Ende Text 1 merken
+	PUSH	HL
+	LD	DE,(WINLG)
+	DEC	D
+	LD	E,0		; letzte Zeile
+	CALL	DABR80		; VRAM-Adresse berechnen
+	CALL	MLINE		; Zeile abspeichern, ab T1E
+	POP	DE		; alter Wert von T1E
+	CALL	NC,TXE4		; zum Anfang von Text 2 verschieben
+	POP	DE
+;	SCF
+;	RET	NZ		; no Memory
+	PUSH	DE
+	CALL	DOSCRL		; Bild nach unten scrollen
+	LD	HL,(T1E)	; Ende Text 1
+	LD	B,2		; 2x CR suchen
+CUU4:	DEC	HL
+	CALL	GET		; Zeichen aus Textspeicher
+	CP	CR		; Zeilenende?
+	JR	NZ,CUU4
+	DJNZ	CUU4
+CUU5:	INC	HL		; nach CR+LF
+	CALL	GET
+	CP	LF		; noch ein LF dahinter?
+	JR	Z,CUU5
+	LD	(T1E),HL
+	LD	HL,(T2A)
+	PUSH	HL
+	LD	DE,0		; erste Zeile
+	CALL	DABR80		; HL=VRAM-Adresse
+	LD	BC,(T1E)	; aus Teiltext 1 neu anzeigen
+	CALL	WRZLE		; erste Zeile anzeigen
+	POP	HL
+	LD	(T2A),HL
+	LD	HL,(MEML)
+	DEC	HL		; Textzeile -1
+	LD	(MEML),HL
+	POP	DE
+	AND	A		; erfolgreich gescrollt
+	RET
+;
+; Bildschirminhalt eine Zeile nach oben scrollen (fuer CUD, CUR, Sh-DEL)
+; (ohne Statuszeile, aber mit VRAM)
+; PE:	B	Rollweite in Zeilen (bis Bildschirmende)
+;
+UPSCRL:	LD	B,22		; 22 Zeilen = Textfenster nach oben scrollen
+	; 10 Pixel/Zeile (max. 220 Byte) im Pixel-RAM scrollen
+UROLL:	LD	A,22
+	SUB	B
+	RET	C		; ausserhalb!
+	LD	H,A		; aktuelle Zeile
+	LD	L,0		; Spalte 0
+	LD	A,B
+	ADD	A,A	;*2
+	LD	C,A
+	ADD	A,A	;*4
+	ADD	A,A	;*8
+	ADD	A,C	;*10 Pixel pro Zeile
+	LD	C,A		; Anzahl Bytes bis BS-Ende
+	PUSH	BC
+	CALL	CUADR		; Pixel-Adresse berechnen
+	LD	D,H
+	LD	E,L		; DE = aktuelle Zeile
+	LD	A,L
+	ADD	A,10
+	LD	L,A		; HL = Folgezeile
+	LD	A,40		; BS-Breite in Bytes
+ROLL1:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	B,0
+	LDIR			; Pixel fuer eine Spalte scrollen
+	EX	DE,HL
+	LD	B,10		; Zeichenhoehe
+ROLL2:	LD	(HL),0		; letzte Zeile loeschen
+	INC	HL
+	DJNZ	ROLL2
+	POP	BC
+	POP	DE
+	POP	HL
+	INC	D		; naechste Spalte
+	INC	H		;	"
+	DEC	A
+	JR	NZ,ROLL1	; bis alle Spalten gescrollt sind
+	; 80 Byte/Zeile (max. 220 Byte) im VRAM scrollen
+	POP	BC		; C = 10*Zeilen bis BS-Ende
+	LD	B,0
+	sla	c	; *20
+	rl	b
+	sla	c	; *40
+	rl	b
+	sla	c	; *80
+	rl	b		; BC = Scrollweite in Byte
+	LD	HL,0B480h	; VRAM-Adresse letzte Zeile
+	SBC	HL,BC
+	LD	D,H
+	LD	E,L		; DE = VRAM-Adresse Ziel
+	PUSH	BC
+	LD	BC,80		; eine Zeile darunter
+	ADD	HL,BC		; HL = VRAM-Adresse Quelle
+	POP	BC
+	LDIR			; VRAM scrollen
+	EX	DE,HL		; HL=VRAM letzte Zeile
+ROLL3:	LD	B,80
+	XOR	A
+ROLL4:	LD	(HL),A		; letzte Zeile im VRAM loeschen
+	INC	HL
+	DJNZ	ROLL4
+	RET
+;
+; Bildschirminhalt eine Zeile nach unten scrollen (fuer CUU, CUL, Enter)
+; (ohne Statuszeile, aber mit VRAM)
+; PE:	B	Rollweite in Zeilen (bis Bildschirmende)
+;
+DOSCRL:	LD	B,22		; 22 Zeilen = Textfenster nach unten scrollen
+	; 10 Pixel/Zeile (max. 220 Byte) im Pixel-RAM scrollen
+DROLL:	LD	A,22
+	SUB	B
+	RET	C		; ausserhalb!
+	LD	A,B
+	ADD	A,A	;*2
+	LD	C,A
+	ADD	A,A	;*4
+	ADD	A,A	;*8
+	ADD	A,C	;*10 Pixel pro Zeile
+	LD	C,A
+	LD	B,0		; BC = Anzahl Bytes bis BS-Ende
+	LD	D,80h		; IRM Spalte 0
+	LD	H,D
+	LD	A,40		; BS-Breite in Bytes
+ROLL5:	LD	E,0FFh		; Ende letzte Zeile
+	LD	L,0FFh-10	; Ende vorletzte Zeile
+	PUSH	BC
+	INC	C
+	DEC	C		; sind wir in der letzten Zeile?
+	JR	Z,ROLL6		; dann nicht scrollen, nur loeschen!
+	LDDR			; Pixel fuer eine Spalte scrollen
+ROLL6:	LD	B,10		; Zeichenhoehe
+ROLL7:	INC	HL
+	LD	(HL),0		; oberste Zeile loeschen
+	DJNZ	ROLL7
+	POP	BC
+	INC	D		; naechste Spalte
+	INC	H		;	"
+	DEC	A
+	JR	NZ,ROLL5	; bis alle Spalten gescrollt sind
+	; 80 Byte/Zeile (max. 220 Byte) im VRAM scrollen
+			; BC = 10*Zeilen bis BS-Ende
+	LD	DE,0B4CFH	; VRAM Ende letzte Zeile
+	LD	HL,0B4CFH-80	; VRAM Ende vorletzte Zeile
+	INC	C
+	DEC	C		; sind wir in der letzten Zeile?
+	JR	Z,ROLL8		; dann auch VRAM nicht scrollen, nur loeschen!
+	sla	c	; *20
+	rl	b
+	sla	c	; *40
+	rl	b
+	sla	c	; *80
+	rl	b		; BC = Scrollweite in Byte
+	LDDR			; VRAM 80 Byte/Zeile scrollen
+ROLL8:	INC	HL
+	JR	ROLL3		; VRAM oberste Zeile loeschen
+;
+; 12H - naechste Seite (Shift-CUD)
+;
+ENPG:	LD	HL,(T2E)	; Ende Teiltext 2
+	LD	BC,(T2A)	; Anfang Teiltext 2
+	OR	A		; CY=0
+	SBC	HL,BC
+	RET	Z		; Textende bereits erreicht
+	CALL	MPAGE		; Seite speichern
+	RET	C		; No Memory
+	LD	DE,22
+	CALL	TXANF		; 22 Zeilen vorwaerts
+	LD	HL,(T2E)
+	LD	DE,(T2A)
+	SBC	HL,DE
+	CALL	Z,BOT		; wenn Textende
+	JR	SCUU3
+;
+; 11h - vorherige Seite (Shift-CUU)
+;
+EVPG:	LD	HL,(T1E)	; Ende Teiltext 1
+	LD	BC,(T1A)	; Anfang Teiltext 1
+	OR	A		; CY=0
+	SBC	HL,BC
+	RET	Z		; Textanfang bereits erreicht
+	CALL	MPAGE		; Seite speichern
+	RET	C		; No Memory
+	LD	DE,22
+	CALL	TXEND		; 22 Zeilen rueckwaerts
+SCUU3:	CALL	WRPG0		; Seite neu anzeigen (ohne Statuszeile)
+	JP	CUD1		; Cursor nach Ende des letzten Zeichens setzen
+;
+; 0Ch = Bildschirm loeschen (ab Home-Posision bis Bildschrimende)
+;	also mit oder ohne Statuszeile moeglich
+;
+CLS80:	LD	HL,(WINON)	; Home-Position
+	CALL	CUADR		; IRM-Adresse berechnen
+	LD	D,H
+	LD	E,L
+	INC	DE
+	LD	A,(WINLG+1)	; Anzahl Zeilen
+	ADD	A,A		; *2
+	LD	C,A
+	ADD	A,A		; *4
+	ADD	A,A		; *8
+	ADD	A,C		; *10
+	DEC	A		; -1
+	LD	B,0
+	LD	C,A		; BC = Pixel in der Hoehe
+	LD	A,(WINLG)	; Fensterbreite
+	SRL	A		; /2 = Anzahl Bytes in der Breite
+CLS1:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	(HL),0
+	LDIR			; Pixel fuer eine BS-Spalte loeschen
+	POP	BC
+	POP	DE
+	POP	HL
+	INC	H		; naechste Spalte
+	INC	D
+	DEC	A
+	JR	NZ,CLS1
+
+	LD	BC,(WINLG)	; C=Spalten, B=Zeilen
+	LD	D,B
+	CALL	PV1
+	DB	MULT		; BA = D*B
+	LD	C,A		; BC = Anzahl Zeichen bis Bildschirm-Ende
+	LD	DE,(WINON)	; Home-Position
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	D,H
+	LD	E,L
+	INC	DE
+	DEC	BC
+	LD	(HL),0
+	LDIR			; VRAM bis Bildschirmende loeschen
+;
+; 10h = Home-Position
+;
+HOME80:	LD	D,0		; Zeile 0
+
+; 0Dh = CR = Cursor auf Spalte 0
+
+CBL80:	LD	E,0		; Spalte 0
+	RET
+;
+; 17h = Shift-HOME (Cursor rechts runter):
+;
+ECLS:	LD	DE,(WINLG)	; Fenstergroesse
+	DEC	D		; letzte Zeile
+	DEC	E		; letzte Spalte
+	RET
+
+; 02h = aktuelle Zeile loeschen
+
+;CLLN80:	LD	HL,(CURSO)
+;	CALL	CUADR		; BS-Adresse berechnen (HL=IRM, CY=rechts/links)
+;	XOR	A
+;	LD	C,40		; Bytes in der Breite
+;CLL1:	LD	B,10
+;	PUSH	HL
+;CLL2:	LD	(HL),A		; Pixel loeschen
+;	INC	HL
+;	DJNZ	CLL2
+;	POP	HL
+;	INC	H		; naechste Spalte
+;	DEC	C
+;	JR	NZ,CLL1
+;	LD	DE,(CURSO)
+;	CALL	DABR80		; Adresse Video-RAM berechnen
+;	LD	D,H
+;	LD	E,L
+;	INC	DE
+;	LD	(HL),0
+;	LD	BC,79		; eine Zeile breit
+;	LDIR			; VRAM loeschen
+;	LD	DE,(CURSO)
+;	JR	CBL80		; Spalte 0 einstellen
+;
+; 08H = Cursor nach links
+; PA:	CY=1	nicht moeglich (Textanfang)
+;
+CUL80:	LD	A,E		; Spalte
+	AND	A		; ganz links?
+	JR	Z,CUL1
+	DEC	E		; eine Position nach links gehen
+	JR	CUL3
+	;
+CUL1:	LD	A,D		; Zeile
+	AND	A		; ganz oben?
+	JR	NZ,CUL2		; nein
+;	PUSH	DE
+	CALL	CUU3		; scrollen
+;	POP	DE
+	RET	C		; nicht gescrollt
+	DB	3Eh		; LD A,n (in Zeile 0 bleiben)
+	;
+CUL2:	DEC	D		; eine Zeile nach oben gehen
+	LD	A,(WINLG)	; Spalten im aktuellen Fenster
+	DEC	A		; letzte Spalte
+	LD	E,A		; Cursor auf letzte Spalte setzen
+CUL3:	LD	A,E		; neue Spalte
+	AND	7		; modulo 8
+	RET	Z		; wir stehen auf Tab-Stopp
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	OR	A		; Dummy?
+	RET	NZ		; nein -> fertig
+	DEC	HL
+	LD	A,(HL)
+	OR	A		; Dummy davor?
+	JR	Z,CUL80		; ja, weiter nach links
+	RET
+;
+; 19H = Wort nach links (Shift-CUL)
+;	- Leerzeichen suchen
+;	- nicht leeres Zeichen bis links davon leer
+;
+WLE0:	CALL	CUL80		; Cursor nach links
+	RET	C		; Textanfang erreicht
+WLEFT:	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	CP	21h		; Leerzeichen?
+	JR	NC,WLE0		; nein
+	;
+WLE1:	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	CP	21h		; Leerzeichen?
+	JR	NC,WLE3		; nein
+	CALL	CUL80		; Cursor nach links
+	RET	C		; Textanfang erreicht
+	JR	WLE1		; bis wir auf einem Wort stehen
+	;
+WLE2:	CALL	CUL80		; Cursor nach links
+	RET	C		; Textanfang erreicht
+	CALL	DABR80		; VRAM-Adresse berechnen
+WLE3:	DEC	HL		; Zeichen links davon
+	LD	A,(HL)
+	CP	21h		; Wortanfang?
+	RET	C		; ja, davor ist ein Leerzeichen
+	JR	WLE2		; zurueck bis zum Anfang des Wortes
+;
+; 0Fh = Hardcopy (Verlassen des 80-Zeichen-Modus, da CALC das nicht kennt)
+;
+HCOPY:	PUSH	DE		; Cursorposition
+	CALL	SET40		; 40-Zeichen-Modus aktivieren
+	LD	HL,(HCADR)	; ShCLR
+	CALL	JPHL		; Routine aufrufen
+	CALL	SET80		; zurueck zum 80-Zeichenmodus
+	POP	DE		; Cursorposition
+	JP	WIN82		; Editor-Fenster einstellen
+	;
+JPHL:	JP	(HL)
+;
+; 13h = Rotation 3 Zeichensaetze CAOS -> IBM -> ASCII deutsch (STOP)
+;
+ASCII:	LD	HL,STAT
+asc0:	LD	A,(HL)
+	ADD	A,20H		; 00 -> 20 -> 40 -> 60
+	LD	(HL),A
+	AND	60H		; Bit 5+6 vom Zeichensatz ausfiltern
+	CP	60H
+	JR	Z,asc0		; einen 4. Zeichensatz gibt es (noch) nicht!
+; Bildschirm aktualisieren
+	ld	de,0		; Zeile 0, Spalte 0
+	ld	hl,0ada0h	; zugehoerige VRAM-Adresse
+asc1:	ld	a,(hl)
+	inc	hl
+	cp	40h
+	jr	z,asc2		; Klammeraffe
+	cp	60h
+	jr	z,asc2		; (c)
+	cp	5bh
+	jr	c,asc3
+	cp	5eh
+	jr	c,asc2		; Umlaute in Grossbuchstaben
+	cp	7bh
+	jr	c,asc3
+	cp	7fh
+	jr	nc,asc3
+asc2:	call	wpix		; Zeichen neu anzeigen
+asc3:	inc	e		; Spalte+1
+	ld	a,80
+	sub	e
+	jr	nz,asc1
+	ld	e,a		; Spalte 0
+	inc	d		; Zeile+1
+	ld	a,23
+	cp	d
+	jr	nz,asc1
+	JR	CLI1
+;
+; 1Ah = Umschaltung Einfuegen <-> Ueberschreiben (INS)
+;
+INS80:	LD	A,(STAT)
+	XOR	10H		; Umschaltung INS-Mode Bit 4
+SETST:	LD	(STAT),A
+	JR	CLI1
+;
+; 14h = Tastenclick EIN/AUS (Shift+INS wie unter CAOS)
+;
+CLICK:	LD	A,(IX+8)
+	XOR	20H		; Click EIN/AUS
+	LD	(IX+8),A
+CLI1:	CALL	STATUS		; und in Statuszeile anzeigen
+CLI2:	LD	DE,(COL)
+	LD	(CURSO),DE
+	RET
+;
+; 01H = CLR	Zeichen vor Cursor loeschen und nach links gehen
+;
+CLR80:	LD	A,E		; Spalte
+	AND	A		; ganz links?
+	JR	Z,CLR1
+	DEC	E		; eine Position nach links gehen
+	JR	CLR3
+	;
+CLR1:	LD	A,D		; Zeile
+	AND	A		; ganz oben?
+	JR	NZ,CLR2		; nein
+	INC	A		; wir srollen und gehen in naechste Zeile
+	LD	(CURSO+1),A	; als aktuelle Position eintragen
+	CALL	CUU3		; 1 Zeile hoch scrollen
+	RET	C		; nicht gescrollt, wir sind am Textanfang!
+	DB	3Eh		; LD A,n (in Zeile 0 bleiben)
+CLR2:	DEC	D		; eine Zeile nach oben gehen
+	LD	E,79		; letzte Spalte
+CLR3:	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	AND	A		; steht da ein Zeichen?
+	JR	NZ,CLR9		; ja, das kann geloescht werden
+;ansonsten von der vorherigen TAB-Position mit Leerzeichen auffuellen
+	LD	A,L
+	AND	0F8h		; zurueck zur vorherigen TAB-Position
+	LD	L,A
+CLR4:	LD	A,(HL)		; Zeichen testen
+	AND	A		; leer?
+	JR	NZ,CLR5
+	LD	(HL),' '	; wenn leer, dann Space eintragen
+CLR5:	INC	HL		; naechstes Zeichen
+	LD	A,L
+	AND	7		; naechster TAB-Stop?
+	JR	NZ,CLR4		; nein, weiter auffuellen
+CLR9:	LD	DE,(CURSO)
+	CALL	CUL80		; Cursor nach links
+	RET	C		; Textanfang erreicht
+;
+; 1FH = DEL	Zeichen auf Cursorposition loeschen, Rest nach links nachruecken
+;
+DEL80:	PUSH	DE		; Cursor retten
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(HL)
+	OR	A		; Dummy?
+	JR	Z,DEL4		; ja, nichts weiter zu tun...
+	PUSH	HL		; VRAM
+DEL1:	PUSH	DE		; Cursorpos.
+	INC	E		; naechste Spalte
+	CALL	DABR80		; raus?
+	JR	NC,DEL2
+	LD	E,0		; ja, wie NL
+	INC	D
+	CALL	DABR80		; raus?
+	JR	C,DEL3		; ja, Ende
+DEL2:	LD	A,(HL)
+	AND	A		; Ende?
+	JR	Z,DEL3
+	LD	B,D
+	LD	C,E		; BC:=DE
+	POP	DE		; DE=Cursorpos. links davon
+	EX	(SP),HL		; HL=VRAM links
+	CALL	WRZCH		; Zeichen eintragen und anzeigen
+	LD	D,B
+	LD	E,C		; DE:=BC
+	JR	DEL1		; von vorn
+	;
+DEL3:	POP	DE
+	POP	HL
+	CALL	WRZCH0		; Zeichen loeschen
+DEL4:	POP	DE
+	RET
+
+IF EXRAM	; Routinen fuer Textspeicherzugriff
+;
+; IRM und LED ausschalten
+;
+IRM_OF:	PUSH	AF
+	IN	A,(88H)
+	AND	5BH		; IRM, USER-ROM und LED off
+	OUT	(88H),A
+	POP	AF
+	RET
+;
+; Text kopieren mit LDIR
+;
+TLDIR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	LDIR
+	JR	IRM_ON
+;
+; Text kopieren mit LDDR
+;
+TLDDR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	LDDR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPIR
+;
+TCPIR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	CPIR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPDR
+;
+TCPDR	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	CPDR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPI
+;
+TCPI	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	CPI
+	JR	IRM_ON
+;
+; Zeichen aus Textspeicher lesen
+;
+GET	EQU	$+RAMC-IRM_OF	; Adresse im RAM0
+	CALL	RAMC		; IRM OFF
+	LD	A,(HL)
+	JR	IRM_ON
+;
+; Zeichen aus Textspeicher lesen
+;
+GETBC	EQU	$+RAMC-IRM_OF	; Adresse im RAM0
+	CALL	RAMC		; IRM OFF
+	LD	A,(BC)
+	JR	IRM_ON
+;
+; Zeichen in Textspeicher schreiben
+;
+PUT	EQU	$+RAMC-IRM_OF
+	CALL	RAMC		; IRM OFF
+	LD	(HL),A
+;
+; IRM und LED einschalten
+;
+IRM_ON:	PUSH	AF
+	IN	A,(88H)
+	OR	0A4H		; IRM, USER-ROM und LED on
+	OUT	(88H),A
+	POP	AF
+	RET
+ENDC:
+ELSE		; Routinen fuer Textspeicherzugriff
+;
+; IRM und LED ausschalten
+;
+IRM_OF:	PUSH	AF
+	IN	A,(88H)
+	AND	0DBH		; IRM, LED off
+	OUT	(88H),A
+	POP	AF
+	RET
+;
+; Text kopieren mit LDIR
+;
+TLDIR:	CALL	IRM_OF
+	LDIR
+	JR	IRM_ON
+;
+; Text kopieren mit LDDR
+;
+TLDDR:	CALL	IRM_OF
+	LDDR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPIR
+;
+TCPIR:	CALL	IRM_OF
+	CPIR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPDR
+;
+TCPDR:	CALL	IRM_OF
+	CPDR
+	JR	IRM_ON
+;
+; Zeichen suchen mit CPI
+;
+TCPI:	CALL	IRM_OF
+	CPI
+	JR	IRM_ON
+;
+; Zeichen aus Textspeicher lesen
+;
+GET:	CALL	IRM_OF
+	LD	A,(HL)
+	JR	IRM_ON
+;
+; Zeichen aus Textspeicher lesen
+;
+GETBC:	CALL	IRM_OF
+	LD	A,(BC)
+	JR	IRM_ON
+;
+; Zeichen in Textspeicher schreiben
+;
+PUT:	CALL	IRM_OF
+	LD	(HL),A
+;
+; IRM und LED einschalten
+;
+IRM_ON:	PUSH	AF
+	IN	A,(88H)
+	OR	24H		; IRM, LED on
+	OUT	(88H),A
+	POP	AF
+	RET
+ENDIF
+;
+; 80-Zeichen-Ausgabe initialisieren:
+;
+SET80:	LD	HL,(SUTAB)	; aktuelle SUTAB (liegt bei CAOS 4.7 im IRM)
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)		; aktuelle CRT-Routine
+	LD	(CRT40),DE	; merken
+	LD	DE,CRT80	; neue CRT-Routine
+	LD	(HL),D
+	DEC	HL
+	LD	(HL),E
+
+; Routine fuer Cursorblinken umstellen
+
+	LD	DE,2*25h	; UP 25 = Routine CUCP
+	ADD	HL,DE
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)		; aktuelle CUCP-Routine
+	LD	(CUCP40),DE	; merken
+	LD	DE,CUCP80	; neue CUCP-Routine
+	LD	(HL),D
+	DEC	HL
+	LD	(HL),E
+
+; ESC-Funktionen umstellen
+
+	LD	HL,(L3TAB)	; aktuelle ESC-Tabelle
+	LD	(L3T40),HL	; merken
+	LD	A,(L3SIZ)	; Laenge der ESC-Tabelle
+	LD	(L3S40),A	; merken
+	LD	HL,L3EDIT
+	LD	(L3TAB),HL	; ESC-Tabelle fuer 80-Zeichen-Modus
+	LD	A,36		; Anzahl=17 (Druckersteuerzeichen ESC0-9
+	LD	(L3SIZ),A	;	     sowie ESC-A bis ESC-Z)
+	LD	DE,ESC0		; 10x die gleiche Routine fuer ESC0-9
+	LD	B,10
+SETESC:	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	DJNZ	SETESC
+	EX	DE,HL		; und 7 separate Routinen fuer
+	LD	HL,ESCTAB	; ESC-A bis ESC-Z
+	LD	BC,52		; max. 26 Routinen
+	LDIR
+
+; Position fuer ESC-G auf erstes Grafikzeichen voreinstellen
+
+	ld	hl,20h		; Zeile 0, Spalte 32
+	LD	(GCURS),HL	; hier merken
+
+; Fenstergroesse einstellen auf 25*80
+
+WIN80:	LD	HL,0		; Fenster ab links/oben
+	LD	(WINON),HL
+	LD	HL,1950H	; 25 Zeilen, 80 Spalten
+	LD	(WINLG),HL
+	RET
+;
+; 80-Zeichen-Ausgabe abschalten
+;
+SET40:	LD	HL,(SUTAB)	; aktuelle SUTAB (liegt bei CAOS 4.7 im IRM)
+	LD	DE,(CRT40)	; alte CRT-Routine
+	LD	(HL),E		; regenerieren
+	INC	HL
+	LD	(HL),D
+
+; CUCP regenerieren
+
+	LD	DE,2*25h-1	; UP 25 = Routine CUCP
+	ADD	HL,DE
+	LD	DE,(CUCP40)	; alte CUCP-Routine
+	LD	(HL),E		; regenerieren
+	INC	HL
+	LD	(HL),D
+
+; ESC-Tabelle regenerieren
+
+	LD	HL,(L3T40)	; alte ESC-Tabelle
+	LD	(L3TAB),HL	; regenerieren
+	LD	A,(L3S40)	; alte Laenge
+	LD	(L3SIZ),A	; regenerieren
+
+; Fenstergroesse einstellen auf 32*40
+
+WIN40:	LD	HL,0		; Fenster ab links/oben
+	LD	(WINON),HL
+	LD	HL,2028H	; 32 Zeilen, 40 Spalten
+	LD	(WINLG),HL
+	CALL	PV1
+	DB	NOUT		; Normalausgabe (CRT)
+	LD	A,12H
+	CALL	PV1
+	DB	CRT		; Scroll-Modus
+	RET
+IF EXRAM
+;
+; 16K oder 64K RAM suchen und einschalten
+; Hilfsprogramme in den RAM0 kopieren
+;
+RAMSW:	LD	B,8		; ab Steckplatz 8 suchen
+NEXT:	LD	C,80H		; I/O-Adresse Modulsteuerung
+	IN	A,(C)		; Kennbyte lesen
+	CP	0F6h		; M011 = 64K RAM ?
+	JR	Z,FOUND
+	CP	0F4h		; M022 = 16K RAM ?
+	JR	Z,FOUND
+	INC	B		; naechster Steckplatz
+	JR	NZ,NEXT
+	JR	NORAM		; kein RAM-Modul gefunden
+	;
+FOUND:	LD	D,0C3h		; Steuerbyte fuer Adresse C000h
+	LD	L,B		; Steckplatz
+	LD	A,2		; Modul "schalten"
+	CALL	PV1
+	DB	MODU		; RAM-Modul zuschalten
+; Hilfsprogramme fuer Zugriff Textspeicher
+NORAM:	LD	HL,IRM_OF	; von hier aus dem ROM
+	LD	DE,RAMC		; in den RAM0 (EDAS Assemblierpuffer)
+	LD	BC,ENDC-IRM_OF
+	LDIR			; kopieren
+	RET
+ENDIF
+;------------------------------------------------------------------------------
+	DEFW	7F7FH
+	DB	'EDIT',1
+	LD	(0BFE7H),A	; kein Menuewort QUIT von ASM
+	CALL	KEY0		; F-Tasten Standardbelegung
+IF EXRAM
+	CALL	RAMSW		; RAM zuschalten, Hilfsprogramm kopieren
+ENDIF
+	LD	HL,0200h	; Beginn Textspeicher
+	LD	(HL),CR		; Anfangszeichen eintragen
+	INC	HL
+	LD	(T1A),HL	; Textspeicher 1 Anfang
+	LD	(T1E),HL	; und Ende setzen
+	INC	HL		; Jetzt ermitteln wie weit RAM vorliegt
+	LD	L,0FFh		; zum Ende der Page gehen
+RAM1:	CALL	GET		; Inhalt lesen
+	LD	C,A		; merken
+	CPL			; negieren
+	CALL	PUT		; negierten Wert einschreiben
+	CALL	GET		; und wieder zurueck lesen
+	CPL			; und nochmals negieren
+	CP	C		; wenn gleich, dann RAM
+	LD	A,C
+	CALL	PUT		; Originalwert zurueck schreiben
+	JR	NZ,RAM2		; kein RAM
+	INC	H		; 1 Page weiter
+	JR	RAM1
+	;
+RAM2:	DEC	H		; letzte RAM-Zelle
+	LD	A,3
+	CALL	PUT		; Endekennung eintragen
+	LD	(T2E),HL	; Textende
+	LD	(T2A),HL	; und Anfang Teil 2
+
+	LD	HL,0
+	LD	(COL),HL	; EDIT-Cursor (Spalte 0)
+
+	CALL	NACLR		; Dateiname loeschen
+	XOR	A
+	LD	(M4A),A		; 'no memory' ruecksetzen
+	LD	HL,4808H
+	LD	(RANDL),HL	; linker Rand=8, rechter Rand=72
+;	LD	HL,1
+;	LD	(MEML),HL	; Zeilennummer 1 einstellen
+	JR	CAOSOK
+
+	DEFW	7F7FH
+	DB	'REEDIT',1
+IF EXRAM
+	CALL	RAMSW		; RAM zuschalten, Hilfsprogramme kopieren
+ENDIF
+CAOSOK:	LD	BC,83F1H
+	OUT	(C),A		; DEP-Version ruecksetzen!
+
+	CALL	PV1
+	DB	OSTR
+	DB	ESC,'3',0	; Bild 1
+	CALL	WIN40		; grosses Fenster 40-Zeichen-Mode
+	CALL	PV1
+	DB	OSTR
+	DB	CLS		; Bild 1 loeschen
+	DB	ESC,'1',0	; Bild 0
+	CALL	WIN40		; grosses Fenster 40-Zeichen-Mode
+	CALL	PV1
+	DB	OSTR
+	DB	CLS,0		; Bild 0 loeaschen
+	LD	HL,STBT
+	SET	1,(HL)		; Schreiben Farbe aus (geht schneller!)
+
+	LD	HL,STAT		; Statusbits
+	LD	(HL),0		; zunaechst ruecksetzen, IBM-Zeichensatz
+
+	LD	BC,0FC80H
+	IN	A,(C)
+	CP	0A7H		; Floppy vorhanden?
+	JR	NZ,REE0		; nein
+	INC	(HL)		; Bit 0 = 1 (Floppy vorhanden)
+
+	LD	BC,83F1H
+	IN	A,(C)
+	INC	A
+	CP	21H		; DEP ab V2.0?
+	JR	C,REE0		; nein
+	SET	1,(HL)		; Laufwerksabfrage moeglich
+
+; Ein eventuell vorhandenes Menuewort ab 00h (z.B. FLOAD oder ASM) deaktivieren:
+REE0:	LD	HL,0		; ab Adresse 0000H
+	LD	B,0FFh		; bis zu Adresse 00FFH
+REE1:	LD	A,(HL)
+	INC	HL
+	CP	7FH		; CAOS-Prolog?
+	JR	Z,REE2		; gefunden
+	CP	0DDH		; EDAS/Editor-Prolog?
+	JR	NZ,REE3
+REE2:	CP	(HL)		; 2 mal?
+	JR	NZ,REE3
+	LD	(HL),0		; 2. Vorkommen loeschen
+REE3:	DJNZ	REE1
+	;
+MAIN:	LD	BC,EDIT-0BA00H	; kurzes Menue
+	JR	MEN0
+
+;-------
+	DEFW	0DDDDH
+CMENU:	DB	'MENU',1Fh
+MEN:	POP	HL		; Stack reinigen
+	LD	BC,4700H	; langes Menue BA00h-0100h
+MEN0:	PUSH	BC		; Menuelaenge
+	CALL	WIN40		; grosses Fenster
+	CALL	PV1
+	DB	OSTR
+	DB	CLS,LF,LF,0	; Bildschirm komplett loeschen
+	LD	B,40
+ULIN:	CALL	PV1
+	DB	OSTR
+	DB	'_',0		; unterstreichen
+	DJNZ	ULIN
+	CALL	TNAME		; Anzeige Dateiname (oder Titel)
+	CALL	PERI		; Anzeige DEVICE
+	CALL	FREE		; Anzeige freier Speicher
+	CALL	PV1
+	DB	HOME
+	LD	HL,0BA00H	; Beginn Menuewortsuche (wegen Erweiterungen)
+	POP	BC		; Menuelaenge
+MEN1:	CALL	PV1
+	DB	OSTR
+	DB	2,'-',0		; Prompt
+	CALL	PV1
+	DB	BRKT
+	JR	C,MEN7
+	LD	A,0DDH		; Edas-Prolog (fest codiert, nicht ueber IX+9)
+MEN2:	CPIR
+	JP	PO,MEN7		; Suchbereich fertig
+	CPI
+	JR	NZ,MEN2		; nicht 2 * Prologbyte
+MEN3:	LD	A,(HL)
+	CP	20h		; Epilog (0..1Fh)?
+	JR	C,MEN4		; Epilog
+	CP	30H
+	JR	C,MEN1		; < '0'
+	CP	5FH
+	JR	NC,MEN1		; > 'Z'
+	CALL	CHR
+	INC	HL
+	DEC	BC
+	JR	MEN3
+	;
+MEN4:	CALL	LFCR
+	JR	MEN1		; weitersuchen
+;
+NLP1:	POP	HL		; Startadresse vom Stack
+	POP	HL		; RET-Adresse vom Stack
+NLP2:	CALL	DERR		; Error
+	JR	LOOP1
+	;
+LOOP0:	LD	A,0BH		; Zeile hoch
+	CALL	PV1
+	DB	CRT
+LOOP1:	LD	A,2		; Zeile loeschen
+	CALL	PV1
+	DB	CRT
+LOOP2:	CALL	PV1
+	DB	NOUT		; Normalausgabe
+	CALL	TNAME
+	CALL	FREE
+	CALL	PERI
+MEN6:	CALL	PV1
+	DB	OSTR
+	DB	CR,'-',0	; Prompt
+MEN7:	CALL	PV1
+	DB	INLIN		; Eingabe im Menuebild
+	JR	C,LOOP0		; BRK
+	INC	DE
+	LD	A,(DE)
+	CP	' '
+	JR	Z,MEN6		; Beginn mit Space
+	AND	A
+	JR	Z,MEN6
+	LD	A,0DDH		; Edas-Prolog
+	LD	HL,0BA00H
+	LD	BC,4700H	; bis 0100H
+	CALL	PV1
+	DB	ZSUCH		; Menuewort suchen
+	JR	NC,NLP2		; nicht gefunden
+;	LD	A,(HL)		; Epilog - ist bei CAOS 4.8 automatisch in A
+	LD	BC,LOOP2
+	PUSH	BC		; RET-Adresse auf Stack
+	INC	HL
+	PUSH	HL		; Startadresse auf Stack
+	CP	1FH
+	RET	Z		; bei Epilog 1Fh ohne Argumente
+	LD	C,16		; Zahlenbasis hexadezimal
+	AND	10h		; Dezimal-Argumente?
+	JR	Z,MEN8
+	LD	C,10		; Zahlenbasis dezimal
+MEN8:	CALL	PV1
+	DB	GARGC		; bis zu 10 Argumente erfassen
+	JR	C,NLP1		; Fehler in Arg's
+	CALL	PV1
+	DB	LARG
+	RET			; Ansprung Kommando
+;-------
+; Anzeige Dateiname in Titelzeile
+TNAME:	LD	HL,(CURSO)
+	PUSH	HL		; aktuelle Cursorposition merken
+	CALL	WIN40
+	LD	HL,0101H	; Position Titel oder Dateiname
+	LD	(CURSO),HL
+	LD	HL,NAMP		; aktueller Dateiname
+	LD	A,(HL)
+	CP	21h		; Dateiname vorhanden?
+	JR	C,NONAM		; nein
+	CALL	PV1
+	DB	OSTR
+	DB	'EDIT:',0
+	LD	B,8
+	CALL	NAME1		; 8 Zeichen Dateiname
+	LD	A,'.'
+	CALL	PV1
+	DB	CRT
+	LD	B,3
+	CALL	NAME1		; 3 Zeichen Dateityp
+	JR	FRE2
+	;
+NONAM:	CALL	PV1
+	DB	OSTR
+	DB	'>> KC-EDIT 0.5 <<',CR,LF,0
+	JR	FRE2		; Fenster regenerieren
+;-------
+; Anzeige des freien Speicherplatzes:
+;
+FREE:	LD	HL,(CURSO)
+	PUSH	HL		; aktuelle Cursorposition merken
+	CALL	WIN40		; volles Fenster
+	LD	HL,011DH	; Pos. fuer Anzeige des freien Speichers
+	LD	(CURSO),HL
+	CALL	PV1
+	DB	OSTR
+	DB	'Frei:',1Fh,1Fh,1Fh,1Fh,0
+	LD	HL,(T2A)	; Beginn Teiltext 2
+	LD	DE,(T1E)	; Ende Teiltext 1
+	XOR	A
+	SBC	HL,DE		; das was dazwischen liegt, ist frei
+	CALL	PV1
+	DB	HLDEZ		; dezimal anzeigen
+FRE2:	POP	HL		; aktuelle Cursorposition
+	LD	(CURSO),HL	; regenerieren
+
+; verkuerztes Fenster fuer Menu (unterhalb Titelzeilen):
+
+WIN28:	LD	HL,0400h	; ab Zeile 4
+	LD	(WINON),HL
+	LD	HL,1C28H	; 28 Zeilen
+	LD	(WINLG),HL
+	RET
+;
+; Anzeige des aktuellen Devices:
+;
+PERI:	LD	HL,(CURSO)
+	PUSH	HL		; aktuelle Cursorposition merken
+	CALL	WIN40		; volles Fenster
+	LD	HL,0113H
+	LD	(CURSO),HL	; Pos. fuer Anzeige des DEVICE
+	LD	A,'('
+	CALL	PV1
+	DB	CRT
+	LD	B,9
+PER1:	CALL	PV1
+	DB	SPACE		; alte Anzeige loeschen
+	DJNZ	PER1
+	LD	A,14H
+	LD	(CURSO),A	; Position regenerieren
+	LD	A,0FEh		; aktuellen Treiber anzeigen
+	CALL	PV1
+	DB	DEVICE		; 49H - neue Funktion ab CAOS 4.6
+
+; falls Diskette und DEP 2.0 dann DEVICE mit Laufwerk erweitern...
+
+	LD	DE,0114H	; Cursorposition von DEVICE
+	CALL	PV1		; umrechnen in VRAM-Adresse
+	DB	DABR		; HL = VRAM
+	LD	DE,DISKN	; Vergleichsname DISK
+	LD	BC,4		; 4 Zeichen kontrollieren
+LWA0:	LD	A,(DE)
+	INC	DE
+	CPI			; Diskette?
+	JR	NZ,LWA3		; nein
+	JP	PE,LWA0
+	LD	HL,STAT
+	BIT	1,(HL)		; DEP ab Version 2.0?
+	JR	Z,LWA3		; nein
+	CALL	PV1
+	DB	OSTR
+	DB	':',0
+	LD	A,1		; Lw anfordern
+	LD	BC,80F1H
+	OUT	(C),A
+LWA1:	IN	A,(C)
+	BIT	0,A		; Rueckmeldung?
+	JR	NZ,LWA1		; nein, warten
+	INC	B		; 81F1H
+	IN	A,(C)		; Laufwerk
+	CALL	CHR
+	INC	B		; 82F1H
+	IN	L,(C)		; akt. User
+	LD	H,0
+	CALL	PV1
+	DB	HLDEZ		; Userbereich dezimal anzeigen
+LWA3:	LD	A,')'
+	CALL	PV1
+	DB	CRT
+	JR	FRE2		; Fenster regenerieren
+	;
+DISKN:	DB	'DISK'
+
+;-------
+	DEFW	0DDDDH
+	DB	'QUIT',1
+	CALL	WIN40		; grosses Fenster 40-Zeichen-Modus
+	LD	HL,CURSO+1
+	LD	A,(HL)
+	ADD	A,4		; Zeile korrigieren
+	LD	(HL),A
+	INC	HL		; STBT
+	RES	1,(HL)		; Schreiben Farbe ein
+
+	LD	DE,CMENU	; "MENU"
+	LD	HL,0E000H	; Beginn Suchbereich
+	LD	BC,2000h	; Laenge Suchbereich
+	LD	A,(IX+9)	; Prologbyte
+	CALL	PV1		; suche CAOS-Kommando MENU
+	DB	ZSUCH		; Menuewort suchen
+	INC	HL		; Epilogbyte ueberspringen
+	EX	(SP),HL		; als Return-Adresse auf den Stack legen
+	LD	DE,(ARGC-1)	; D = urspruenglicher Schaltzustand USER-C
+	LD	A,2		; USER-ROM
+	LD	L,A		; schalten
+	LD	E,MODU
+	JP	PV3		; zuerst USER-ROM schalten, dann zu CAOS
+
+;-------
+	DEFW	0DDDDH
+	DB	'CLEAR',1Fh
+	LD	HL,(T1E)
+	LD	DE,(T1A)
+	AND	A
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L
+	LD	HL,(T2E)
+	LD	DE,(T2A)
+	SBC	HL,DE
+	ADD	HL,BC		; Laenge Text 1 + 2
+	LD	A,H
+	OR	L
+	JR	Z,NACLR		; kein Text, nur Name loeschen
+	CALL	PV1
+	DB	OSTR
+	DB	CR,'Delete Text',0
+	CALL	YESNO
+	RET	C		; nein
+	LD	HL,(T1A)
+	LD	(T1E),HL	; Text 1 loeschen
+	LD	HL,(T2E)
+	LD	(T2A),HL	; Text 2 loeschen
+	CALL	FREE		; Free aktualisieren
+	CALL	HOM		; EDIT-Cursor Home
+;
+; Dateiname loeschen:
+;
+NACLR:	LD	HL,NAMP		; Namenpuffer
+	LD	B,11		; 11 Zeichen lang
+NACL1:	LD	(HL),' '	; Leerzeichen eintragen
+	INC	HL
+	DJNZ	NACL1
+	RET
+;-------
+HOM:	LD	DE,0
+	LD	(COL),DE	; EDIT-Cursor home
+	RET
+
+;-------
+	DEFW	0DDDDH
+	DB	'SAVE',1Fh
+	CALL	TOP		; Text an Speicherende
+SAV1:	LD	DE,(T2A)
+	LD	HL,(T2E)	; Ende Text 2
+	XOR	A
+	SBC	HL,DE		; Text vorhanden?
+	RET	Z		; nein
+	CALL	NAME		; Dateiname eingeben -> NAME0
+	RET	C		; BRK
+	CALL	LFCR
+	CALL	KPINI		; Kassettenpuffer initialisieren mit Vorblock
+	LD	DE,(T2A)	; Beginn Text 2
+	LD	(IX+2),1	; Block 1 einstellen
+	SET	7,(IX+7)	; Init merken
+
+	LD	A,0FDH		; Treiber abfragen
+	CALL	PV1
+	DB	DEVICE		; Kassette?
+	JR	Z,SAV5		; bei Kassette Vorblock ausgeben
+SAV2:	LD	HL,CASS+80H
+	LD	B,L		; 1 Block
+	LD	A,1Ah		; Puffer mit 1Ah vorbelegen (Endezeichen CP/M)
+SAV3:	DEC	L
+	LD	(HL),A		; Kassettenpuffer loeschen (mit 1Ah)
+	JR	NZ,SAV3
+SAV4:	EX	DE,HL
+	CALL	GET		; Datenbyte aus Textspeicher
+	EX	DE,HL
+	INC	DE
+	LD	(HL),A		; in IRM (Kassettenpuffer) ablegen
+	CP	3
+	JR	Z,SAV5		; Ende-Kennung erkannt
+	INC	HL
+	DJNZ	SAV4
+SAV5:	LD	A,(IX+2)	; Blocknummer
+	CALL	PV1
+	DB	AHEX		; Blocknr. anzeigen
+	CALL	PV1
+	DB	OSTR
+	DB	8,8,0		; Cursor zurueck vor Blocknr.
+	CALL	PV1
+	DB	BRKT
+	LD	BC,160		; kurzer Vorton
+	JR	C,SAV8		; BRK -> Datei schliessen
+	LD	HL,(T2E)	; Textende
+	SBC	HL,DE		; letzter Block?
+	JR	C,SAV8		; -> Datei schliessen
+	PUSH	DE		; Textpointer
+	BIT	7,(IX+7)	; Init?
+	JR	Z,SAV6		; nein
+	RES	7,(IX+7)	; Init ruecksetzen
+	LD	HL,NAME0	; Dateiname
+	CALL	PV1
+	DB	ISRO		; Vorblock ausgeben
+	JR	SAV7
+	;
+SAV6:	CALL	PV1
+	DB	MBO		; Daten-Block ausgeben
+SAV7:	POP	DE		; Textpointer
+	RET	C		; Fehler -> Abbruch
+	JR	SAV2		; naechster Block
+	;
+SAV8:	BIT	7,(IX+7)	; Init?
+	JR	Z,SAV9		; nein
+	RES	7,(IX+7)	; Init ruecksetzen
+	LD	HL,NAME0	; Dateiname
+	CALL	PV1		; erst noch Datei oeffnen, Vorblock ausgeben
+	DB	ISRO		; (jetzt ist Datei mindestens 2 Bloecke gross)
+	RET	C
+SAV9:	CALL	PV1
+	DB	CSRO		; Close (Ausgabe letzter Block)
+SAV10:	CALL	NC,LOA14	; Dateiname uebernehmen
+LFCR:	CALL	PV1
+	DB	CRLF
+	RET
+;-------
+CHR:	CALL	PV1
+	DB	OCHR
+	RET
+
+;-------
+	DEFW	0DDDDH
+	DB	'LOAD',1Fh
+	LD	A,0FDH		; Treiber abfragen
+	CALL	PV1
+	DB	DEVICE		; Kassette?
+	JR	Z,LOA0		; bei Kassette Dateiname nicht abfragen
+	CALL	NAME		; Dateiname eingeben -> NAME0
+	RET	C		; BRK
+	CALL	LFCR
+LOA0:	CALL	HOM		; EDIT-Cursor Home
+	LD	HL,CASS		; Kassettenpuffer
+	LD	(IX+5),L
+	LD	(IX+6),H
+	SET	0,(IX+7)	; Read, nicht Verify
+	LD	HL,NAME0	; Name an ISRI uebergeben
+	CALL	PV1
+	DB	ISRI		; ersten Block einlesen
+	RET	C		; Fehler
+
+; !!! bei Kassette: BRK abfragen, sonst wiederholen!
+
+	XOR	A		; Z=1 (Daten aus Puffer entnehmen!)
+	CALL	BLRD		; (Vor-) Block lesen bzw. Blocknummer anzeigen
+	JP	C,LOA12		; BRK oder Fehler
+	LD	A,0FDH		; Treiber abfragen
+	CALL	PV1
+	DB	DEVICE
+	JR	NZ,LOA3		; nicht Kassette
+; Bei Kassette, Name aus Vorblock anzeigen und speichern:
+	LD	A,2		; Zeile loeschen
+	CALL	CHR
+	LD	DE,NAME0	; Name hier zwischenspeichern
+	LD	HL,CASS
+	LD	BC,11
+LOA2:	LD	A,(HL)		; Zeichen aus Kassettenpuffer
+	CP	' '
+	CALL	NC,CHR		; anzeigen
+	LDI			; und in Puffer kopieren
+	JP	PE,LOA2		; bis alle 11 Zeichen abgearbeitet sind
+	CALL	LFCR
+LOA3:	LD	(IX+3),2	; Block Nr. 2 erwarten (1. Datenblock)
+	LD	DE,(T1E)	; Ladebeginn
+; LOAD-Hauptschleife
+; DE	Adresse, wohin gespeichert wird
+; (T2E)	max. Endadresse
+LOA4:	LD	HL,(T2A)	; max. Endadresse
+	XOR	A
+	SBC	HL,DE		; verfuegbaren Platz berechnen
+	JR	Z,LOA11		; kein Byte frei -> no Memory
+	PUSH	HL
+	CALL	BLRD		; Block in Puffer einlesen
+	POP	HL
+	JR	C,LOA12		; BRK oder Fehler
+	LD	BC,128		; Blocklaenge
+	SBC	HL,BC		; ist im Speicher noch Platz fuer einen Block?
+	JR	NC,LOA5		; ja, voller Block moeglich
+	ADD	HL,BC
+	LD	C,L		; C=restliche Anzahl
+LOA5:	LD	B,C		; B=Anzahl in dieser Runde
+	LD	HL,CASS		; Daten aus Kassettenpuffer
+LOA10:	LD	A,(HL)		; Zeichen entnehmen
+	CP	3		; CAOS-Ende-Zeichen?
+	JR	Z,LOA12		; ja
+	CP	1Ah		; CP/M-Endezeichen?
+	JR	Z,LOA12		; ja
+	INC	HL
+	EX	DE,HL
+	CALL	PUT		; Datenbyte in Textspeicher
+	EX	DE,HL
+	INC	DE
+	DJNZ	LOA10
+	INC	(IX+3)		; naechste Blocknummer
+	JR	LOA4
+;
+LOA11:	INC	A		; A=1
+	LD	(M4A),A		; Speicher voll setzen
+LOA12:	CALL	PV1
+	DB	CSRI		; Datei schliessen
+; Text verschieben
+; DE=Ende+1 geladener Text
+; (T1E) Anfang geladener Text
+	LD	H,D
+	LD	L,E		; HL=Textende neu
+	LD	BC,(T1E)	; BC=Textende alt
+	AND	A		; CY=0
+	SBC	HL,BC
+	JP	Z,LFCR		; Abbruch, kein Inhalt geladen!
+	LD	B,H
+	LD	C,L		; BC=Laenge des zu verschiebenden Textes
+	LD	HL,(T2A)	; zu Anfang Teiltext 2 verschieben
+	EX	DE,HL
+	CALL	LFCR		; ab CAOS 4.6: Zeilenvorschub nicht mehr in CSRI
+	DEC	DE
+	DEC	HL
+	CALL	TLDDR		; Text verschieben
+	INC	DE
+	INC	HL
+	LD	(T2A),DE	; neuer Anfang Teiltext 2
+	LD	A,(M4A)
+	OR	A
+	JR	Z,LOA13		; OK
+	CALL	MEM		; Anzeige "no Memory"
+	CALL	LFCR
+; Dateiname jetzt uebernehmen
+LOA13:	LD	A,(NAMP)	; aktueller Dateiname
+	CP	' '		; noch leer?
+	RET	NZ		; nein, dann nicht umbenennen
+LOA14:	LD	HL,NAME0	; benutzter Dateiname von LOAD
+	LD	DE,NAMP		; aktueller Dateiname
+	LD	BC,11		; im Format 8.3
+	LDIR			; jetzt uebernehmen
+	RET
+;-------
+; Block einlesen in Kassettenpuffer:
+; PE:	(IX+3)	erwarteter Block
+;	Z=1	1. Block (nur Puffer entnehmen!)
+;	Z=0	folgenden Block lesen
+; PA:	CY=1	BRK betaetigt oder Fehler bei Diskette
+; VR:	HL,AF
+BLRD:	LD	L,4		; 4 Versuche
+	JR	NZ,BLRD1
+	SET	7,(IX+7)	; Init merken, wenn Vorblock
+	JR	BLRD2		; Daten uebernehmen
+	;
+BLRD1:	CALL	PV1
+	DB	BRKT
+	RET	C		; BRK
+	LD	A,(IX+3)	; 1. Datenblock erwartet?
+	CP	2
+	JR	NZ,BLRD0	; nein
+	BIT	7,(IX+7)	; war vorher Init?
+	JR	Z,BLRD0		; nein
+	RES	7,(IX+7)	; Init ruecksetzen
+	EXX
+	 LD	BC,(CASS+11H)	; AADR bei CAOS-Vorblock
+	 LD	HL,(CASS+13H)	; EADR bei CAOS-Vorblock
+	 SBC	HL,BC		; CY=0 vom vorangehenden CP 2
+	 LD	(ARG3),HL	; Anzahl Datenbytes bei Typestar-Dateien
+	EXX
+	LD	A,(CASS+10H)
+	AND	0DFH		; echter CAOS-Vorblock?
+	JR	Z,BLRD0		; ja, z.B. EDAS-Quelltext mit Vorblock
+	DEC	(IX+3)		; Blocknummer wie vorher
+	JR	BLRD2		; Inhalt als Daten auswerten!
+	;
+BLRD0:	CALL	PV1
+	DB	MBI		; Block einlesen
+	RET	C		; Fehler
+BLRD2:	LD	A,1
+	DEC	A		; Z=1, CY unveraendert!
+	LD	A,(IX+2)	; Blocknummer
+	PUSH	AF
+	CP	(IX+3)		; richtige Blocknummer?
+	JR	Z,BLRD3		; ja
+	INC	A		; Z=0
+	JR	NZ,BLRD5	; nicht Block FF
+	LD	A,L
+	CP	4		; Block FF im 1. Versuch?
+	JR	NZ,BLRD5	; nein
+BLRD3:	POP	AF
+	JR	C,BLRD4		; Lesefehler
+	PUSH	AF
+	LD	A,2
+	CALL	PV1		; Zeile loeschen
+	DB	CRT
+	POP	AF
+BLRD4:	PUSH	AF
+	CALL	PV1
+	DB	AHEX		; Blocknr.
+	POP	AF
+	JR	C,BLRD6		; Lesefehler
+	CALL	PV1
+	DB	OSTR
+	DB	'> ',0		; ok
+	AND	A		; CY=0
+	RET
+	;
+BLRD5:	POP	AF
+	SCF			; CY=1, Lesefehler setzen
+	INC	L
+	DEC	L		; Z=0, falscher Block
+	JR	BLRD4
+	;
+BLRD6:	JR	Z,BLRD7		; Blocknr. richtig
+	CALL	PV1
+	DB	OSTR
+	DB	'*',8,8,8,0	; falsche Blocknr.
+	JR	BLRD1		; weiterversuchen
+	;
+BLRD7:	LD	H,A
+	DEC	L		; Leseversuche zaehlen
+	JR	Z,BLRD8		; letzter Versuch
+	CALL	PV1
+	DB	OSTR
+	DB	'? ',7,0	; Lesefehler!
+	JP	BLRD1
+	;
+BLRD8:	CALL	PV1
+	DB	OSTR
+	DB	'!',LF,CR,0	; Block fehlerhaft uebernommen
+	AND	A		; CY=0
+	RET
+;-------------------------------------------------------------------------------
+; Ausdruck des gesamten Textes auf den in CAOS aktivierten Druckers
+; PRINT ohne Parameter druckt Text 1:1 aus
+; PRINT mit Parameter fuegt nach n Zeilen einen Seitenwechsel 0ch ein
+;
+	DEFW	0DDDDH
+	DB	'PRINT',11H	; Argument als Dezimalzahl!
+	CALL	PRINT1		; Druck vorbereiten
+	RET	C		; kein Drucker oder Parameterfehler
+	CALL	TOP		; gesamten Text an Speicherende
+PRI1:	LD	HL,(T2A)	; Druckbeginn
+	LD	E,0		; mit Zeichenzaehler = 0 starten
+PRI2:	LD	A,(ARG1)	; Zeilen/Seite
+	LD	B,A		; bzw. 0 fuer Endlosdruck
+PRI3:	CALL	GET		; Zeichen aus Textspeicher
+	INC	HL
+	CP	3		; Ende-Kennung?
+	JR	Z,PRI8		; ja, fertig
+	CP	CR		; neue Zeile?
+	JR	NZ,PRI4		; nein
+	CALL	PRCHR		; CR zum Drucker senden
+	JR	C,PRI9		; BRK
+	INC	B
+	DEC	B
+	JR	Z,PRI3		; keine Seitenwechsel
+	DJNZ	PRI3		; bis Seitenende wiederholen
+	LD	A,(ARG1)	; Zeilen/Seite
+	LD	B,A		; bzw. 0 fuer Endlosdruck
+	LD	A,CLS		; Blattwechsel
+PRI4:	CP	0Eh		; Zeile binden?
+	JR	Z,PRI6		; Rest der Zeile ignorieren, einschl. cr+lf
+	CP	0Fh		; Einleitung HEX-Sequenz?
+	JR	NZ,PRI5
+
+; HEX-Sequenz
+HEX1:	CALL	GET		; Folgezeichen nach 0Fh
+	CP	20H		; Leerzeichen?
+	JR	NZ,HEX2
+	INC	HL		; falls Leerzeichen -> ignorieren
+	JR	HEX1		; weiter bis das erste Zeichen kommt
+	;
+HEX2:	PUSH	DE		; Zeichenzaehler retten
+	PUSH	HL		; Textpointer retten falls keine HEX-Codes
+	LD	DE,NERR		; Zeichen in Assemblierpuffer aufbereiten
+HEX3:	CALL	GET		; Zeichen aus Textspeicher
+	CP	21H
+	JR	C,HEX4		; Trennzeichen (Leerzeichen, Tabulator...)
+	LD	(DE),A		; zwischenspeichern
+	INC	DE
+	INC	HL
+	JR	HEX3
+	;
+HEX4:	XOR	A		; Endekennung
+	LD	(DE),A		; anhaengen
+	LD	DE,NERR		; Puffer
+	PUSH	HL
+	CALL	PV1		; HEX-Code
+	DB	RHEX		; umwandeln
+	POP	HL		; Textpointer nach HEX-Code
+	JR	NC,HEX5		; kein Fehler beim Umwandeln
+	POP	HL		; Textpointer vor HEX-Code
+	POP	DE		; Zeichenzaehler
+	JR	PRI6		; normal weiter drucken
+	;
+HEX5:	POP	DE		; Textpointer vor HEX-Code jetzt vergessen
+	POP	DE		; Zeichenzaehler
+	LD	A,(NUMVX)
+	CALL	CHR		; Hexcode direkt zu Drucker schicken
+	CALL	GET		; Trennzeichen nochmals holen
+	INC	HL
+	CP	CR
+	JR	Z,PRI7		; Zeilenende, normal weiter drucken
+	CP	3
+	JR	Z,PRI8		; Textende erreicht, Druck beenden
+	JR	HEX2		; naechsten HEX-Code holen
+
+PRI5:	INC	E
+	DEC	E
+	JR	NZ,PRI7		; wir sind nicht am Zeilenanfang
+	CP	'.'
+	JR	NZ,PRI7		; kein dot-Kommando
+
+; Zeilenrest nicht drucken (z.B. dot-Kommandos)
+PRI6:	CALL	GET		; Zeichen aus Textspeicher
+	INC	HL
+	CP	3
+	JR	Z,PRI8		; Ende-Kennung erreicht!
+	CP	LF
+	JR	NZ,PRI6		; weiter bis nach CR+LF
+	JR	PRI3		; neue Zeile wieder drucken	
+
+; Zeichen zum Drucker
+PRI7:	CALL	PRCHR		; Druck Zeichen
+	JR	C,PRI9		; BRK
+	JP	PRI3		; naechstes Zeichen
+
+; Druck beendet
+PRI8:	LD	A,(ARG1)	; Zeilen/Seite
+	CP	B		; sind wir bereits auf einer neuen Seite?
+	LD	A,CLS
+	CALL	NZ,PRCHR	; nein, dann Blatt wechseln
+PRI9:	CALL	PV1
+	DB	NOUT		; zurueck zu Normalausgabe (CRT)
+	RET
+;-------
+; Zeichenausgabe zum Drucker (Ausgabekanal UOUT1):
+; - 0Dh sendet CR+LF
+; - 0Ch ist Blattwechsel
+; - 09h Tabulatoren werden in Leerzeichen gewandelt
+; - Druckersteuerzeichen 0-9 nach ESC/P aufloesen
+; - alle anderen Steuerzeichen werden ignoriert
+; PE:	A	Zeichen
+;	E	Zeichenzaehler
+; PA:	E	Zeichenzaehler entsprechend um Zeichenzahl
+;	CY=1	BRK gedrueckt
+; VR:	AF, E
+;
+PRCHR:	PUSH	BC		; B retten (Zeilenzaehler)
+	LD	B,1		; zunaechst 1 Zeichen annehmen
+	CP	' '
+	JR	NC,PRC4		; kein Steuerzeichen
+	CP	CLS
+	JR	Z,PRC1		; Blattwechsel am Drucker
+	CP	CR
+	JR	NZ,PRC2
+; CR druckt CR+LF
+	CALL	CHR		; CR zum Drucker
+	LD	A,LF
+PRC1:	LD	E,-1		; Zeilenzaehler ruecksetzen
+	JR	PRC4		; drucken
+	;
+PRC2:	CP	9		; Tab ?
+	JR	NZ,PRC5		; alle anderen Steuerzeichen ignorieren!
+; TAB in Leerzeichen umwandeln
+	LD	A,8		; TAB-Schrittweite
+	SUB	E		; minus Zeichenposition
+	AND	7		; modulo 8
+	JR	NZ,PRC3
+	LD	A,8		; kompletter TAB-Schritt
+PRC3:	LD	B,A		; Anzahl Leerzeichen
+	LD	A,' '
+PRC4:	CALL	CHR		; ausgeben an Drucker
+	INC	E		; Zeichen mit zaehlen
+	DJNZ	PRC4
+	JR	PRC6
+	;
+PRC5:	SUB	10H		; Druckersteuerzeichen?
+	JR	C,PRC6		; < 10H
+	CP	10
+	CALL	C,GETC		; Druckersteuerzeichen ausfuehren
+PRC6:	CALL	BRKS		; BRK/STOP abfragen
+	POP	BC
+	RET
+;
+; UP1 fuer PRINT und PPRINT:
+; - Kontrolle, ob Drucker aktiviert ist
+; - Einstellung Seitenwechsel nach Parameter in ARG1
+; - EIN/AUS-Merker fuer Druckersteuerzeichen initialisieren
+; PE:	ARG1	Zeilenzahl BCD
+; PA:	ARG1	Zeilenzahl Hex
+;	CY=1	Fehler: Druckertreiber nicht aktiv oder
+;		keine dezimale Angabe des Arguments
+;
+PRINT1:	LD	HL,(UOUT1+1)	; Hier steht die CAOS-Druckerroutine
+	LD	A,(HL)		; ersten Befehlscode holen
+	CP	0C9H		; ist das ein RET?
+	JR	NZ,DEZ1		; nein, dann ist ein Drucker initialisiert
+	CALL	PV1
+	DB	OSTR
+	DB	'Kein Drucker aktiv!',CR,LF,0
+	SCF
+	RET
+	;
+DEZ1:	LD	A,(ARGN)	; Anzahl Argumente
+	OR	A
+	JR	NZ,DEZ2
+	LD	(ARG1),A	; ohne Argumente -> wie 0 benutzen
+DEZ2:	LD	HL,ZEI2		; 2=Druckerausgabe
+	CALL	PV1		; Ausgabekanal 1
+	DB	SOUT		; einstellen
+; Erstbelegung Druckersteuerzeichen
+	LD	HL,GTCR		; ein/aus-Merker
+	XOR	A		; CY=0
+	LD	B,10		; Anzahl Druckersteuerzeichen
+GTC0:	LD	(HL),A
+	INC	HL
+	DJNZ	GTC0
+	RET
+	;
+DEZ4:	CALL	PV1
+	DB	OSTR
+	DB	'Parameterfehler',CR,LF,0
+	SCF			; Format-Fehler
+	RET
+;-------
+; Druckersteuerzeichen nach Tabelle abarbeiten:
+; PE:	A	Nummer der Funktion 0..9
+;	GTCR	Option zur Funktion 0..9
+;	GTC	Befehlstabelle
+; VR:	BC, AF
+;
+GETC:	PUSH	HL
+;	CP	10
+;	JR	NC,GET4		; groesser als 9
+	LD	HL,GTCR		; ein/aus Merker, 10 Byte
+	LD	B,0
+	LD	C,A
+	ADD	HL,BC
+	LD	A,(HL)
+	XOR	1		; abwechselnd on/off
+	LD	(HL),A
+	ADD	A,C		; 0/1 plus Funktionsnummer
+	ADD	A,C		; verdoppeln
+	LD	C,A
+	INC	C		; zu suchende Nummer 1..20
+	LD	HL,GTC		; Druckercode-Tabelle
+GET1:	LD	B,(HL)		; Anzahl Zeichen fuer den Befehl
+	INC	HL
+	DEC	C
+	JR	Z,GET3	 	; gefunden
+GET2:	INC	HL
+	DJNZ	GET2		; weiter zum naechstem Code
+	JR	GET1
+	;
+GET3:	LD	A,(HL)		; Zeichen aus Tabelle
+	CALL	CHR		; zum Drucker schicken
+	INC	HL
+	DJNZ	GET3
+GET4:	POP	HL
+	RET
+;-------
+; Durckersteuerzeichen fuer Drucker mit ESC/P (z.B. K6313, LX400...)
+;		Anzahl,Codes		;Nr.	Funktion
+GTC:	DB	3,ESC,'U',0		;0	unidirektional aus
+	DB	3,ESC,'U',1		;	unidirektional ein
+	DB	2,ESC,'T'		;1	Exponentschrift aus
+	DB	3,ESC,'S',0		;	Exponentschrift ein
+	DB	1,12H			;2	Schmalschrift aus
+	DB	1,0FH			;	Schmalschrift ein
+	DB	3,ESC,'-','0'		;3	unterstreichen aus
+	DB	3,ESC,'-','1'		;	unterstreichen ein
+	DB	2,ESC,'P'		;4	PICA  (10 cpi)
+	DB	2,ESC,'M'		;	ELITE (12 cpi)
+	DB	3,ESC,'W',0		;5	Breitschrift aus
+	DB	3,ESC,'W',1		;	Breitschrift ein
+	DB	2,ESC,'H'		;6	Doppeldruck aus
+	DB	2,ESC,'G'		;	Doppeldruck ein
+	DB	2,ESC,'T'		;7	Indexschrift aus
+	DB	3,ESC,'S',1		;	Indexschrift ein
+	DB	2,ESC,'F'		;8	Fettschrift aus
+	DB	2,ESC,'E'		;	Fettschrift ein
+	DB	3,ESC,'x',0		;9	NLQ aus
+	DB	3,ESC,'x',1		;	NLQ ein
+;-------------------------------------------------------------------------------
+; KEY		KEYLIST
+; KEY 0		Defaultbelegung fuer KC-Tastatur
+; KEY D5	Defaultbelegung fuer D005-Tastatur
+; KEY 1-F	F-Taste belegen
+;
+	DEFW	0DDDDH
+	DB	'KEY',1
+	OR	A
+	JR	NZ,KEYL
+	CALL	PV1
+	DB	KEYLI		; KEYLIST
+	RET
+	;
+KEYL:	LD	A,L
+	OR	A
+	JR	Z,KEY0		; KEY 0
+	CP	0D5H
+	JR	Z,KEYD5		; KEY D5
+	CALL	PV1
+	DB	KEY		; F-Taste belegen
+	RET
+	;
+KEY0:	LD	HL,KEB		; KC-Tastatur
+	LD	B,3		; 3 Tasten
+	JR	KEYBEL
+	;
+KEYD5:	LD	HL,KEA		; D005-Tastatur
+	LD	B,11		; 11 Tasten
+KEYBEL:	LD	DE,FTASTE	; 0B900H
+	XOR	A
+KEYNEU:	LD	(DE),A		; Trennung
+	INC	DE
+	LDI			; Tastencode
+	INC	BC		; BC unveraendert
+	DJNZ	KEYNEU
+	EX	DE,HL
+KCL:	LD	(HL),0		; Rest loeschen
+	INC	HL
+	LD	A,L
+	CP	9CH
+	JR	NZ,KCL
+	RET
+;
+; Funktionstastencodes:
+;
+KEA:	DB	'['	; F1	D005-Tastatur
+	DB	'\'	; F2
+	DB	']'	; F3
+	DB	'~'	; F4
+	DB	5	; F5	TAB
+	DB	6	; F6	weitersuchen
+	DB	'{'	; F7
+	DB	'|'	; F8
+	DB	'}'	; F9
+	DB	'`'	; F10
+	DB	''	; F11
+;
+KEB:	DB	ESC	; F1	ESC
+	DB	5	; F2	TAB
+	DB	6	; F3	weitersuchen
+;-------
+; Unterprogramm sucht String ab Cursorzeile und stellt T2A entsprechend
+; PE:	STRING	gesuchte Zeichenkette
+; PA:	Textgrenzen so eingestellt, dass EDIT dahinzeigt
+FIND:	LD	A,(LIN)		; Suche ab akt. Cursorzeile
+	LD	D,0
+	LD	E,A		; DE=aktuelle Bildschirmzeile
+	OR	A		; steht der Cursor in Zeile 0?
+	CALL	NZ,TXANF	; ggf. Textzeilen nach Anfang verschieben
+	CALL	HOM		; Suche ab akt. Seite
+	LD	DE,(T2A)
+	LD	HL,(T2E)
+	XOR	A
+	SBC	HL,DE
+	JP	Z,BOTO		; kein Text 2 vorhanden
+	LD	B,H
+	LD	C,L		; BC = Laenge
+	EX	DE,HL		; HL = Anfang
+FIN1:	LD	DE,STRING	; Stringspeicher
+	LD	A,(DE)		; 1. Zeichen
+	OR	A
+	RET	Z		; 0 = Ende
+	CALL	TCPIR		; suchen 1. Zeichen
+	JR	NZ,BOTO		; nicht gefunden
+	PUSH	HL
+	PUSH	BC
+FIN2:	INC	DE
+	LD	A,(DE)		; naechstes Zeichen
+	OR	A
+	JR	Z,FIN3		; gefunden
+	CALL	TCPI		; suchen weiteres Zeichen
+	JR	Z,FIN2
+	POP	BC
+	POP	HL
+	JR	FIN1		; weitersuchen
+	;
+FIN3:	POP	BC
+	POP	DE
+	LD	DE,(T2A)
+	DEC	HL
+	SBC	HL,DE
+	RET	Z		; an Textende
+	LD	B,H
+	LD	C,L
+	LD	DE,(T1E)
+	LD	HL,(T2A)
+	CALL	TLDIR		; Text teilen
+	LD	(T1E),DE
+	LD	(T2A),HL
+	LD	DE,1
+	PUSH	HL
+	CALL	TXEND		; einen Zeilenanfang zurueck
+	POP	HL		; Pos. vor Verschiebung auf Zeilenanfang
+	LD	DE,(T2A)	; Pos. nach Verschiebung
+	XOR	A
+	SBC	HL,DE
+	LD	B,L
+	LD	C,A		; BC=Position in der Zeile
+	JR	Z,FIN7		; String steht an Zeilenanfang
+	LD	HL,STRING+1	; 2. Zeichen des Suchstring
+FIN4:	CP	(HL)		; 0 ?
+	INC	HL
+	JR	Z,FIN5		; Stringende
+	DJNZ	FIN4
+	JR	FIN7
+	;
+FIN5:	EX	DE,HL
+	CALL	GET		; Zeichen aus Textspeicher
+	EX	DE,HL
+	INC	DE
+	INC	C
+	CP	TAB		; Tabulator?
+	JR	NZ,FIN6
+	LD	A,C
+	ADD	A,7
+	AND	78H
+	LD	C,A
+FIN6:	DJNZ	FIN5
+FIN7:	LD	A,C
+	CP	80		; letzte Spalte?
+	JR	C,FIN8
+	LD	A,79
+FIN8:	LD	L,A		; Spalte
+	LD	H,0		; Zeile 0
+FIN9:	LD	(COL),HL
+	LD	A,3
+	CP	H		; sind wir schon in Zeile 3?
+	RET	Z		; ja, fertig
+	LD	DE,1
+	CALL	TXEND		; Versuch, eine Zeile zurueck zu gehen
+	RET	Z		; wir waren schon am Textanfang
+	LD	HL,(COL)
+	INC	H		; Zeile+1 eintragen
+	JR	FIN9
+;
+; Zum Textende gehen (Seite beginnt 22 Zeilen vor Ende)
+;
+BOTO:	LD	DE,0		; komplett an Textende gehen
+	CALL	TXANF
+BOT:	LD	HL,1500H	; EDIT-Cursor in Zeile 21
+	LD	(COL),HL
+	LD	D,L		; 0
+	LD	E,H		; 21
+	CALL	TXEND		; 21 Zeilen zurueck
+	RET
+;
+; EDITOR-Hauptschleife:
+;
+	DEFW	0DDDDH
+	DB	'EDIT',1Fh
+EDIT:	CALL	BILD0		; Editor immer in Bild 0 (Bild 1 = Hilfe)
+	LD	HL,MAIN
+	EX	(SP),HL		; zurueck zum kurzen Menu
+	LD	HL,(0BFE7H)	; Hier steht Menuewort QUIT zu ASM
+	LD	DE,0DDDDH
+	AND	A
+	SBC	HL,DE
+	JR	Z,EDI0		; aus ASM gestartet
+	res	7,(IX+8)	; ansonsten CAPS einschalten
+EDI0:	CALL	SET80		; 80-Zeichen-Modus einstellen
+	CALL	CLS80		; Bild loeschen
+	CALL	LCOUNT		; Zeilennummer ermitteln
+EDI1:	CALL	WRPG		; Seite schreiben
+EDI2:	CALL	PCOL		; Cursorposition anzeigen
+	CALL	KEYB		; Eingabe
+	ld	hl,(t1e)
+	ld	(T1MERK),hl	; Textgrenzen merken fuer den Fall
+	ld	hl,(t2a)	; dass beim Speichern kein Platz ist
+	ld	(T2MERK),hl
+	JR	NC,EDI3		; nicht BRK
+	CALL	MPAGE		; Seite speichern
+	JR	C,EDI6		; No Memory
+; zusaetzliche CR+LF am Ende von Text 2 abschneiden:
+	ld	hl,(t2e)
+ts1:	ld	de,(t2a)
+	sbc	hl,de
+	ld	b,h
+	ld	c,l		; BC = Textlaenge
+	add	hl,de		; veraendert Z-Flag nicht!
+	ld	de,(t2e)
+	jr	z,ts3		; kein Teiltext 2 mehr vorhanden
+	dec	hl
+	call	GET		; letztes Zeichen holen
+	cp	lf
+	jr	nz,ts2		; Textende gefunden
+	dec	hl
+	call	GET		; vorletztes Zeichen holen
+	cp	cr
+	jr	z,ts1		; Suchen, ob noch ein CR+LF davor kommt?
+ts2:	inc	hl		; hier steht das letzte CR
+	inc	hl		; hier steht das letzte LF
+	ld	de,(t2e)	; hier steht 03h
+	dec	de		; hier soll letztes LF stehen
+	or	a		; CY=0
+	sbc	hl,de
+	jr	nc,ts4		; kein CR+LF am Textende
+	jr	z,ts4		; keine CR+LF zu viel am Textende
+	add	hl,de
+	inc	bc
+	inc	bc
+	CALL	TLDDR		; Text nach hinten verschieben
+	inc	de
+ts3:	ld	(t2a),de	; neuer Anfang von Teiltext 2
+ts4:	CALL	SET40		; zurueck zum 40-Zeichen-Modus
+	ld	hl,vram1
+	ld	de,vram1+1
+	ld	bc,09FFh
+	ld	(hl),0
+	ldir			; gesamten VRAM von Bild 0+1 loeschen
+	set	7,(ix+8)	; CAPS aus
+	ret
+	;
+EDI3:	CP	CR		; Enter?
+	JR	NZ,EDI4
+	LD	A,0Eh		; 0Dh als 0Eh ausfuehren
+EDI4:	CP	7FH		; ge-CAPS-ter Unterstrich?
+	JR	NZ,EDI5
+	LD	A,5FH		; wieder als Unterstrich
+EDI5:	CALL	CRT_I		; Zeichen auf Bildschirm anzeigen
+	LD	HL,(CURSO)
+	LD	(COL),HL	; EDIT-Cursor
+	LD	A,(M4A)
+	OR	A		; Ueberlauf?
+	JP	Z,EDI2
+EDI6:	CALL	MEMW		; Anzeige "No Memory" und Tastaturabfrage
+	CALL	STATUS		; Staturzeile aktualisieren
+	ld	hl,(T1MERK)
+	ld	(t1e),hl	; urspruengliche Textgrenzen
+	ld	hl,(T2MERK)	; wieder regenerieren
+	ld	(t2a),hl
+	JP	EDI2		; zurueck zum Editieren
+;
+; Zeichenausgabe mit Einfuegemodus
+; PE:	A	Zeichencode
+;
+CRT_I:	CP	20h		; Steuerzeichen?
+	JR	C,INS3		; direkt ausfuehren ohne anzuzeigen!
+CRT_X:	LD	HL,STAT
+	BIT	4,(HL)		; Einfuegemodus?
+	JR	NZ,INS3		; nein, einfach anzeigen
+	EX	AF,AF'		; Zeichencode in A'
+	CALL	CFR1		; ist noch ein Zeichen frei?
+	RET	C		; nein
+	EX	AF,AF'		; Zeichencode
+INS0:	LD	DE,(CURSO)	; aktuelle Cursorposition
+	CALL	DABR80		; VRAM-Adresse holen
+INS1:	LD	B,(HL)		; Zeichen von akt. Position holen
+	LD	(HL),A		; neues Zeichen eintragen
+	CALL	WPIX		; auf Bildschirm zeichnen
+	LD	A,B
+	AND	A		; war das ein Dummy?
+	JR	Z,INS2		; ja, fertig
+	INC	E		; CUR
+	CALL	DABR80		; raus?
+	JR	NC,INS1
+	LD	E,0		; Spalte 0 in
+	INC	D		; naechster Zeile
+	CALL	DABR80		; raus?
+	JR	NC,INS1		; nein, weiter einfuegen
+INS2:	LD	DE,(CURSO)	; aktuelle Cursorposition
+	CALL	DABR80		; VRAM-Adresse holen
+	LD	A,(HL)		; Zeichen aus VRAM zuruecklesen
+INS3:	JP	CRT80
+;
+; Kontrolle, ob noch genug Zeichen zum Einfuegen frei sind
+; PE:	B	Anzahl der Zeichen
+; PA:	CY=1	kein Platz
+; VR:	HL,BC,DE,AF
+;
+CFR1:	LD	C,1
+CFREE:	PUSH	BC		; Anzahl C auf Stack
+	LD	DE,(CURSO)	; aktuelle Cursorposition
+	CALL	DABR80		; aktuelle VRAM-Adresse
+	EX	DE,HL		; DE = VRAM-Adresse		
+	LD	HL,0B4D0H	; VRAM-Ende
+	XOR	A	; CY=0
+	SBC	HL,DE		; Anzahl Zeichen bis Bildschirmende
+	LD	B,H
+	LD	C,L		; BC = Suchlaenge
+	EX	DE,HL		; HL = Adresse
+	POP	DE		; Anzahl jetzt in E
+CFR2:	CPIR			; ist da noch mindestens 1 Zeichen frei?
+	SCF
+	RET	NZ		; nicht gefunden (Fehler)
+	CCF
+	JP	PO,CFR3		; ausgesucht
+	DEC	E
+	JR	NZ,CFR2		; weitere freie Zeichen suchen
+	RET
+	;
+CFR3:	DEC	E
+	RET	Z		; ausgesucht und E=0: OK
+	SCF			; ansonsten Fehler
+	RET
+;
+; Zaehle die Zeilenumbrueche im Teiltext1, also vor dem Bildbeginn
+; PE:	T1A, T1E
+; PA:	MEML, DE=(MEML)
+;
+LCOUNT:	ld	de,(t1a)	; Beginn Text 1 = 0201h
+	dec	de		; 0200h
+	ld	hl,(t1e)
+	and	a
+	sbc	hl,de
+	ld	b,h
+	ld	c,l		; BC = Laenge Text 1
+	ex	de,hl		; HL = Beginn Text 1
+	ld	de,0		; DE = Zeilenzaehler
+	ld	a,CR		; Trennzeichen 
+LCNT1:	CALL	TCPIR		; CR suchen
+	JR	NZ,LCNT2	; nicht gefunden
+	INC	DE		; CR zaehlen
+	JP	PE,LCNT1		; noch nicht ausgesucht
+LCNT2:	ld	(meml),de	; Zeilennummern vor dargestellter Seite
+	ret
+;-------
+; 02h->1Dh = Shift-DEL - aktuelle Zeile loeschen, Rest nach oben scrollen
+;
+EDEL:	LD	A,22		; letzte Zeile
+	SUB	D		; - aktuelle Zeile
+	LD	B,A		; = Anzahl zu scrollender Zeilen
+	CALL	NZ,UROLL	; B Zeilen scrollen
+	LD	DE,(WINLG)
+	DEC	D		; letzte Zeile
+	LD	E,0		; Spalte 0
+	CALL	DABR80		; HL=VRAM-Adresse
+	LD	BC,(T2A)	; unterste Zeile aus Teiltext 2 neu anzeigen
+	CALL	WRZLE		; Letzte Zeile anzeigen
+	LD	DE,(CURSO)
+	JP	CUD1		; Cursor auf/hinter Zeichen setzen
+;-------
+; F1 (5) - Tabulatorschritt erzeugen:
+EDTAB:	LD	A,(STAT)
+	AND	10h		; Einfuegemodus?
+	JR	NZ,TAB2		; nein, einfach zur naechsten TAB-Position gehen
+	LD	A,E		; Spalte
+	CPL
+	AND	7		; bis zur naechsten TAB-Position
+	INC	A
+	LD	B,A		; Anzahl
+	LD	C,A
+	PUSH	BC
+	CALL	CFREE		; Kontrolle, ob genug Zeichen frei sind
+	POP	BC
+	LD	DE,(CURSO)
+	RET	C		; nicht genug frei!
+TAB1:	PUSH	BC
+	LD	A,' '		; Leerzeichen
+	CALL	INS0		; im Einfuegemodus ausgeben
+	LD	(HL),0		; Dummy in VRAM eintragen
+	POP	BC
+	DJNZ	TAB1
+;zur naechsten TAB-Position gehen
+TAB2:	CALL	CUR80		; Cursor nach rechts
+	LD	A,E
+	AND	7		; TAB-Position erreicht?
+	JR	NZ,TAB2
+	RET
+;-------
+; 0Dh -> 0Eh Enter (und Shift-Enter):
+;
+EENT:	LD	A,(STAT)
+	AND	10h		; Einfuegemodus?
+	JR	NZ,ENT4		; nein, einfach zur naechsten Zeile gehen
+	LD	A,(WINLG+1)	; Anzahl Zeilen
+	DEC	A		; letzte Zeile
+	CP	D		; unterste Bildschirmzeile?
+	JR	NZ,ENT1		; nein
+	CALL	CUD4		; ja, dann erst einmal hoch scrollen
+;	JR	C,...		; Fehler / No Memory?
+	DEC	D		; und Cursor auf die vorherige Zeile mitnehmen
+	LD	(CURSO),DE	; Cursorposition eintragen
+;letzte Bildschirmzeile abspeichern vor Text 2
+ENT1:	LD	HL,(T1E)	; Ende Text 1 merken
+	PUSH	HL
+	LD	HL,0B480h	; VRAM-Adresse, Beginn letzte Zeile
+	CALL	MLINE		; letzte Zeile abspeichern, ab T1E
+	POP	DE		; alter Wert von T1E
+	CALL	NC,TXE4		; zum Anfang von Text 2 verschieben
+;Text unterhalb der aktuellen Zeile nach unten scrollen
+	LD	DE,(CURSO)
+	LD	A,(WINLG+1)	; Anzahl Zeilen
+	DEC	A		; letzte Zeile
+	SUB	D		; - aktuelle Zeile
+	DEC	A		; Zeile darunter
+	LD	B,A		; = Anzahl zu scrollender Zeilen
+	CALL	DROLL		; B Zeilen nach unten scrollen
+;Zeile unterhalb der aktuellen Zeile ist jetzt leer
+;Text ab alter Cursorposition in die neue Zeile uebernehmen
+	LD	DE,(CURSO)	; Position aktuelle Zeile
+	LD	HL,(RANDL)	; L=linker Rand
+	LD	H,D
+	INC	H		; H=eine Zeile tiefer
+	LD	A,E
+	CP	L		; Cursor links vom linken Rand?
+	JR	NC,ENT2		; nein, auf linkem Rand bleiben
+	LD	L,0		; ja, dann ganz links neu beginnen
+ENT2:	LD	(CURSO),HL	; neue Position
+	LD	B,L		; neue Spalte
+ENT3:	CALL	DABR80		; VRAM-Adresse holen
+	ld	c,(hl)		; Zeichen entnehmen
+	xor	a
+	ld	(hl),a		; leer machen
+	call	wpix		; anzeigen, also loeschen
+	PUSH	DE
+	INC	D		; Zeile darunter
+	LD	E,B		; Spalte
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,C		; Zeichen
+	LD	(HL),A		; auf neuer Zeile eintragen
+	CALL	WPIX		; und anzeigen
+	INC	E		; naechste Spalte in neuer Zeile
+	LD	B,E		; wieder in B merken
+	POP	DE
+	INC	E		; naechste Spalte in aktueller Zeile
+	LD	A,E
+	CP	81		; fertig?
+	JR	NZ,ENT3		; nein, weiter bis zum Zeilenende
+	LD	DE,(CURSO)	; neue Position
+	RET
+	;
+ENT4:	CALL	CUD80		; Cursor eine Zeile nach unten
+	LD	A,(RANDL)
+	LD	E,A		; und auf den linken Rand setzen
+	RET
+;
+; 1. Quelltextzeile abspeichern:
+;
+SCROL:	LD	DE,0		; Position links oben
+	CALL	DABR80		; VRAM-Adresse berechnen
+	CALL	MLINE		; 1. Zeile speichern
+SCROL1:	LD	A,(CURSO+1)	; Zeile
+	INC	A
+	LD	(WINLG+1),A	; Fenster begrenzen
+	JP	LFCR
+;-------
+; Abfrage BRK und STOP (bei STOP auf naechste Taste warten):
+; PA:	CY=1	BRK betaetigt
+BRKS:	CALL	PV1
+	DB	KBDS
+	RET	NC		; keine Taste gedrueckt
+	CP	3		; BRK?
+	SCF
+	RET	Z
+STOP:	CP	13H		; STOP?
+	SCF
+	CCF
+	RET	NZ		; nicht STOP
+	CALL	KEYB		; auf Taste warten
+	RET	C		; BRK
+	JR	STOP
+;-------
+; Anzeige "Blockmarken?" und warten:
+BLMW:	LD	HL,(CURSO)
+	PUSH	HL
+	CALL	WIN80		; volles Fenster zum Schreiben in Statuszeile
+	XOR	A		; Zeile 0
+	LD	(CURSO+1),A
+	CALL	BLER1		; Anzeige "Blockmarken?" statt Zeile/Spalte
+	JR	MEMW1		; Tastatureingabe abwarten
+;-------
+; Anzeige "no Memory" und warten:
+MEMW:	LD	HL,(CURSO)
+	PUSH	HL
+	CALL	WIN80		; volles Fenster zum Schreiben in Statuszeile
+	XOR	A		; Zeile 0
+	LD	(CURSO+1),A
+	CALL	MEM		; Anzeige "No Memory" statt Zeile/Spalte
+MEMW1:	CALL	KEYB		; Tastatureingabe abwarten
+	CALL	WIN82
+	POP	HL
+	LD	(CURSO),HL
+	RET
+
+KEYB:	CALL	PV1
+	DB	KBD		; Eingabe abwarten
+	CP	3
+	SCF			; BRK -> CY=1
+	RET	Z
+	CCF
+	RET
+;-------
+; Anzeige "Blockmarken?"
+BLER1:	CALL	PV1
+	DB	OSTR
+	DB	CR,9,'>>>> Block-Marken? <<<<',8,0
+	RET
+;-------
+; Anzeige "no Memory":
+MEM:	CALL	PV1
+	DB	OSTR
+	DB	CR,9,'>>>> Speicher voll <<<<',8,0
+	XOR	A
+	LD	(M4A),A		; Fehler loeschen
+	RET
+;-------
+; Abfrage ja/nein:
+; PA:	CY=1	BRK oder 'N' gedrueckt
+;	CY=0	'Y' gedrueckt
+YESNO:	CALL	PV1
+	DB	OSTR
+	DB	' (Y/N) ? ',0	; Entscheidung
+YES1:	CALL	KEYB
+	JR	C,YES2		; BRK
+	CALL	LETTR
+	CP	'Y'
+	JR	Z,YES2
+	CP	'N'
+	JR	NZ,YES1
+	SCF			; nein -> CY=1
+YES2:	PUSH	AF
+	CALL	CHR
+	CALL	LFCR
+	POP	AF
+	RET
+;
+; Tastatureingabe in einer Zeile:	(fuer FIND, RPLACE, NAME, ZEILE)
+; (bei CR wird kein Zeilenvorschub ausgegeben)
+; PE:	BC=min./max. Cursorspalte!
+;	BC=0610h	Eingabe Dateiname
+;	BC=0627h	Eingabe REPLACE
+;	BC=080Ch	Eingabe ESC-Z (Zeilennummer)
+;	BC=0819h	Eingabe ESC-F (Find)
+; PA:	CY=1	BRK gedrueckt (und LF,CR ausgegeben)
+;	CY=0	Enter, HL=Adresse des Zeilenanfangs im VRAM
+; VR:	AF,DE,HL
+;
+INPUT:	ld	a,(l3siz)	; Laenge der ESC-Tabelle
+	push	af
+	xor	a		; temporaer deaktivieren
+	ld	(l3siz),a
+	LD	A,B
+	LD	(CURSO),A
+INP1:	CALL	KEYB		; Tasteneingabe
+	JR	NC,INP0		; nicht BRK
+	CALL	LFCR		; Bei BRK Zeilenvorschub
+	pop	af
+	ld	(l3siz),a	; ESC-Funktionen wieder aktivieren
+	SCF
+	RET
+	;
+INP0:	cp	'.'
+	jr	z,inp9		; Punkt trennt Dateiname + Typ
+	cp	5		; TAB
+	jr	z,inpp		; geht zu Dateityp
+	CP	' '
+	JR	NC,INP2		; darstellbares Zeichen
+	CP	8		; CUL
+	JR	Z,INP2
+	CP	9		; CUR
+	JR	Z,INP2
+	CP	CR
+	JR	NZ,INP1
+
+; Eingabe beenden
+INP7:	LD	A,(CURSO+1)	; aktuelle Zeile
+	LD	D,A
+	LD	E,B		; Eingabeposition
+	CALL	PV1
+	DB	DABR		; Berechnen VRAM-Adresse
+	pop	af
+	ld	(l3siz),a	; ESC-Funktionen wieder aktivieren
+	AND	A		; CY=0
+	RET
+
+INP9:	LD	A,C		; max. Spalte
+	CP	10h		; sind wir bei der Eingabe Dateiname?
+	JR	NZ,INP10	; nein, dann als normales Zeichen zulassen
+; gehe zu Spalte von Dateityp
+inpp:	ld	a,b
+	add	a,8
+	ld	(curso),a
+	jr	INP3
+
+; Zeichen anzeigen
+INP10:	LD	A,'.'
+INP2:	CALL	PV1
+	DB	CRT		; Zeichen anzeigen
+INP3:	LD	HL,CURSO
+	LD	A,(HL)
+	CP	B		; zu klein?
+	JR	NC,INP4
+	LD	A,B
+INP4:	CP	C		; zu gross?
+	JR	C,INP5
+	LD	A,C
+INP5:	LD	(HL),A
+	JR	INP1
+
+;-------
+	DEFW	0DDDDH
+	DB	'NAME',1
+	CALL	NAME		; Dateiname eingeben -> NAME0
+	JP	SAV10		; aktuellen Dateiname aendern
+;
+; Name (mit Typ) eingeben und zur Benutzung ablegen:
+; PE:	NAMP	gespeicherter Dateiname (zur Vorgabe)
+; PA:	HL=NAME0 (eingegebener Dateiname dort abgelegt)
+;	CY=1	BRK
+;
+NAME:	CALL	PV1
+	DB	OSTR
+	DB	LF,0BH,'Name :',0
+	LD	HL,NAMP		; aktueller Dateiname
+	LD	B,8		; 8 Zeichen Dateiname
+	CALL	NAME1		; anzeigen
+	LD	A,(HL)		; Dateityp
+	CP	' '+1		; leer?
+	JR	C,NAME2		; TXT vorschlagen
+	LD	B,3		; 3 Zeichen Dateityp
+	CALL	NAME1		; anzeigen
+	JR	NAME3
+	;
+NAME2:	CALL	PV1
+	DB	OSTR
+	DB	'TXT',0		; Dateityp vorschlagen
+NAME3:	LD	BC,0610H	; Eingabeposition von-bis
+	CALL	INPUT		; Eingabe
+	RET	C		; BRK
+	LD	DE,NAME0	; Dateiname hier ablegen
+	PUSH	DE
+	LD	BC,11		; 8.3
+	LDIR			; Zur Verwendung kopieren
+	POP	HL
+	RET
+	;
+NAME1:	LD	A,(HL)		; gemerkter Name
+	AND	7FH		; wegen BASIC UUU
+	INC	HL
+	CALL	PV1
+	DB	CSTBT		; zur Sicherheit!
+	DJNZ	NAME1
+	RET
+;
+; Kassettenpuffer initialisieren, Dateiname eintragen:
+; PE:	HL=Dateiname
+;
+KPINI:	LD	DE,CASS+80h	; Ende Kassettenpuffer+1
+	XOR	A
+KPIN2:	DEC	E
+	LD	(DE),A		; Kassettenpuffer loeschen
+	JR	NZ,KPIN2
+	LD	(IX+5),E	; DE=0B700h
+	LD	(IX+6),D
+	LD	BC,11
+	LDIR			; Name eintragen
+	RET
+;
+; Text an Speicheranfang verschieben:
+; PE:	DE=Zeilenzahl, 0=gesamter Text
+;
+TXANF:	LD	HL,(T2E)	; Ende Teiltext 2
+	LD	BC,(T2A)	; Anfang Teiltext 2
+	XOR	A		; CY=0
+	SBC	HL,BC
+	LD	B,H
+	LD	C,L		; Laenge Text 2
+	RET	Z		; kein Text 2
+	LD	HL,(MEML)	; Zeilennummer
+	PUSH	HL
+	LD	HL,(T2A)	; von hier verschieben
+TXA1:	LD	A,CR
+	CALL	TCPIR		; Zeilenende suchen
+	JR	NZ,TXA2		; ausgesucht, aber CR nicht gefunden
+	DEC	DE		; rueckwaerts zaehlen
+	EX	(SP),HL
+	INC	HL		; Zeilennummer +1
+	EX	(SP),HL
+	JP	PO,TXA2		; ausgesucht und CR gefunden
+	LD	A,D
+	OR	E		; gewuenschte Anzahl erreicht?
+	JR	NZ,TXA1
+	CALL	GET
+	CP	LF		; folgt LF?
+	JR	NZ,TXA2		; nein
+	INC	HL		; LF noch mitnehmen
+TXA2:	CALL	TXA		; Text verschieben
+TXA4:	POP	HL
+	LD	(MEML),HL	; neue Zeilennummer
+	RET
+	;
+TXA:	LD	DE,(T2A)	; Anfang Text 2
+	PUSH	DE
+	XOR	A
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; BC=Laenge des zu verschiebenden Textes
+	POP	HL		; HL=Quelle
+	LD	DE,(T1E)	; DE=Ziel
+	JR	Z,TXA3		; nichts zu verschieben
+	CALL	TLDIR		; an Text 1 anhaengen
+TXA3:	LD	(T1E),DE
+	LD	(T2A),HL
+	RET
+;
+; Text an Speicherende verschieben:
+; PE:	DE=Zeilenzahl, 0=gesamter Text
+; PA:	Z=1 es wurde kein Text verschoben (Position ist bereits Textanfang)
+;
+TOP:	CALL	HOM
+TXEND:	LD	HL,(T1E)	; Ende Teiltext 1
+	LD	BC,(T1A)	; Anfang Teiltext 1
+	XOR	A		; CY=0
+	SBC	HL,BC
+	LD	B,H
+	LD	C,L		; Laenge Text 1
+	RET	Z		; kein Text 1
+	INC	BC		; bis zum CR am Textanfang suchen
+	LD	HL,(MEML)	; Zeilennummer
+	PUSH	HL
+	LD	HL,(T1E)	; von hier verschieben
+	DEC	HL		; letztes Zeichen
+	CALL	GET		; Zeichen aus Textspeicher
+	CP	LF		; LF am Zeilenende?
+	JR	NZ,TXE0
+	DEC	HL		; vor das LF gehen fuer Suchen
+	DEC	BC		; und Suchanzahl verringern
+TXE0:	CALL	GET		; Zeichen aus Textspeicher
+	CP	CR		; davor noch ein CR?
+	JR	NZ,TXE1
+	DEC	HL		; das auch uebergehen
+	DEC	BC
+TXE1:	LD	A,CR
+	CALL	TCPDR		; Zeilenende suchen
+	DEC	DE		; rueckwaerts zaehlen
+	EX	(SP),HL
+	DEC	HL		; Textzeile -1
+	EX	(SP),HL
+	JR	NZ,TXE2		; ausgesucht, aber CR nicht gefunden
+	JP	PO,TXE2a	; ausgesucht und CR gefunden
+	LD	A,D
+	OR	E		; gewuenschte Anzahl erreicht?
+	JR	NZ,TXE1
+TXE2a:	INC	HL		; auf CR gehen
+TXE2:	INC	HL		; auf LF gehen
+	CALL	GET		; Zeichen aus Textspeicher
+	CP	LF		; folgt LF?
+	JR	NZ,TXE3
+	INC	HL		; das LF auch noch ubergehen
+TXE3:	EX	DE,HL		; DE=Beginn Verschiebebereich
+	POP	HL
+	LD	(MEML),HL	; neue Zeilennummer
+TXE4:	LD	HL,(T1E)	; HL=Ende Verschiebebereich
+TXE5:	PUSH	HL
+	XOR	A		; CY=0
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; BC=Laenge des zu verschiebenden Textes
+	POP	HL
+	LD	DE,(T2A)
+	DEC	DE		; DE=Quelle
+	DEC	HL		; HL=Ziel
+	CALL	NZ,TLDDR	; Text verschieben
+	INC	DE
+	LD	(T2A),DE
+	INC	HL
+	LD	(T1E),HL
+	RET
+;
+; Abspeichern der Bildschirmseite in den Textspeicher:
+; PA:	CY=1	No Memory
+;
+MPAGE:	ld	hl,(t2a)
+	ld	(T2merk),hl	; Textgrenzen merken fuer den Fall
+	ld	hl,(t1e)	; dass beim Speichern kein Platz ist
+	ld	(T1merk),hl
+	LD	HL,(T1E)
+	PUSH	HL		; Ende Text 1 merken
+	LD	DE,0		; links oben
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	B,23		; Zeilen
+MPG1:	PUSH	BC
+	CALL	MLINE		; Zeile abspeichern, an Text 1 anhaengen
+	POP	BC
+	JR	C,MPG3		; No Memory!
+	DJNZ	MPG1		; bis alle Bildschirmzeilen abgearbeitet sind
+	POP	DE		; T1E alter Wert
+	JR	TXE4		; zum Anfang von Text 2 verschieben!
+	;
+MPG3:	POP	DE
+	RET
+;
+; Bildschirmzeile (an Ende von Text 1) abspeichern:
+; PE:	HL	VRAM-Adresse der Zeile
+; PA:	HL	VRAM-Adresse + 80 (naechste Zeile)
+;	T1E	neues Textende
+;	CY=1	und (M4A)=A	Speicher voll!
+;
+MLINE:	LD	DE,(T1E)	; Text hier abspeichern
+	LD	B,80		; Zeilenlaenge
+MLN1:	LD	C,0		; Zaehler fuer Nullen
+	LD	A,(HL)
+	INC	HL
+	AND	A		; Zeichen vorhanden?
+	JR	Z,MLN4		; kein Zeichen
+MLN2:	CALL	MLN9		; Zeichen in Textspeicher
+	RET	C		; No Memory
+	DJNZ	MLN1		; naechstes Zeichen
+	JR	MLN5		; CR+LF anhaengen
+	;
+MLN3:	LD	A,(HL)		; naechstes Zeichen testen
+	INC	HL
+	AND	A		; jetzt ein Zeichen vorhanden
+	JR	NZ,MLN6		; ja, Tabs eintragen
+MLN4:	INC	C		; Nullen zaehlen
+	DJNZ	MLN3
+MLN5:	LD	A,CR
+	CALL	MLN9		; in Textspeicher
+	RET	C
+	LD	A,LF
+	CALL	MLN9		; in Textspeicher
+	RET	C
+	LD	(T1E),DE	; Text bis hierher eingetragen
+	RET
+	;
+MLN6:	PUSH	AF		; Zeichen merken
+	LD	A,C		; gezaehlte Nullen
+	ADD	7		; aufrunden
+	SRL	A
+	SRL	A
+	SRL	A		; und durch 8 teilen
+	LD	C,A		; Anzahl Tabulatoren
+	LD	A,TAB
+MLN7:	CALL	MLN9		; in Textspeicher eintragen
+	JR	C,MLN8		; Speicher voll
+	DEC	C
+	JR	NZ,MLN7
+	POP	AF		; Zeichen
+	JR	MLN2		; nach dem TAB eintragen
+	;
+MLN8:	POP	BC		; Zeichen vergessen
+	RET
+;
+; Zeichen in Textspeicher eintragen
+; PE:	A	Zeichen
+;	DE	Zeiger auf Textspeicher
+; PA:	CY=1	und (M4A)=A	Speicher voll!
+;
+MLN9:	PUSH	HL
+	LD	HL,(T2A)
+	SCF
+	SBC	HL,DE		; 1 Zeichen Platz frei?
+	POP	HL
+	JR	C,MLN10
+	EX	DE,HL
+	CALL	PUT		; Zeichen in Textspeicher
+	EX	DE,HL
+	INC	DE
+	RET
+	;
+MLN10:	LD	(M4A),A		; no Memory
+	RET
+;
+; Ausgabe Zeile auf Bildschirm:
+; PE:	BC	Zeiger auf Textspeicher
+;	DE	Cursorposition (E = Spalte)
+;	HL	VRAM-Adresse
+;
+WRZLE:	LD	A,E		; Spalte
+	CP	80		; Zeilenende?
+	JR	NC,WRZL05	; Bildschirmzeile voll
+	CALL	GETBC		; Zeichen aus Textspeicher holen und
+	CP	3		; Textende?
+	JR	Z,WRZL10	; T2A setzen und Rest der Zeile loeschen
+	INC	BC		; Zeiger auf naechstes Zeichen setzen
+	CP	' '
+	JR	C,WRZL02	; Steuerzeichen
+WRZL01:	CALL	WRZCH		; Zeichen anzeigen (wenn anders)
+	INC	HL		; naechste VRAM-Adresse
+	INC	E		; naechste Spaltenposition
+	JR	WRZLE		; naechstes Zeichen aus Textspeicher holen
+	;
+WRZL02:	CP	TAB		; Tabulator
+	JR	NZ,WRZL04
+WRZL03:	CALL	WRZCH0		; Leerzeichen anzeigen
+	INC	HL		; VRAM
+	INC	E		; Spalte
+	LD	A,E
+	CP	80		; Zeilenende?
+	JR	NC,WRZL05	; Bildschirmzeile voll
+	AND	7
+	JR	NZ,WRZL03	; bis Tabulatorschritt fertig
+	JR	WRZLE		; naechstes Zeichen aus Textspeicher holen
+	;
+WRZL04:	CP	CR		; Zeilenende?
+	JR	Z,WRZL08	; ja
+	CP	LF
+	JR	Z,WRZL06	; LF
+	CP	3		; Textende?
+	JR	WRZL01		; alles andere darstellen
+
+; Bildschirmzeile voll
+WRZL05:	CALL	GETBC		; 81. Zeichen lesen
+	CP	CR		; ist das vielleicht noch ein CR?
+	JR	Z,WRZL07
+	CP	LF		; oder ein LF?
+	JR	NZ,WRZL10
+; LF erkannt
+	INC	BC		; LF uebergehen
+WRZL06:	CALL	GETBC
+	CP	CR		; LF+CR?
+	JR	NZ,WRZL10	; nur LF
+	JR	WRZL09
+
+; CR erkannt
+WRZL07:	INC	BC		; CR uebergehen
+WRZL08:	CALL	GETBC
+	CP	LF		; CR+LF?
+	JR	NZ,WRZL10
+WRZL09:	INC	BC		; 2. Zeichen von CR+LF uebergehen
+WRZL10:	LD	(T2A),BC	; neuer Textanfang
+
+; Zeilenrest mit Leerzeichen beschreiben
+WRZL11:	LD	A,E
+	CP	80		; letzte Spalte?
+	RET	NC		; fertig mit der Zeile
+	CALL	WRZCH0		; Zeilenrest mit Leerzeichen fuellen
+	INC	HL
+	INC	E
+	JR	WRZL11
+;
+; Ausgabe einer Text-Seite auf Bildschirm:
+;
+WRPG:	CALL	STATUS		; Statuszeile anzeigen
+WRPG0:	LD	BC,(T2A)	; Anfang Teiltext 2
+	LD	DE,0		; Zeile 0, Spalte 0
+	CALL	DABR80		; HL=VRAM-Adresse
+WRPG1:	LD	E,0
+	CALL	WRZLE		; Zeile schreiben
+	INC	D		; naechste Zeile
+	LD	A,D
+	CP	23		; letzte Zeile?
+	JR	NZ,WRPG1
+	JP	CLI2		; gemerkte Cursorposition aktivieren
+;
+; Anzeige der Statuszeile im Editiermodus (aehnlich WordPro)
+;
+LINES:	DW	0,255,319,255	; Linie oberer Bildschirmrand
+	DW	0,237,319,237	; Linie unter Statuszeile
+	DW	0,237,0,255	; Rahmen linke Seite
+	DW	319,238,319,254	; Rahmen rechte Seite
+	DW	106,238,106,254	; erste Trennung
+	DW	170,238,170,254	; zweite Trennung
+	DW	242,238,242,254	; dritte Trennung
+
+STATUS:	CALL	WIN80		; volles Fenster
+
+; Rahmen zeichnen
+	LD	A,00111100b
+	LD	(FARB),A	; Linienfarbe weiss
+	LD	HL,LINES
+	LD	B,7		; 7 Linien zeichnen
+STA0:	PUSH	BC
+	LD	DE,ARG1
+	LD	BC,8
+	LDIR			; Linienparameter in ARG's laden
+	PUSH	HL
+	CALL	PV1
+	DB	LINE
+	POP	HL
+	POP	BC
+	DJNZ	STA0
+
+	LD	HL,1		; Zeile 0, Spalte 1
+	LD	(CURSO),HL
+	CALL	PV1
+	DB	OSTR
+	DB	'Zeile:       Spalte: ',0
+	CALL	CAPS0		; CAPS-Symbol anzeigen Spalte 28
+
+; Bit 4 (STAT) testen: Einfuegen ein/aus?
+	LD	A,30		; Spalte 30
+	LD	(CURSO),A
+	LD	HL,STAT
+	BIT	4,(HL)
+	JR	NZ,STA1
+	CALL	PV1
+	DB	OSTR
+	DB	'Einf'81h,'gen ',0
+	JR	STA2
+	;
+STA1:	CALL	PV1
+	DB	OSTR
+	DB	9Ah,'berschr.',0
+
+; Bit 5+6 (STAT) testen: Zeichensatz
+STA2:	LD	A,45		; Spalte 44
+	LD	(CURSO),A
+	CALL	PV1
+	DB	OSTR
+	DB	'ZS:',0
+	LD	A,(HL)
+	AND	60H		; Bit 5+6
+	JR	NZ,STA3
+	CALL	PV1
+	DB	OSTR
+	DB	'ASCII  ',0	; 00 = IBM-Zeichensatz
+	JR	STA4
+
+STA3:	SUB	20H
+	JR	NZ,STA31
+	CALL	PV1
+	DB	OSTR
+	DB	'deutsch',0	; 01 = ASCII deutsch
+	JR	STA4
+	;
+STA31:	CALL	PV1
+	DB	OSTR
+	DB	'CAOS   ',0	; 10 = CAOS-Zeichensatz
+
+; aktuellen Dateiname anzeigen
+STA4:	LD	A,64		; Spalte 64
+	LD	(CURSO),A
+	LD	HL,NAMP
+	LD	B,8
+	CALL	NAME1
+	LD	A,'.'
+	CALL	PV1
+	DB	CRT
+	LD	B,3
+	CALL	NAME1
+
+; Spaltengloeckchen falls Tastenclick ein ist
+	LD	DE,0028h	; Position Spaltengloeckchen in Zeile 0
+	BIT	5,(IX+8)	; Tastenclick?
+	LD	A,5		; Code fuer Gloeckchen
+	JR	NZ,STA5
+	LD	A,' '		; ansonsten leer
+STA5:	CALL	WPIX		; direkt anzeigen
+
+; Tabulatorleiste mit Randmarken
+	LD	DE,0100h	; Zeile 1, Spalte 0
+	LD	HL,(RANDL)	; L=Pos. linker Rand
+				; H=Pos. rechter Rand
+	LD	B,10		; 10 Tabulatoren
+	LD	C,7		; Code fuer waagerechte Linie ohne TAB
+STA6:	LD	A,E		; Spalte
+	CP	L		; linke Randmarke?
+	JR	NZ,STA7
+	LD	C,2		; Code fuer linke Randmarke
+STA7:	CP	H		; rechte Randmarke?
+	JR	NZ,STA8
+	LD	C,3		; Code fuer rechte Randmarke		
+STA8:	LD	A,C		; Zeichencode
+	CALL	WPIX		; direkt anzeigen
+	LD	A,8
+	ADD	A,E		; naechste Spalte
+	LD	E,A
+	LD	C,6		; Code fuer waagerechte Linie mit TAB
+	DJNZ	STA6
+
+; Anzeige der Cursorposition in der Statuszeile
+
+PCOL:	CALL	WIN80		; volle Fenstergroesse (falls Einsprung hier)
+	LD	HL,8		; Position Zeile
+	LD	(CURSO),HL
+	LD	HL,(COL+1)	; aktuelle Zeile
+	LD	H,0
+	LD	DE,(MEML)	; Zeilennummer von Textanfang
+	ADD	HL,DE
+	CALL	PV1
+	DB	HLDEZ		; dezimal anzeigen
+	CALL	PV1
+	DB	SPACE
+	LD	HL,22		; Position Spalte
+	LD	(CURSO),HL
+	LD	HL,(COL)	; aktuelle Spalte
+	LD	H,0
+	INC	HL		; ab 1 beginnend
+	CALL	PV1
+	DB	HLDEZ		; dezimal anzeigen
+	CALL	PV1
+	DB	SPACE
+
+	LD	A,56		; Position HEX-Wert
+	LD	(CURSO),A
+	LD	DE,(COL)	; aktuelle Cursorposition
+	INC	D
+	INC	D		; +2 weil wir in WIN80 stehen
+	CALL	DABR80
+	LD	A,(HL)
+	CALL	PV1
+	DB	AHEX
+
+	LD	DE,(COL)	; aktuelle Cursorposition
+	LD	(CURSO),DE	; wieder eintragen
+;	JP	WIN82		; Editor-Fenster ab Zeile 2
+
+; Fenster ab Zeile 2 mit 23 Zeilen
+
+WIN82:	LD	HL,0200h
+	LD	(WINON),HL
+	LD	HL,1750h
+	LD	(WINLG),HL
+	RET
+
+; CAPS-Zustand anzeigen
+
+CAPS80:	PUSH	DE
+	CALL	WIN80		; Fenster mit Statuszeile
+	CALL	CAPS0
+	POP	DE
+	JR	WIN82		; Fenster ohne Statuszeile
+	;
+CAPS0:	BIT	7,(IX+8)	; CAPS ein oder aus?
+	LD	A,1DH		; Pfeil nach oben
+	JR	NZ,CA1		; CAPS ist aus
+	LD	A,1FH		; Pfeil nach unten
+CA1:	LD	DE,001Ch	; Position CAPS-Symbol (Spalte 28)
+	JP	WPIX		; direkt anzeigen
+
+;======================
+; Editor-Erweiterungen:
+;======================
+
+;
+; Import-Funktion nachladen
+;
+I_NAME:	DB	'IMPORT  KCC',0	; Dateiname
+	DEFW	0DDDDH
+	DB	'IMPORT',1
+	LD	HL,I_NAME	; Dateiname
+OVERLD:	CALL	PV1
+	DB	OSTR
+	DB	'Loading ',0
+	PUSH	HL
+	CALL	PV1
+	DB	ZKOUT		; Dateiname anzeigen
+	CALL	LFCR
+	POP	HL		; Dateiname aus dem EDITOR-ROM
+	LD	DE,NAME0	; nach Adresse 0 kopieren
+	LD	BC,11		; 8.3
+	LDIR
+	LD	HL,NAME0	; Dateiname fuer LOAD
+	CALL	PV1		; (ARGN)=0 wenn ohne Parameter aufgerufen wird
+	DB	LOAD
+	RET	C		; Fehler
+	JP	0BA00H
+;
+; Hilfe-Funktion nachladen:
+;
+H_NAME:	DB	'HILFE   KCC',0	; Dateiname
+	DEFW	0DDDDH
+	DB	'HELP',1
+	LD	HL,H_NAME	; Dateiname
+	JR	OVERLD		; nachladen & starten
+;-------
+; Blockmarken (1CH=Anfang, 1EH=Ende) suchen:
+; PE:	HL	Beginn Suchbereich
+;	DE	Ende Suchbereich
+; PA:	Z=1	beide Blockmarken gefunden
+;	HL	Adresse nach Blockanfangszeichen
+;	DE	Adresse des Blockendezeichens oder Ende Suchbereich
+;
+SRCH40:	EX	DE,HL
+	OR	A		; CY=0
+	SBC	HL,DE
+	LD	C,L
+	LD	B,H		; Textlaenge
+	INC	BC
+	EX	DE,HL
+	LD	A,1CH		; Blockanfangsmarke
+	CALL	TCPIR		; Suchen 1. Trennzeichen
+	RET	NZ
+	LD	D,H
+	LD	E,L
+	LD	A,1EH		; Blockendemarke
+	CALL	TCPIR		; Suchen 2. Trennzeichen
+	DEC	HL
+;	XOR	A		; Z=1
+	EX	DE,HL
+	RET
+
+;-------
+	DEFW	0DDDDH
+	DB	'PSAVE',1Fh
+	CALL	TOP		; gesamten Text an Speicherende
+	LD	HL,(T2A)
+	PUSH	HL
+	LD	DE,(T2E)
+	PUSH	DE
+	CALL	SRCH40		; Blockmarken suchen
+	JR	Z,PSA1		; gefunden
+BLERR:	POP	DE
+	POP	HL
+	CALL	PV1
+	DB	NOUT
+	CALL	BLER1		; Anzeige "Blockmarken?"
+	JP	LFCR
+	;
+PSA1:	LD	(T2A),HL	; modifizieren
+	LD	(T2E),DE	; modifizieren
+	LD	HL,(T2E)
+	CALL	GET		; Zeichen aus Textspeicher
+	PUSH	HL		; Adresse und
+	PUSH	AF		; Inhalt merken
+	LD	A,3
+	CALL	PUT		; Textende vortaeuschen!
+	CALL	SAV1		; abspeichern
+PSA2:	POP	AF
+	POP	HL
+	CALL	PUT		; regenerieren
+	POP	HL
+	LD	(T2E),HL	; gesamter Text
+	POP	HL
+	LD	(T2A),HL	; gesamter Text
+	RET
+;-------------------------------------------------------------------------------
+; Ausdruck eines Teil-Textes auf den in CAOS aktivierten Druckers
+; PPRINT ohne Parameter druckt Text 1:1 aus
+; PPRINT mit Parameter fuegt nach n Zeilen einen Seitenwechsel 0ch ein
+;
+	DEFW	0DDDDH
+	DB	'PPRINT',11H	; Argument als Dezimalzahl
+	CALL	PRINT1		; Druck vorbereiten
+	RET	C		; kein Drucker oder Parameterfehler
+	CALL	TOP		; gesamten Text an Speicherende
+	LD	HL,(T2A)
+	PUSH	HL
+	LD	DE,(T2E)
+	PUSH	DE
+	CALL	SRCH40		; Blockmarken suchen
+	JR	NZ,BLERR	; nicht gefunden
+	LD	(T2A),HL	; modifizieren
+	LD	(T2E),DE	; modifizieren
+	LD	HL,(T2E)
+	CALL	GET		; Zeichen aus Textspeicher
+	PUSH	HL		; Adresse und
+	PUSH	AF		; Inhalt merken
+	LD	A,3
+	CALL	PUT		; Textende vortaeuschen!
+	CALL	PRI1		; Drucken
+	JR	PSA2		; alter Zustand
+
+;-------
+; Eingabe Zeile, danach CR,LF:
+REPL8:	LD	BC,627H
+	CALL	INPUT
+	RET	C		; BRK
+	PUSH	AF
+	CALL	LFCR
+	POP	AF
+	RET
+
+;-------
+	DEFW	0DDDDH
+	DB	'REPLACE'
+	DB	1
+	OR	A
+	CALL	Z,TOP		; an Speicherende verschieben
+	CALL	PV1
+	DB	OSTR
+	DB	LF,LF,0BH,0BH,'Find :',0
+	CALL	REPL8		; Eingabe
+	RET	C		; BRK
+	LD	A,(HL)
+	OR	A
+	RET	Z		; nichts eingegeben!
+	LD	(FTXT),HL	; VRAM-Adresse1 merken
+	CALL	PV1
+	DB	OSTR
+	DB	'Repl.:',0
+	CALL	REPL8		; Eingabe
+	RET	C		; BRK
+	LD	(RTXT),HL	; VRAM-Adresse2 merken
+	DB	0FDH
+	LD	H,0		; Zaehler HY
+	LD	HL,(T2E)
+	LD	DE,(T2A)
+	OR	A
+	SBC	HL,DE
+	RET	Z		; kein Text im Speicher
+	LD	B,H
+	LD	C,L		; Textlaenge
+	EX	DE,HL
+REPL1:	LD	DE,(FTXT)	; Suchtext
+	LD	A,(DE)		; 1. Zeichen aus VRAM
+	CALL	TCPIR		; im Teiltext 2 suchen
+	JP	PO,REPL4	; nicht gefunden
+	PUSH	BC		; restl. Laenge
+	PUSH	HL		; Adresse
+REPL2:	INC	DE
+	LD	A,(DE)		; naechstes Zeichen aus VRAM
+	OR	A		; Suchstring zu Ende?
+	JR	Z,REPL5		; ja, gefunden
+	CALL	TCPI
+	JP	PO,REPL3	; Ende Quelltext
+	JR	Z,REPL2		; stimmt ueberein
+	POP	HL
+	POP	BC
+	JR	REPL1		; weitersuchen
+;
+REPL3:	POP	HL
+	POP	BC
+REPL4:	LD	DE,1
+	CALL	TXEND		; 1 Zeile zurueckgehen
+	DB	0FDH
+	LD	A,H		; Anzahl der Ersetzungen HY
+	CALL	PV1
+	DB	AHEX
+	CALL	PV1
+	DB	OSTR
+	DB	' Replaces'
+	DB	CR,0BH,0BH,0BH,0
+	RET
+
+; Zeichenketten ersetzen:
+REPL5:	EX	(SP),HL
+	DEC	HL		; Beginn der Zeichenkette im Text
+	PUSH	BC		; restl. Laenge
+	CALL	TXA		; Teiltext zum Anfang verschieben
+	LD	DE,(T1E)
+	POP	BC		; restl. Laenge
+	POP	HL		; Nach der Zeichenkette
+	PUSH	HL
+	LD	(T2A),HL
+	LD	HL,(RTXT)	; neuer String
+REPL6:	LD	A,(HL)
+	AND	A		; Null?
+	JR	Z,REPL7		; ja, fertig
+	INC	HL
+	EX	DE,HL
+	CALL	PUT		; an Text 1 anfuegen
+	EX	DE,HL
+	INC	DE
+	JR	REPL6
+;
+REPL7:	LD	(T1E),DE	; Ende Text 1 neu setzen
+	DB	0FDH
+	LD	A,H		; Zaehler HY
+	ADD	A,1		; +1
+	DAA
+	DB	0FDH
+	LD	H,A		; Zaehler HY
+	POP	HL		; Pos. zum weitersuchen
+	POP	DE		; Stack reinigen
+	JR	REPL1
+;-------
+; Test auf gueltiges Zeichen (Buchstabe):
+; PE:	A	Zeichen
+; PA:	A	Zeichen (Kleinbuchstaben -> gross)
+;	CY=1	kein Buchstabe
+LETTR:	CP	'A'
+	RET	C		; 00...40H
+	CP	'Z'+1
+	CCF
+	RET	NC		; A...Z
+	CP	'a'
+	RET	C		; 5BH...60H
+	CP	'z'+1
+	CCF
+	RET	C		; 7BH...
+	AND	0DFH		; klein -> gross
+	RET
+
+; ESC-Funktionen (Eingabe von Druckersteuerzeichen)
+
+ESC0:	LD	A,C		; Nr. in 2er-Schritten	also 00h..12h
+	SRL	A		; /2			also 00h..09h
+	OR	10h		; Druckercodes ab 10h	also 10h..19h
+ESC1:	LD	HL,STBT
+	SET	3,(HL)		; Steuercodes nicht ausfuehren
+	PUSH	HL
+	CALL	CRT_X		; Druckersteuerzeichen darstellen
+	POP	HL
+	RES	3,(HL)
+	LD	DE,(CURSO)	; neue Cursorposition
+	LD	(COL),DE	; als EDIT-Cursor eintragen
+	JP	PCOL		; Cursorposition anzeigen
+				; Cursorpos. in DE mitgeben an KBD
+
+; ESC-Steuer-Funktionen
+
+ESCJ:	LD	A,0CH		; Seitenwechsel (CLS/Eject)
+	DB	21h
+ESCN:	LD	A,0EH		; Zeile binden
+	DB	21h
+ESCX:	LD	A,0FH		; HEX-Sequenz wir in WP9
+	DB	21h
+ESCA:	LD	A,1CH		; Blockanfangsmarke
+	DB	21h
+ESCU:	LD	A,1DH		; Pfeil nach oben (UP)
+	DB	21h
+ESCE:	LD	A,1EH		; Blockendemarke
+	DB	21h
+ESCD:	LD	A,1FH		; Pfeil nach unten (DOWN)
+	JR	ESC1
+
+; ESC-G (Eingabe Grafikzeichen mit Auswahl in Statuszeile)
+
+ESCG:	LD	HL,0		; Fenster ab links/oben
+	LD	(WINON),HL
+	LD	(CURSO),HL	; Cursor home
+	CALL	PV1
+	DB	OSTR
+	DB	'Zeichen ausw',84h,'hlen und BRK/Ender:',0
+	LD	A,0B0h
+	ld	b,30h
+gra1:	call	pv1
+	db	crt		; B0h-AFh
+	inc	a
+	djnz	gra1
+	LD	A,80h
+	ld	b,30h
+gra2:	call	pv1
+	db	crt		; 80h-AFh
+	inc	a
+	djnz	gra2
+	LD	A,0E0h
+	ld	b,20h
+gra3:	call	pv1
+	db	crt		; E0-FFh
+	inc	a
+	djnz	gra3
+	LD	HL,(GCURS)	; gemerkte Cursor-Position
+gra4:	LD	(CURSO),HL	; Cursor home
+gra5:	CALL	KEYB		; Eingabe
+	JR	C,GRA99		; BRK
+	LD	HL,(CURSO)
+	cp	8		; CUL?
+	JR	NZ,gra8
+	ld	a,h		; Zeile
+	and	a		; Zeile 0?
+	ld	a,l		; Spalte
+	jr	nz,gra7
+	cp	20h		; ganz links in Zeile 0?
+	jr	z,gra5		; nichts tun
+gra6:	dec	l		; eine Pos. nach links
+	jr	gra4
+	;
+gra7:	and	a		; ganz links?
+	jr	nz,gra6
+	ld	hl,79		; letzte Spalte in Zeile 0
+	jr	gra4
+	;
+gra8:	CP	9		; CUR?
+	jr	nz,gra11
+	ld	a,h		; Zeile
+	and	a		; Zeile 0?
+	ld	a,l		; Spalte
+	jr	z,gra10
+	cp	79		; ganz rechts?
+	jr	z,gra5		; nichts tun
+gra9:	inc	l		; eine Pos. nach rechts
+	jr	gra4
+	;
+gra10:	cp	79		; ganz rechts?
+	jr	nz,gra9
+	ld	hl,100h		; erste Spalte in Zeile 1
+	jr	gra4
+	;
+gra11:	CP	0Ah		; CUD?
+	jr	nz,gra17
+	ld	a,h		; Zeile
+	dec	a		; Zeile 1?
+	jr	z,gra5		; nichts tun
+	inc	h		; Zeile runter
+	jr	gra4
+	;
+gra17:	CP	0Bh		; CUU?
+	jr	nz,gra12
+	ld	a,h		; Zeile
+	and	a		; Zeile 0?
+	jr	z,gra5		; nichts tun
+	ld	a,l
+	cp	20h		; Spalte <20h
+	jr	c,gra5		; nichts tun
+	dec	h		; Zeile hoch
+	jr	gra4
+	;
+gra12:	CP	0Dh		; Enter?
+	jr	nz,gra5
+	ex	de,hl		; Cursorpos. in DE
+	call	dabr80		; VRAM-Adresse berechnen
+	ld	a,(hl)		; Code aus VRAM lesen
+	push	af
+	call	gra99		; Statuszeile regenerieren
+	pop	af
+	JP	ESC1		; Grafikzeichen in Text schreiben
+
+GRA99:	; Statuszeile + Cursorposition regenerieren
+	LD	HL,(CURSO)	; Cursorposition
+	LD	(GCURS),HL	; merken fuer naechstes ESC-G
+	LD	A,2		; Fenster begrenzen auf
+	LD	(WINLG+1),A	; 2 Zeilen
+	CALL	CLS80		; Fenster der Statuszeile loeschen
+GRA100:	JP	CLI1		; Statuszeile neu anzeigen
+				; und Cursorposition regenerieren
+
+; ESC-L (setze linke Randmarke)
+; ESC-R (setze rechte Randmarke)
+
+ESCL:	LD	HL,RANDL
+	JR	ESCLR
+	;
+ESCR:	LD	HL,RANDR
+ESCLR:	LD	A,E		; aktuelle Spalte = (CURSO)
+	AND	0F8h		; zurueck auf naechsten TAB-Stop
+	LD	(HL),A
+	JR	GRA100
+
+; ESC-C (Block kopieren direkt zu aktueller Cursorposition)
+; PE:	DE	aktuelle Cursorposition
+
+ESCC:	CALL	COPY		; Block kopieren
+ESCC0:	CALL	LCOUNT		; tatsaechliche Zeilennummer ermitteln
+	JP	WRPG		; Seite neu anzeigen (mit Statuszeile)
+
+; ESC-K (Block loeschen)
+; PE:	DE	aktuelle Cursorposition
+
+ESCK:	CALL	KILL		; Block loeschen
+	JR	ESCC0
+
+; ESC-V (Block verschieben)
+; PE:	DE	aktuelle Cursorposition
+
+ESCV:	ld	hl,(MEML)	; merken, wo Bildschirm beginnt
+	ld	(Mmerk),hl
+	CALL	COPY		; Block kopieren
+	CALL	NC,KILL1	; Block loeschen, wenn COPY erfolgreich war
+	JR	ESCC0
+;
+; Block kopieren
+; PE:	DE	aktuelle Cursorposition
+; PA:	CY=1	Fehler (Speicherplatz oder Blockmarken)
+;
+COPY:	CALL	DABR80		; VRAM-Adresse akt. Cursorpos. berechnen
+	LD	A,(HL)		; Code aus VRAM lesen
+	LD	(Cmerk),A	; Zeichencode auf Cursorposition merken
+	LD	A,1AH		; Kennung
+	LD	(HL),A		; an Cursor-Position eintragen
+
+	CALL	MPAGE		; Seite speichern
+	JR	NC,COPY1	; OK
+; No Memory
+	LD	DE,(COL)	; EDIT-Cursor
+	CALL	DABR80		; VRAM-Adresse berechnen
+	LD	A,(Cmerk)	; gespeicherter Code auf dieser Stalle
+	LD	(HL),A		; wieder im VRAM eintragen
+	CALL	MEMW		; Anzeige "No Memory" und Tastaturabfrage
+;	CALL	STATUS		; Statuszeile neu anzeigen
+;	LD	DE,(COL)	; EDIT-Cursor
+	SCF
+	RET
+
+; Text genau an Cursorposition trennen
+COPY1:	; Text ist gespeichert (Bildschirminhalt liegt ab T2A)
+	LD	DE,(T2A)
+	LD	HL,(T2E)
+	;AND	A		; CY ist noch 0
+	SBC	HL,DE		; Laenge Text 2 berechnen
+	LD	B,H
+	LD	C,L		; Laenge Suchbereich
+	EX	DE,HL		; HL=(T2A) Beginn Suchbereich
+	LD	A,1AH		; Kennung
+	CALL	TCPIR		; Kennung suchen in Text 2
+	; HL zeigt jetzt direkt nach Kennung
+	LD	DE,(T2A)
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; Laenge des zu verschiebenden Textes
+	DEC	BC		; ohne Kennung
+	EX	DE,HL		; Quelle = Anfang von Text 2
+	LD	DE,(T1E)	; Ziel = Ende von Text 1
+	LD	A,B
+	OR	C
+	CALL	NZ,TLDIR	; von T2A bis vor Kennung zu T1E verschieben
+	LD	(T1E),DE	; neues Ende Text 1
+	LD	A,(Cmerk)
+	CALL	PUT		; jetzt regenerieren
+	AND	A		; war ein Zeichen unter Cursor?
+	JR	NZ,COPY2	; ja
+	INC	HL
+COPY2:	LD	(T2A),HL	; neuer Anfang Text 2
+
+; Blockmarken suchen in Text 1 oder Text 2
+	LD	HL,(T1A)
+	CALL	SRCH40		; Blockmarken suchen
+	JR	Z,COPY3		; in Text 1 enthalten
+	LD	HL,(T2A)
+	LD	DE,(T2E)
+	CALL	SRCH40		; Blockmarken suchen
+	JR	Z,COPY3		; in Text 2 enthalten
+
+; Blockmarken nicht gefunden
+	CALL	BLMW		; Anzeige "Blockmarken?" und Tastaturabfrage
+	CALL	ESC98		; zurueck zur aktuellen EDIT-Position
+	SCF
+	RET
+
+; Kontrolle, ob Blockgroesse noch zwischen T1E und T2A passt
+;	HL zeigt auf Blockanfang (nach Marke)
+;	DE zeigt auf die Blockendemarke
+COPY3:	PUSH	DE		; DE = Blockanende
+	EX	DE,HL
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; BC = Groesse des zu kopierenden Blocks
+	LD	HL,(T2A)
+	LD	DE,(T1E)
+	SBC	HL,DE		; HL = Groesse des freien Bereichs
+	SBC	HL,BC		; passt Block noch dazwischen?
+	POP	HL		; HL = Blockendemarke
+	JR	NC,COPY4	; OK, Block passt noch dazwischen
+
+; Block passt nicht zwischen T1E und T2A
+	CALL	ESC98		; zurueck zur aktuellen EDIT-Poition
+	SCF
+	RET
+
+; Block vor Anfang von Text 2 kopieren
+COPY4:	DEC	HL		; vor Blockendemarke gehen
+	LD	DE,(T2A)	; Anfang Text 2
+	DEC	DE
+	CALL	TLDDR		; Block kopieren
+	INC	DE
+	LD	(T2A),DE	; neuer Anfang von Text 2 jetzt hier
+
+; So viele Zeilen zurueck gehen wie die Cursorposition angibt
+ESC98:	LD	DE,(LIN)	; E=aktuelle Bildschirmzeile
+	LD	D,0		; Spalte uninteressant
+	LD	A,(COL)		; aktuelle Cursorspalte
+	AND	A		; ganz links?
+	JR	Z,ESCC5		; ja
+	INC	E		; sonst die angefangene Zeile dazu zaehlen
+ESCC5:	JP	TXEND		; Text an Speicherende verschieben
+
+; ESC-B (gehe zu Textende)
+
+ESCB:	CALL	MPAGE		; Seite speichern
+	JR	NC,ESCB1
+NOMEM:	CALL	MEMW		; Anzeige "No Memory" und Tastaturabfrage
+	CALL	STATUS		; Statuszeile neu anzeigen
+	LD	DE,(COL)	; EDIT-Cursor
+	RET
+	;
+ESCB1:	CALL	BOTO		; zu Textende gehen
+
+; Bildschirm neu anzeigen
+ESC97:	CALL	LCOUNT		; tatsaechliche Zeilennummer ermitteln
+	JP	WRPG		; Seite neu anzeigen (mit Statuszeile)
+
+; ESC-T (gehe zu Textanfang)
+
+ESCT:	CALL	MPAGE		; Seite speichern
+	JR	C,NOMEM		; Anzeige "No Memory" in Titelzeile
+	CALL	TOP
+	JR	ESC97		; Seite neu anzeigen (mit Statuszeile)
+;
+; Block loeschen
+; PA:	CY=1	Fehler (Speicherplatz oder Blockmarken)
+;
+KILL:	ld	hl,(MEML)	; merken, wo Bildschirm beginnt
+	ld	(Mmerk),hl
+	CALL	MPAGE		; Seite speichern
+;	JR	NC,KILL1	; OK
+; No Memory
+	JP	C,MEMW		; Anzeige "No Memory" und Tastaturabfrage
+
+; Text komplett an Speicherende verschieben
+KILL1:	LD	DE,0		; gesamter Text
+	CALL	TXEND		; Text an Speicherende verschieben
+	LD	HL,(T2A)
+	LD	DE,(T2E)
+	CALL	SRCH40		; Blockmarken suchen in Text 2
+	JR	Z,KILL2
+
+; Blockmarken nicht gefunden
+	CALL	BLMW		; Anzeige "Blockmarken?" und Tastaturabfrage
+	JR	GOTO		; zurueck zur aktuellen EDIT-Position
+;	SCF
+;	RET
+
+; Text an Blockanfang trennen
+;	HL zeigt auf Blockanfang (nach Marke)
+;	DE zeigt auf die Blockendemarke
+KILL2:	PUSH	DE
+	LD	DE,(T2A)
+	SBC	HL,DE
+	LD	B,H
+	LD	C,L		; Laenge von Textanfang bis Blockanfang
+	EX	DE,HL		; HL=(T2A)
+	LD	DE,(T1A)
+	LD	A,B
+	OR	C
+	CALL	NZ,TLDIR	; alles vor Blockanfang zu Text 1 verschieben
+	DEC	DE		; vor Blockanfangsmarke gehen
+	LD	(T1E),DE	; Ende Text 1 jetzt hier
+
+; Text 2 nach Blockende beginnen lassen
+	POP	HL
+	INC	HL		; nach Blockanfangsmarke gehen
+	LD	(T2A),HL	; Anfang Text 2 jetzt hier
+	LD	DE,1
+	CALL	TXEND		; getrennte Zeile zu Textende ergaenzen
+
+; zu urspruenglicher Zeile gehen
+GOTO:	CALL	LCOUNT		; aktuelle Zeilennummer ermitteln
+	LD	HL,(Mmerk)	; urspruengliche Zeilennummer BS-Anfang
+	OR	A		; CY=0
+	SBC	HL,DE
+	RET	Z		; stimmt
+	JR	C,ESK81
+	EX	DE,HL
+	JP	TXANF		; noch nn Zeilen zum Textanfang verschieben
+	;
+ESK81:	ADD	HL,DE
+	EX	DE,HL
+	OR	A
+	SBC	HL,DE
+	EX	DE,HL
+	JP	TXEND		; noch nn Zeilen zum Textende verschieben
+
+; ESC-Z (Gehe zu Zeile Nr.)
+
+ESCZ:	CALL	WIN80		; volles Fenster zum Schreiben in Statuszeile
+ESCZ1:	XOR	A
+	LD	(CURSO+1),A	; Zeile 0
+	LD	(0AD0DH),A	; Trennung Zeile/Spalte wegen DEL-Taste
+	LD	BC,080Ch	; Spalte von 8 bis 12 zulaessig
+	CALL	INPUT		; Eingabe
+	JR	C,ESCZ4		; BRK -> nur Statuszeile regenerieren
+
+; eingegebene Dezimalzahl erfassen
+	LD	DE,0AD08h	; VRAM-Adresse der Zeilennummer
+	LD	BC,0		; Zeilenzaehler
+ESCZ2:	LD	A,(DE)
+	AND	0DFH
+	JR	Z,ESCZ3		; 0 oder Leerzeichen beendet die Zahlenfolge
+	LD	A,(DE)
+	CP	'0'
+	JR	C,ESCZ1		; Zeichen kleiner als '0'
+	CP	'9'+1
+	JR	NC,ESCZ1	; Zeichen groesser als '9'
+	AND	0Fh
+	LD	H,B
+	LD	L,C
+	ADD	HL,HL	; *2
+	ADD	HL,HL	; *4
+	ADD	HL,HL	; *8
+	ADD	HL,BC	; *9
+	ADD	HL,BC	; *10
+	LD	B,0
+	LD	C,A
+	ADD	HL,BC		; + neue Ziffer
+	LD	B,H
+	LD	C,L
+	INC	DE		; naechste Stelle
+	JR	ESCZ2
+
+; gehe zu eingegebener Zeile
+;	BC = Zeilennummer
+ESCZ3:	LD	HL,(MEML)	; Zeilennummer, Bildschirmanfang
+	LD	DE,22
+	ADD	HL,DE		; Zeilennummer der letzten BS-Zeile
+	SBC	HL,BC
+	JR	C,ESCZ5		; gewuenschte Zeile liegt hinter BS-Ende
+	LD	H,B
+	LD	L,C
+	LD	DE,(MEML)	; Zeilennummer, Bildschirmanfang
+	SBC	HL,DE
+	JR	C,ESCZ5		; gewuenschte Zeile liegt vor BS-Anfang
+
+; die gewuenschte Zeile ist auf dem Bildschirm, dann Cursor auf diese Zeile setzen
+	LD	H,L		; neue Zeile
+	LD	L,0		; Spalte 0
+	LD	(COL),HL	; zur Cursorposition machen
+ESCZ4:	JP	STATUS		; Staturzeile aktualisieren
+
+; die gewuenschte Zeile liegt ausserhalb des Bildschirms
+ESCZ5:	LD	(Mmerk),BC	; Soll-Zeilennummer merken fuer GOTO
+	CALL	WIN82
+	CALL	MPAGE		; Seite speichern
+	JR	NC,ESCZ6
+ESCF2:	CALL	MEMW		; Anzeige "No Memory" und Tastaturabfrage
+	ld	hl,(T1MERK)
+	ld	(t1e),hl	; urspruengliche Textgrenzen
+	ld	hl,(T2MERK)	; wieder regenerieren
+	ld	(t2a),hl
+	JR	ESCZ4
+
+; Bildschirminhalt ist gespeichert, jetzt zu gewuenschter Stelle gehen
+ESCZ6:	CALL	GOTO		; Text entsprechend verschieben
+	LD	HL,0
+	LD	(COL),HL	; neue Cursorposition
+	JP	WRPG		; Seite neu anzeigen (mit Statuszeile)
+
+; ESC-F (Suchen einer Zeichenkette)
+
+ESCF:	CALL	WIN80		; volles Fenster zum Schreiben in Statuszeile
+	LD	HL,1		; Zeile 0, Spalte 1
+	LD	(CURSO),HL
+	CALL	PV1
+	DB	OSTR
+	DB	'Suche:',0
+	LD	DE,8		; Zeile 0, Spalte 8
+	LD	B,17
+ESCF1:	CALL	DABR80		; VRAM-Adresse berechnen
+	CALL	WRZCH0		; Nullcode eintragen
+	INC	E		; naechste Spalte
+	DJNZ	ESCF1
+	LD	BC,0819h	; Spalte von 8 bis 25 zulaessig
+	CALL	INPUT		; Eingabe der Zeichenkette
+	JR	C,ESCZ4		; BRK -> nur Statuszeile regenerieren
+
+; Zeichenkette ist eingegeben
+	LD	HL,0AD08h	; VRAM-Adresse der eingegebenen Zeichenkette
+	LD	DE,STRING	; Stringspeicher
+	LD	BC,LSTR		; max. Laenge
+	LDIR			; eintragen und merken
+	CALL	STATUS		; Statuszeile regenerieren
+	LD	DE,(COL)	; EDIT-Cursor mitgeben
+;
+; F2 (F6) - weitersuchen:
+;
+EFIND:	LD	A,(STRING)
+	OR	A
+	RET	Z		; kein Text
+	CALL	MPAGE		; Seite speichern
+	JR	C,ESCF2		; "No Memory" und Abbruch
+	LD	DE,1
+	CALL	TXANF		; 1 Zeile vorwaerts
+	CALL	FIND		; String suchen ab 2. BS-Zeile
+	CALL	LCOUNT		; Zeilennummer neu ermitteln
+	CALL	WRPG		; Seite neu anzeigen
+	JP	CLI2		; Cursorposition regenerieren
+
+; ESC-H (Hilfe) - Anzeige von Bild 1 und Warten auf Tastatureingabe
+; Hilfe-Texte muessen vorher dort angezeigt sein!
+;
+ESCH:	LD	DE,(CURSO)
+	LD	HL,1548H
+	LD	(CURSO),HL
+	LD	A,(IX+1)	; Merkzelle von Port 84h
+	OR	0101b		; Anzeige+Zugriff Bild 1
+	LD	(IX+1),A
+	OUT	(PORT1),A
+	CALL	KEYB		; Tastatureingabe abwarten
+BILD0:	LD	A,(IX+1)	; Merkzelle von Port 84h
+	AND	11111010b	; Anzeige+Zugriff Bild 0
+	LD	(IX+1),A
+	OUT	(PORT1),A
+	LD	(CURSO),DE
+	RET
+
+;=======	DEVICE-Kommandos	=======
+
+	DEFW	0DDDDH
+	DEFM	'DIR'
+	DB	1Fh		; In Register DE Maske uebergeben
+	CALL	PV7		; neue Funktion ab CAOS 4.7
+	DB	8		; Verzeichnis anzeigen
+	RET
+
+	DEFW	0DDDDH
+	DEFM	'CD'
+	DB	1Fh		; neues Laufwerk in Register DE uebergeben
+	CALL	PV7		; neue Funktion ab CAOS 4.7
+	DB	9		; Laufwerk wechseln
+	RET
+
+	DEFW	0DDDDH
+	DEFM	'REN'
+	DB	1Fh		; Textargument zulaessig (2 Dateinamen)
+	CALL	PV7
+	DB	11		; Datei umbenennen
+	RET
+
+	DEFW	0DDDDH
+	DB	'ERA'
+	DB	1Fh		; Textargument zulaessig (Dateiname)
+	CALL	PV7
+	DB	10		; Datei loeschen
+	RET
+
+;-------
+; Geraeteumschaltung und Anzeige
+; DEVICE	Auflisten der installierten Treiber
+; DEVICE n	Umschaltung Geraet n (0..7)
+;
+	DW	0DDDDH
+	DB	'DEVICE',1
+	AND	A		; Parameter angegeben?
+	JR	Z,DRLIST	; nein, Treiber auflisten
+	LD	A,L
+	CP	8
+	JR	NC,DERR		; n > 8
+	CALL	SETDRV		; Treiber einstellen
+	RET	NC		; kein Fehler
+DERR:	CALL	PV1
+	DB	ERRM		; Treiber nicht aktiv
+	RET
+	;
+DRLIST:	LD	A,0FFh		; Treiber auflisten
+SETDRV:	CALL	PV1
+	DB	DEVICE		; 49H - neue Funktion seit CAOS 4.6
+	RET
+;
+; Steuercodetabelle fuer 80-Zeichen-Mode:
+;			; 	CRT	EDIT
+;
+CTAB80:	DW	NOOP	; 00
+	DW	CLR80	; 01	CLR	Zeichen links loeschen	OK
+	DW	EDEL	; 02	Sh-DEL	Zeile loeschen		OK
+	DW	NOOP	; 03	BRK	Editor beenden		OK
+	DW	NOOP	; 04	Sh-BRK
+	DW	EDTAB	; 05	-	F1 (Tabulator)		OK INS und NoINS
+	DW	EFIND	; 06	-	F2 (weitersuchen)	OK
+	DW	NOOP	; 07	BEEP
+	DW	CUL80	; 08	CUL	Cursor nach links	OK mit Scrolling
+	DW	CUR80	; 09	CUR	Cursor nach rechts	OK mit Scrolling
+	DW	CUD80	; 0A	CUD	Cursor runter		OK mit Scrolling
+	DW	CUU80	; 0B	CUU	Cursor hoch		OK mit Scrolling
+	DW	ECLS	; 0C	Sh-HOME	Cursor rechts/unten	OK
+	DW	CBL80	; 0D	CR
+	DW	EENT	; 0E/0D	Sh-Enter neue Zeile		OK INS und NoINS
+	DW	HCOPY	; 0F	Sh-CLR	Hardcopy, CALC		OK
+	DW	HOME80	; 10	HOME	Cursor links oben	OK
+	DW	EVPG	; 11	Sh-CUU	Seite zurueck		OK
+	DW	ENPG	; 12	Sh-CUD	Seite vor		OK
+	DW	ASCII	; 13	STOP	Wechsel Zeichensatz	OK
+	DW	CLICK	; 14	Sh-INS	Tastenclick EIN/AUS	OK
+	DW	NOOP	; 15	-
+	DW	CAPS80	; 16	CAPS	(Anzeige aktualisieren)
+	DW	NOOP	; 17	-
+	DW	WRIGH	; 18	Sh-CUR	Wort nach rechts	OK mit Scrolling
+	DW	WLEFT	; 19	Sh-CUL	Wort nach links		OK mit Scrolling
+	DW	INS80	; 1A	INS	Einfuegen ein/aus	OK
+	DW	NOOP	; 1B	ESC	(wird innerhalb KBD in CAOS ausgewertet)
+	DW	NOOP	; 1C	LIST	-
+	DW	NOOP	; 1D	RUN	-
+	DW	NOOP	; 1E	CONT	-
+	DW	DEL80	; 1F	DEL	akt. Zeichen loeschen	OK
+
+; ESC-Tabelle fuer die Funktionen ESC-A bis ESC-Z
+;”
+ESCTAB:	DW	ESCA	; ESC-A	ANFANG	Eingabe Blockanfangsmarke 1Ch
+	DW	ESCB	; ESC-B	BOTTOM	gehe zu Textende (ehemals Menuewort BOTTOM)
+	DW	ESCC	; ESC-C COPY	Block kopieren (ehemals Menuewort PCOPY)
+	DW	ESCD	; ESC-D	DOWN	Eingabe Pfeil runter 1Fh
+	DW	ESCE	; ESC-E	ENDE	Eingabe Blockendemarke 1Eh
+	DW	ESCF	; ESC-F FIND	Suchen (ehemals Menuewort FIND)
+	DW	ESCG	; ESC-G	GRAFIK	Eingabe Grafikzeichen
+	DW	ESCH	; ESC-H	HELP	Online-Hilfe (Anzeige IRM-Seite 2)
+	DW	NOOP	; ESC-I
+	DW	ESCJ	; ESC-J	eJect	Eingabe Seitenwechsel (Eject) 0Ch
+	DW	ESCK	; ESC-K KILL	Block loeschen (ehemals Menuewort PDEL)
+	DW	ESCL	; ESC-L	LINKS	setze linke Randmarke
+	DW	NOOP	; ESC-M
+	DW	ESCN	; ESC-N NEWLINE	Zeile binden 0Eh 
+	DW	NOOP	; ESC-O
+	DW	NOOP	; ESC-P
+	DW	NOOP	; ESC-Q
+	DW	ESCR	; ESC-R	RECHTS	setze rechte Randmarke
+	DW	NOOP	; ESC-S
+	DW	ESCT	; ESC-T	TOP	gehe zu Textanfang (ehemals Menuewort TOP)
+	DW	ESCU	; ESC-U	UP	Eingabe Pfeil hoch 1Dh
+	DW	ESCV	; ESC-V moVe	Block verschieben (COPY + KILL)
+	DW	NOOP	; ESC-W
+	DW	ESCX	; ESC-X	HEX	Eingabe HEX-Sequenz 0Fh (wie WP9)
+	DW	NOOP	; ESC-Y
+	DW	ESCZ	; ESC-Z	ZEILE	Gehe zu Zeile Nr.?
+
+	ABSFILL	0E000h,<USER-ROM-Ende (Editor)>
+
+ROMEND:
+	.DEPHASE
+
+	END

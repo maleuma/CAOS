@@ -1,0 +1,1479 @@
+;_______________________________________________________________;
+;								;
+;	KC-Debugger 2.3 (Testmonitor/Zusatzmonitor)		;
+;	===========================================		;
+;								;
+;	29.05.1988	TEMO 2.1 (C) Frank Klemm '87/'88 Gera	;
+;	14.12.1992	KC-Debugger 1.0 in CAOS 4.3-USER-ROM	;
+;	27.07.2013	ROM-Version neu reassembliert		;
+;								;
+; Aktuelle Speicherbelegung:					;
+; 0000-0037h	Arbeitszellen, Registerablage usw.		;
+; 0038-009Dh	RST38, CTC-Interrupt und Speicherumschaltung	;
+; 009E-00A1h	Kopie letzter Befehl (4 Byte)			;
+; 00A2-00ABh	Kopie aktueller + folgender Befehl (10 Byte)	;
+; 00AC-00ADh	USER-Prompt, USER-Prolog			;
+; 00AE-00FFh	zur Zeit noch frei (fuer USB-Tastatur-Interrupt);
+;								;
+; REAS.Z80			ML-Soft 14.12.1992-08.05.2021	;
+;_______________________________________________________________;
+;								;
+; Weitere Anpassungen:						;
+; 19.10.2013	weitere Kommentare/Marken aus TEMO.ASM		;
+;								;
+; Aenderungen mit Version 1.1:					;
+; 20.10.2013	TEMO-Initialisierung optimiert, 12 Byte gespart	;
+;		CHSUM umbenannt in CRC				;
+;		Registeranzeige erweitert durch 2 Titelzeilen	;
+; 21.10.2013	weitere Kommentare/Marken aus TEMO.MAC		;
+; 25.10.2013	Verwendung von MENU und LOOP aus CAOS		;
+;		CRC berechnet Summe und CRC16			;
+; 26.10.2013	REG Parameterauswertung neu gemacht		;
+;		REG ohne Parameter = Anzeige			:
+;		REG rr nnnn = Registerinhalt neu setzen		;
+; 27.10.2013	LINEST weggelassen, immer 2 Reassemblerzeilen.	;
+;		BITTAB aus CAOS mitgenutzt (Adresse FDF8h)	;
+;		Kommando 'SWITCH' neu programmiert		;
+;		FILL erweitert fuer Bytefolgen und 0 ohne Byte	;
+;		MOVE sinvollerweise umbenannt in COPY		;
+;		Build-In-Hilfe: CRC, IN, OUT, FILL, EXCH, COPY	;
+;		WORKRAM mit Defaultwert bei Aufruf ohne Param.	;
+;		Anzeigen bei ARITH erweitert mit +/-/*		;
+; 29.10.2013	Fehler in Build-In-Hilfe korrigiert		;
+; 30.10.2013	BREAK erweitert zur Anzeige (ohne ARG)		;
+;		Kommando SBRK auskommentiert			;
+;		Begonnen mit Ueberarbeitung Go-Kommando...	;
+; 03.11.2013	Anzeige Breakpoint im Schrittbetrieb		;
+;		Step und GO weiterentwickelt, GO: OK.		;
+; 04.11.2013	Aktuelle Quelltextzeile in roter Schrift	;
+; 09.11.2013	Schrittbetrieb mit CR funktioniert jetzt auch,	;
+;		nur nicht im Modul im Aufsatz wegen WAIT	;
+; 10.11.2013	REAS-Arbeitszellen ab B7F2h neu angeordnet	;
+;		Prologbytes fuer Reassembler initialisieret	;
+; 17.11.2013	ARITH testweise durch CALC ersetzt		;
+;		Code fuer Bildwechsel optimiert			;
+; 18.11.2013	Speicherumschaltung bei RST38, CTC-Interrupt	;
+;		und GO eingebaut, RAM0 von 38H bis 7FH benutzt	;
+;		Es wird nur noch mit CCTL0 gearbeitet!		;
+;		Standard-Speichernutzung 0...7Fh		;
+;		(Verlagerung nur fuer 0..36h moeglich)		;
+;		Kommando "." Stackmodifizieren aufgenommen	;
+;		Kommando CALC in "?" geaendert			;
+; 20.11.2013	keine variable Arbeitszellen mehr (schaltbar)	;
+; 21.11.2013	Registerablage per PUSH-Befehlen optimiert	;
+;		dadurch insgesamt 265 Byte gespart!		;
+; 23.11.2013	Nach WORKRAM nur noch IX+9 neu setzen, sonst	;
+;		werden Einstellungen USER-Bild ueberschrieben	;
+; 24.11.2013	Schrittbetrieb weiter getestet + optimiert...	;
+;		(Programmunterbrechung jetzt mit STOP, Abfrage-	;
+;		schleife dafuer jetzt mit BRK)			;
+; 27.11.2013	Kopie der aktuellen Programmteile fuer DISASS	;
+;		jetzt nach RAM0 kopiert um Schrittebtrieb im	;
+;		CAOS ROM-C verfolgen zu koennen. (Option new)	;
+; 10.12.2013	Retten/Laden von Promptzeichen und Prologbyte	;
+; 11.12.2013	Fehler bei Schrittbetrieb mit veraendertem IX	;
+;		beseitigt					;
+; 14.12.2013	Arbeitszellen verlagert, so dass 0..0bh frei	;
+;		bleibt fuer Dateiname (Floppy-Routinen)		;
+; 15.12.2013	Umbenennung in Version 2.0			;
+; 16.12.2013	Lautstaerke stumm schalten bei STEP und GO	;
+; 31.12.2013	RETEMO veraendert RSP (USER-Stack) nicht mehr	;
+;		REG-Kommando repariert nach Adressverschiebung	;
+;		vom 14.12.2013					;
+; 02.01.2013	RST38 optimiert, Code-Regenerierung war an der	;
+;		falschen Programmstelle eingebaut.		;
+; 04.01.2014	Option NEW fest eingebaut, Option REL entfernt	;
+; 12.07.2017	Systemstack auf 01C4H init. (statt 01D4H)	;
+; 03.02.2018	STAT umbenannt in BRKI wegen EDAS-Arbeitszellen	;
+; 26.03.2018	REAS umbenannt in DISASS wie im CAOS-Menue	;
+; 07.10.2018	SWITCH erweiter mit alt -> neu wie in CAOS	;
+; 14.10.2018	Arbeitszellen verlagert wegen USB-Tastatur,	;
+;		Umbenennung in Version 2.2			;
+; 28.03.2021	Kommando FIND zur Bytesuche im Speicher aus	;
+;		Zusatzmonitor von Gerrit Schuzk uebernommen	;
+; 08.05.2021	SWITCH korrigiert, konnte keine Module schalten	;
+; 28.10.2022	kuerzere (langsamere) CRC-Routine eingebaut	;
+; 29.10.2022	Aufruf %TEMO <TEMO-Kommando> implementiert	;
+; 30.10.2022	CMP: Vergleich von Speicherbereichen eingebaut	;
+;		nach Zusatzmonitor ZM				;
+;		Umbenennung des Debuggers in Version 2.3	;
+;
+; Ideen:
+; - Ruecksprungziel auf 0160H = USER-Stack eintragen
+; - erweiterte Tastaturinterrupt-Routine um im Echtzeitbetrieb
+;   eine Unterbrechnungsmoeglichkeit per STOP-Taste zu schaffen
+;_______________________________________________________________;
+;
+; Kommandos im CAOS-Menue:
+;
+;	%TEMO	- Kaltstart Debugger
+;	%RETEMO	- Warmstart Debugger
+;
+; Kommandos im Debugger-Menue:					Test:
+;
+;	>MENU		- MENU auflisten			ok.
+;	>WORKRAM	- Arbeitsbereich verlagern		ok.
+;	>QUIT		- zu CAOS zurueckkehren			ok.
+;	>REAS		- Reassembler aufrufen			ok.
+;	>CRC		- Berechnung Pruefsumme, CRC16		ok.
+;	>REG		- Registeranzeige/Modifikation		ok.
+;	>SWITCH		- Module lesen / schalten		ok.
+;	>DISPLAY	- Speicherdump anzeigen			ok.
+;	>MODIFY		- Speicher modifizieren			ok.
+;	>IN		- Port lesen				ok.
+;	>OUT		- Port schreiben			ok.
+;	>FILL		- Speicherbereich fuellen		ok.
+;	>EXCH		- Speicherbereich tauschen		ok.
+;	>COPY		- Speicherbereich kopieren		ok.
+;	>ARITH		- Addition, Subtraktion, Multiplikation	ok.
+;	>?		- BASIC-Taschenrechner (Ersatz fuer ARITH)
+;	>BREAK		- Unterbrechungspunkt setzen/anzeigen	ok.
+;	>GO		- Sprung in Anwenderprogramm mit Initialisierung des Unterbrechungspunktes
+;	>STEP		- Schrittbetrieb: LF,CR,U...
+;	>.		- Stackmodifizieren			ok.
+;	>STACK		- Anzeige Stackpointer			ok.
+;
+;_______________________________________________________;
+;
+
+;
+; Arbeitszellen in Arbeitsspeicher-Bereich (Teil 1):
+; Adressbereich: 0010h .. 0037h
+;
+RAF	EQU	10h	;+ Register AF	zusammenhaengend, feste Reihenfolge!
+RBC	EQU	RAF+2	;| Register BC
+RDE	EQU	RAF+4	;| Register DE
+RHL	EQU	RAF+6	;| Register HL
+RIX	EQU	RAF+8	;| Register IX
+RIY	EQU	RAF+10	;| Register IY
+ZAF	EQU	RAF+12	;| Register AF'
+ZBC	EQU	RAF+14	;| Register BC'
+ZDE	EQU	RAF+16	;| Register DE'
+ZHL	EQU	RAF+18	;| Register HL'
+RSP	EQU	RAF+20	;| Register SP
+RTS	EQU	RAF+22	;+  Stack-Inhalt
+PCO	EQU	RAF+24	;+ PC (alter Wert)
+PCN	EQU	RAF+26	;+ PC (neuer Wert)
+;
+mem2	equ	28h	; bis 2Bh:  4 Byte Code (letzter Befehl)
+mem1	equ	2Ch	; bis 35h: 10 Byte Code (aktueller+folgender Befehl)
+;
+uprompt	equ	36h		;+ 36h	Ablage USER-Prompt
+				;|
+uprol	equ	uprompt+1	;+ 37h	Ablage USER-Prologbyte
+;
+; die anderen Arbeitszellen nach den RST38-Routinen:
+;
+BREAK	EQU	RSTEND-RST38+38H
+			;+ AAh	Unterbrechungspunkt (RAM)
+BRKI	EQU	BREAK+2	;| ACh	Inhalt Unterbrechungspunkt (BREAK)
+MODE	EQU	BREAK+3	;+ ADh	Betriebsart bei Schrittbetrieb
+	; 0	Echtzeitbetrieb (Abbruch nur bei RST38)
+	; 1	Schrittbetrieb ohne Anzeige (Kontrolle Breakpoint durch CTC)
+	; 2	Schrittbetrieb mit Anzeige bis Breakpoint (ohne Tastaturabfrage)
+	; 3	Schrittbetrieb mit Anzeige und Tastatursteuerung
+;
+; Die folgenden Arbeitszellen liegen im IRM hinter der SUTAB
+;
+WINDOW2	EQU	0AAE8h	; bis AAF3h: Zwischenspeicher fuer TEMO-Fenster (Bild 1)
+	; 9 Byte:	WINNR,WINON,WINLG,CURSO,STBT,COLOR
+	; 1 Byte:	IX+1 bzw. Port 84h
+	; 2 Byte:	CCTL0 (Grossbuchstaben)
+
+WINDOW1	EQU	0AAF4h	; bis AAFFh: Zwischenspeicher fuer USER-Fenster (Bild 2)
+	; 9 Byte:	WINNR,WINON,WINLG,CURSO,STBT,COLOR
+	; 1 Byte:	IX+1 bzw. Port 84h
+	; 2 Byte:	CCTL0 (Grossbuchstaben)
+;
+; Mitverwendete Arbeitszellen von REAS im IRM:
+; --------------------------------------------
+; MS	EQU	0B7F2H	; Markenschalter (alt ARGN=0B781h)
+; CMODE	EQU	0B7F3H	; Ausgabe auf: 0=Bildschirm ...
+; DMODE	EQU	CMODE+1	; Special-Mode: 0=normal
+; ROFFS	EQU	0B7F5H	; Anzeige-Offset Reassembler
+; PBY	EQU	0B7F7H	; 6 Prologbytes vordefiniert bzw. von Kommandozeile
+	;   bis 0B7FCH
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+;	TEMO-Hilfsroutinen fuer RST38 und Interrupt
+;	werden in den RAM0 kopiert ab 0038H
+;
+RST38:	EX	(SP),HL
+	DEC	HL		; zurueck vor RST38H-Byte
+	EX	(SP),HL
+	push	hl
+	push	af
+	LD	HL,(BREAK)	; Adresse Unterbrechungspunkt
+	LD	A,(BRKI)	; urspruenglicher Wert vom Speicher holen
+	LD	(HL),A		; und wieder im Programm eintragen
+	pop	af
+	ld	hl,RSTROM	; Restart-Routine im USER-ROM
+	jr	memsw		; Speicher sichern und schalten
+	;
+ICTC:	push	hl
+	ld	hl,INTROM	; Interrupt-Routine im USER-ROM
+memsw:	ex	(sp),hl		; auf Stack legen fuer RET
+	push	af
+	push	hl
+	push	de
+	push	bc
+	ld	de,mem2		; Codespeicher 2 (letzter Befehl)
+	ld	hl,mem1		; Codespeicher 1 (aktueller+folgender Befehl)
+	ld	bc,4		; 4 Byte kopieren
+	ldir			; fuer Anzeige letzten Befehl
+	ld	hl,10
+	add	hl,sp		; Berechnung, wo PC gerade steht
+	ld	a,(hl)		; das ist 10 Byte zurueck
+	inc	hl		; auf dem Stack zu finden
+	ld	h,(hl)
+	ld	l,a
+	ld	c,10		; 10 Byte kopieren
+	ldir			; fuer Anzeige aktuellen+folgenden Befehl
+	pop	bc
+	pop	de
+	pop	hl
+	in	a,(88H)		; PIO-A
+	push	af
+nn1:	ld	a,8FH		; Standard (USER ein, IRM ein, CAOS-E ein)
+	out	(88H),a		; mit IRM ein
+	pop	af
+	ld	(U88H),A	; aktuellen PIO-Zustand im IRM eintragen
+	ld	a,(ix+4)
+	ld	(U86H),A	; aktuellen Zustand im IRM eintragen
+nn2:	ld	a,43h		; Standard (RAM4 ein, CAOS-C aus, USER=DEBUG)
+	ld	(ix+4),a	; mit passenden ROM-Ebenen
+	out	(86H),a
+	pop	af
+	ret			; Hier Absprung in den ROM (INTROM / RSTROM)
+;
+; Startroutine von GO mit Speicherschaltung
+; muss im RAM0 abgearbeitet werden, da IRM und ROM geschalten werden koennen
+;
+GORAM:	ld	a,43h		; Standardwert wird ueberschrieben...
+U86H	EQU	$-1-RST38+38H	; Inhalt von Port 86H in USER-Programm
+	ld	(ix+4),a
+	out	(86H),a		; ROM-Ebenen schalten
+	ld	a,8Fh		; Standardwert wird ueberschrieben...
+U88H	EQU	$-1-RST38+38H	; Inhalt von PIO-A in USER-Programm
+	out	(88H),a		; RAM-Ebenen schalten
+	LD	A,(MODE)
+	AND	A		; RAM- oder ROM-Mode?
+	JR	Z,GO5		; Echtzeitbetrieb, CTC nicht aktivieren!
+	LD	A,87H		; EI, Zeitgeber, VT=16, ZK folgt
+	DI		; Interrupts sperren
+	OUT	(CTC0),A	; CTC-Steuerwort
+	LD	A,2		; 2*16=32 Takte
+	OUT	(CTC0),A	; CTC-Zeitkonstante
+	EI		; 4 Takte Interrupts freigeben
+	NOP		; 4 Takte warten
+	NOP		; 4 Takte warten
+GO5:	POP	AF	; 11 Takte ; Wert in AF laden
+	RET		; 10 Takte ; PC anspringen
+			; 33 Takte in Summe ab dem OUT-Befehl!
+RSTEND:
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Arbeitsspeicher verlagern
+; Aufruf: WORKRAM [H-adr]
+;
+	DEFW	0FDFDH
+	DB	'WORKRAM',1
+	DEC	A		; 1 Parameter?
+	LD	A,L		; angegebenen Parameter verwenden
+	JR	Z,WORK1
+	LD	A,1		; ohne Parameter: Defautwert = 1
+WORK1:	CALL	PV1
+	DB	SIXD		; Verlagerung Arbeitsbereich (setzt IX+9 zurueck)
+	CALL	INIT2		; ISR-Routine wieder einstellen
+	LD	(IX+9),0FDh	; Prologbyte fuer TEMO wieder einstellen
+	JR	TE3		; Monitor-Loop
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+;	TEMO-Kaltstart
+;
+TOP:	DW	7F7FH
+	DB	'TEMO',1FH	; Textargumente zulaessig
+
+	ld	a,(de)
+	or	a		; Parameter angegeben?
+	jr	z,te0		; nein
+	CALL	UROM		; Schaltzustand User-ROM merken
+	PUSH	HL		; nach Ausfuehrung wieder abschalten
+	LD	A,0FDH		; Prologbyte
+	LD	HL,CRC		; Beginn der Menuewortsuche ab CRC
+	LD	BC,CPA5-CRC	; Laenge Suchbereich bis CMP
+	CALL	PV1
+	DB	ZSUCH		; Menuewort im Debugger suchen
+	JR	C,SU1		; Menuewort gefunden
+SU0:	JP	ERR		; Fehlermeldung, Monitor-Loop
+	;
+SU1:	INC	HL		; Epilogbyte uebergehen
+	PUSH	HL		; Startadresse
+	CP	1FH		; Textparameter?
+	RET	Z		; ohne arg zu erfassen!
+	CALL	PV1
+	DB	GARG
+	JR	C,SU0		; bad args
+	CALL	PV1
+	DB	LARG		; Arg's laden
+	RET
+
+te0:
+	LD	HL,RAF		; erstes Register im TEMO-Arbeitsspeicher
+	XOR	A
+	LD	B,24		; RAF bis PCN
+TE1:	LD	(HL),A		; alle Register loeschen
+	INC	HL
+	DJNZ	TE1
+	LD	HL,BREAK
+	LD	B,3		; BREAK bis MODE
+TE2:	LD	(HL),A		; Unterbrechungspunkt=0
+	INC	HL		; MODE=0 voreinstellen
+	DJNZ	TE2
+	LD	DE,WINDOW2
+	LD	HL,WINTAB	; vordefinierte Daten fuer TEMO-Fenster
+	LD	BC,10
+	LDIR			; initialisieren
+	LD	HL,CCTL0
+	LDI			; Zeichensatz 0 (Grossbuchstaben)
+	LDI			; hinzufuegen
+	LD	HL,PROBY
+	LD	DE,PBY		; 6 bekannte Prologbytes
+	LD	BC,6		; fuer Reassembler initialisieren
+	LDIR
+	CALL	INIT		; TEMO initialisieren, zu Bild 2 wechseln
+TE3:	LD	A,I
+	LD	H,A
+	LD	L,60H
+	LD	(RSP),HL	; Anwender-SP setzen
+	LD	L,0C4H
+	LD	(SYSP),HL	; System-SP neu setzen
+	LD	SP,HL		; und laden
+	LD	(RIX),IX	; IX-Register auf aktuellen Wert setzen
+	XOR	A
+	LD	(ARGN),A	; MENU normal ausschreiben
+	JR	TMENU
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+;	TEMO-Warmstart
+;
+	DW	7F7FH
+	DB	'RETEMO',1
+	LD	A,I
+	LD	H,A		; WORKRAM
+;	LD	L,60H
+;	LD	(RSP),HL	; Anwender-SP nicht neu setzen!
+	LD	L,0C4H
+	LD	(SYSP),HL	; System-SP neu setzen
+	LD	SP,HL		; und laden
+	CALL	INIT		; TEMO initialisieren, zu Bild 2 wechseln
+	JP	PRSE		; Monitor-Loop
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; TEMO-Menue ausschreiben
+; Aufruf: MENU [Mode]
+;
+	DEFW	0FDFDH
+	DB	'MENU',1
+	POP	HL
+	POP	HL		; Stack bereinigen
+TMENU:	CALL	PV1	
+	DB	OSTR
+;	DB	ESC,'2'		; koennte entfallen...
+	DB	0CH,LF
+	DB	'> KC-DEBUGGER 2.3 <',CR,LF,0
+	CALL	PV1		; Uebergang in
+	DB	MENU		; CAOS-Menueschleife
+;
+;-------------------------------
+; Bild 1 fuer Anwenderprogramm einstellen
+;
+BILD0:	LD	HL,(CURSO)	; Cursorposition von TEMO-Fenster
+	LD	(WINDOW2+5),HL	; abspeichern (fuer RETEMO)
+BILD1:	LD	HL,WINDOW1	; USER-Fenster initialisieren
+	ld	bc,(UPROMPT)	; USER-Prompt und -Prolog (B = Prolog)
+	ld	a,c		; A = Prompt
+	JR	WININI
+;-------------------------------
+; Bild 2 fuer TEMO einstellen (Anwenderfenster sichern)
+;
+BILD2:	LD	DE,WINDOW1
+	LD	HL,WINNR
+	LD	BC,9		; Von WINNR bis COLOR
+	LDIR			; Anwender-Fenster sichern
+	LD	A,(IX+1)
+	AND	0FH		; nur Bit 0-3 interessant
+	LD	(DE),A		; merken
+	INC	DE
+	INC	HL		; Adresse fuer Scroll-Mode oder
+	INC	HL		; Page-Mode nicht beruecksichtigen
+	LDI
+	LDI			; Zeichentabelle CCTL0 mit sichern
+	LD	HL,WINDOW2	; TEMO-Fenster initialisieren
+	ld	a,(IX+9)	; aktuelles Prologbyte
+	ld	(UPROL),a	; als USER-Prolog merken
+	ld	a,(PROMPT)	; aktuelles Promptzeichen
+	ld	(UPROMPT),A	; als USER-Prompt merken
+	ld	a,'+'		; Promptzeichen fuer TEMO
+	ld	B,0FDH		; Prologbyte fuer TEMO
+WININI:	ld	(PROMPT),A	; neues Promptzeichen
+	LD	(IX+9),B	; neues Prologbyte
+	LD	DE,WINNR
+	LD	BC,9
+	LDIR			; Fensterdaten laden
+
+	LD	A,ESC		; ESC-Funktion einleiten
+	CALL	DOCHR		; fuer Bildwechsel
+	LD	A,(IX+1)
+	AND	0F0H		; Bit 7-4: RAM8-Ebene erhalten
+	OR	(HL)		; Bit 0-3: abgespeicherter Wert
+	LD	(IX+1),A	; eintragen
+	OUT	(84H),A		; und aktivieren
+	INC	HL
+	INC	DE		; Adresse fuer Scroll-Mode oder
+	INC	DE		; Page-Mode ueberspringen
+	LDI
+	LDI			; Zeichentabelle CCTL0 kopieren
+	AND	1		; Bit 0 = Bild
+	ADD	A,'1'		; ergibt '1' oder '2'
+	JP	DOCHR		; mit ESC 1/2 VRAM-Adresse aktualisieren!
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Liste der Registernamen und Flagnamen
+;
+REGL:	DB	'F A C B E D L H '	; 8 Einfachregister
+	DB	'S Z   HY  P N CY'	; 8 Flags
+	DB	'AFBCDEHLIYSPPC'	; 7 Doppelregister
+
+FLAGL:	DB	'SZ.H.PNC'
+;
+; Fensterdaten fuer TEMO-Fenster
+;
+WINTAB:	DB	0	; WINNR	= Fensternummer
+	DW	0	; WINON	= Fensteranfang
+	DW	2028H	; WINLG	= Fenstergroesse
+	DW	0	; CURSO	= Cursorposition
+	DB	0	; STBT	= Steuerbyte
+	DB	39H	; COLOR	= Farbe sw/ws
+	DB	0DH	; IX+1	= IRM-Ebene (Bild 1, Pixel/Color)
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Verlassen des Testmonitors
+;
+	DEFW	0FDFDH
+	DB	'QUIT',1
+	CALL	BILD0		; Daten fuer USER-Fenster laden/aktivieren
+				; und CAOS-Prolog wiederherstellen
+	LD	A,I
+	LD	H,A
+	LD	L,0C4H
+	LD	(SYSP),HL	; normalen System-SP setzen
+	LD	SP,HL
+;
+; Monitor-Loop:
+;
+PRSE:	CALL	PV1
+	DB	LOOP		; Uebergang zu CAOS-Eingabeschleife
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Reassembler aufrufen
+; Aufruf: REAS Aadr [Zeilen [Ausadr [Prol]]]
+;
+	DEFW	0FDFDH
+	DB	'DISASS',1
+	JP	LIST		; Sprung zum Reassembler
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Register modifizieren und anzeigen
+; Aufruf: REG [register nnnn]
+;
+	DEFW	0FDFDH
+	DB	'REG',1FH	; Textparameter zulaessig
+	LD	A,(DE)
+	AND	0DFH
+	JP	Z,REGANZ	; ohne Argument -> Registerinhalte anzeigen
+
+; Register modifizieren:
+
+	LD	HL,REGL		; Registernamen
+	LD	BC,FLAGL-REGL	; Laenge der Tabelle
+ZS1:	LD	A,(DE)		; Suche nach Registernamen (Kleinbuchstaben)
+	CPI
+	JR	Z,LBL1		; 1. Buchstabe stimmt
+	CPI
+LBL2:	JP	PO,ERR		; ausgesucht -> ERROR
+	JR	ZS1
+	;
+LBL1:	INC	DE
+	LD	A,(DE)		; 2. Zeichen
+	CP	'A'-1		; zu Ende ?
+	DEC	BC
+	JR	C,LBL3
+	INC	BC
+	CPI			; 2. Buchstabe richtig?
+	DEC	DE
+	JR	NZ,LBL2		; zweiter Buchstabe falsch
+	INC	DE
+	INC	DE
+	LD	A,(DE)
+LBL3:	CP	27H		; folgt ' ?
+	JR	NZ,LBL4
+	INC	DE		; Zeiger nach '
+	SET	0,B		; Zweitregister setzen
+LBL4:	INC	DE
+	CALL	GETHEX		; folgende Zahl lesen
+	JR	NC,LBL5		; kein Fehler
+ERR:	CALL	PV1		; Fehlermeldung, Monitor-Loop
+	DB	ERRM
+	SCF		;CY=1
+	RET
+	;
+LBL5:	LD	DE,(NUMVX)	; Zahl holen
+	LD	HL,RAF		; Beginn Registerspeicher
+	LD	A,FLAGL-REGL-2
+	SUB	C		; A = Nr. des Registers
+	BIT	5,A
+	JR	NZ,DOPP		; Doppelregister
+	RRCA			; /2
+	BIT	3,A
+	JR	Z,REGI		; Einfachregister
+;	LD	L,RAF		; Flags
+	BIT	0,B
+	JR	Z,FL1
+	LD	L,ZAF		; Flags Zweitregister
+FL1:	AND	7
+	LD	BC,BITTAB	; Bitmaske aus CAOS
+	ADD	A,C
+	LD	C,A
+	LD	A,(BC)		; Maske geholt
+	BIT	0,E
+	JR	Z,RESF
+	OR	(HL)		; Bit setzen
+	DB	01h	; LD BC,nn
+;
+RESF:	CPL
+	AND	(HL)		; Bit loeschen
+	LD	(HL),A
+	RET			; Monitor-Loop
+;
+; Einzelregister modifizieren
+;
+REGI:	BIT	0,B		; Zweitregister?
+	JR	Z,REGI1
+	ADD	A,12		; Einzelregister aus Zweitregistersatz
+REGI1:	ADD	A,RAF
+	LD	L,A
+	LD	(HL),E
+	RET
+;
+; Doppelregister modifizieren
+;
+DOPP:	RES	5,A
+	LD	L,RIY		; Registeradresse IY
+	CP	8
+	JR	Z,REGI3
+	LD	L,RSP		; Registeradresse SP
+	CP	10
+	JR	Z,REGI3
+	LD	L,PCN		; Registeradresse PC
+	CP	12
+	JR	Z,REGI3
+	CALL	REGI		; Registeradresse berechnen
+REGI3:	LD	(HL),E		; Low(Doppelregister) eintragen
+	INC	HL
+	LD	(HL),D		; High(Doppelregister) eintragen
+	RET
+;
+; Register anzeigen:
+;
+REGANZ:	LD	HL,(RSP)	; Anwender-Stack
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A		; HL = Inhalt von Stack
+	LD	(RTS),HL	; hier aktualisieren
+;
+; Registeranzeige
+;
+; PE:	Register in den TEMO-Arbeitszellen
+; VR:	HL, DE, BC, AF
+;
+REG:	CALL	PV1		; Registernamen erste Zeile
+	DB	OSTR
+	DB	'A  -FLAGS-- B C  D E  H L  M  IX   IY   ',0
+	LD	HL,RAF		; Start mit Register AF
+	CALL	PRLINE		; Erstregistersatz  AF bis IX+IY
+
+	CALL	PV1		; Registernamen zweite Zeile
+	DB	OSTR
+	DB	'A'' -FLAGS''- B''C'' D''E'' H''L'' M'' SP   (SP) ',0
+;	CALL	PRLINE		; Zweitregistersatz AF' bis SP + (SP)
+;	RET			; reinlaufen ...
+;
+; Auflisten der Registerinhalte (1 Zeile) ohne CR+LF da Zeile voll ist
+; PE:	HL	Zeiger auf Registerliste
+;
+PRLINE:	LD	C,(HL)		; Flags
+	INC	HL
+	LD	A,(HL)
+	INC	HL
+	CALL	AHSPC		; --A--
+
+	LD	B,8+1		; --Flags--
+	LD	DE,FLAGL	; FLAG-Bezeichner
+PRL1:	LD	A,' '		; Leerzeichen (Flag nicht gesetzt)
+	SLA	C
+	JR	NC,PRL2
+	LD	A,(DE)		; Zeichen des Flags
+PRL2:	INC	DE
+	CALL	DOCHR
+	DJNZ	PRL1
+
+	LD	B,3		; 3 Doppelregister:
+	CALL	WORDS		; -BC-DE-HL-
+	LD	A,(DE)
+	CALL	AHSPC		; --M--
+
+	LD	B,2		; 2 Doppelregister: IX, IY
+;
+WORDS:	LD	E,(HL)		; Ausgabe 16 bit-Wort
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	EX	DE,HL
+	CALL	HLHEX
+	EX	DE,HL
+	DJNZ	WORDS
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; SWITCH - Module listen, lesen, schalten:
+; Aufruf: SWITCH [Steckplatz [Steuerbyte]]
+;			L	E
+;
+	DW	0FDFDH
+	DB	'SWITCH',1
+	CP	1
+	JR	C,MODUL		; kein Argument -> Module auflisten
+	JR	Z,SWI2		; Modulzustand nur lesen/anzeigen
+	LD	D,E		; Steuerbyte
+	LD	C,A	; ARGN
+	LD	A,L		; Steckplatz
+	CP	3
+	JP	C,ERR		; RAM0, IRM und USER-ROM hier nicht schaltbar!
+	LD	A,C	; ARGN
+SWI2:	PUSH	AF
+	CALL	PV1
+	DB	MODU		; Modul lesen/schalten
+	LD	E,A
+	LD	A,L
+	CALL	AHSPC		; Steckplatz L anzeigen
+	LD	A,H
+	CALL	AHSPC		; Kennbyte Modul
+	LD	A,E
+	CALL	PV1
+	DB	AHEX		; Steuerbyte alt
+	POP	AF
+	DEC	A
+	JR	Z,SWI5		; das war nur lesen
+	LD	A,9
+	CALL	PV1
+	DB	CSTBT		; Pfeil nach rechts anzeigen
+	LD	A,D
+	CALL	PV1
+	DB	AHEX		; Steuerbyte neu
+SWI5:	JP	NL
+
+; alle Module auflisten:
+
+MODUL:	CALL	PV1
+	DB	OSTR
+	DB	ESC,'6'		; Systemcheck (int. Module)
+	DB	ESC,'5'		; Modulcheck (ext. Module)
+	DB	0
+	RET
+	;
+AHSPC:	CALL	PV1
+	DB	AHEX
+	CALL	PV1
+	DB	SPACE
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Display
+; Aufruf: DISPLAY Adresse [Zeilen [Bytes]]
+;
+	DEFW	0FDFDH
+	DB	'DISPLAY',3	; mind. 1 Parameter erforderlich
+	CALL	PV1
+	DB	DISP
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Modify
+; Aufruf: MODIFY Adresse [Bytes]
+;
+	DEFW	0FDFDH
+	DB	'MODIFY',3	; mind. 1 Parameter erforderlich
+MOD1:	CALL	PV1
+	DB	MODI
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Stackmodifizieren
+;
+	DEFW	0FDFDH
+	DEFM	'.',1
+	LD	HL,(RSP)	; Anwender-Stack als Adresse
+	LD	A,2		; 2 Parameter
+	LD	E,A		; 2 Byte parallel aendern
+	JR	MOD1
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Transformationsprogramm
+; nur in Stacktiefe 1 aufrufen !!!
+;
+; PE:	HL: Anfang
+;	DE: Ende+1
+;	BC: Wert
+;	A:  ARGN
+; PA:	HL: Anfang
+;	DE: Wert
+;	BC: Laenge
+;	A:  ARGN
+;	CY=0
+;
+FORM:	EX	DE,HL		; Anfang/Ende tauschen
+	DEC	HL		; ENDE-1
+	SBC	HL,DE		; Laenge berechnen
+	JR	C,RANGE		; Ende <= Anfang
+	INC	HL		; Laenge +1
+	EX	DE,HL		; Anfang wieder in HL
+	PUSH	BC		; Wert auf Stack legen
+	LD	B,D
+	LD	C,E		; Laenge jetzt in BC
+	POP	DE		; Wert jetzt in DE
+	RET
+;
+RANGE:	POP	HL		; Stack eine Ebene zurueck
+RANGE1:	CALL	PV1		; Aufruf RANGE1 wird von JEDIT mitgenutzt!
+	DB	OSTR		; Fehlermeldung anzeigen
+	DB	'INVALID RANGE',7,0
+	JP	NL		; CR,LF
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Berechnung Pruefsumme und CRC16
+; Aufruf: CRC Aadr Eadr+1
+;
+CRC:	DEFW	0FDFDH
+	DB	'CRC',1
+	CP	2		; 2 Argumente erforderlich
+	JR	Z,CRC0
+	CALL	HELP
+	DB	'CRC AADR EADR+1',0
+	;
+CRC0:	CALL	FORM		; Argumente transformieren
+
+; Berechnung Summe16 und CRC16: (HL=Adresse BC=Anzahl)
+
+fastcrc	equ	0		; schnelle CRC-Routine
+if	fastcrc			; dafuer 11 Byte laenger
+
+	ld	de,0		; Startwert fuer Summe
+	push	de
+	LD	DE,0FFFFH	; Startwert fuer CRC
+CH1:	LD	A,(HL)
+	ex	(sp),hl
+	add	a,l
+	ld	l,a		; Summe berechnen (auf Stack)
+	jr	nc,CH2
+	inc	h
+CH2:	ex	(sp),hl
+	ld	a,(hl)		; CRC berechnen (in DE)
+	XOR	D
+	LD	D,A
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	AND	0FH
+	XOR	D
+	LD	D,A
+	RRCA
+	RRCA
+	RRCA
+	PUSH	AF
+	AND	1FH
+	XOR	E
+	LD	E,A
+	POP	AF
+	PUSH	AF
+	RRCA
+	AND	0F0H
+	XOR	E
+	LD	E,A
+	POP	AF
+	AND	0E0H
+	XOR	D
+	LD	D,E
+	LD	E,A
+	CPI
+	JP	PE,CH1
+	ex	de,hl		; CRC in HL fuer Anzeige
+
+else	; fastcrc		; kuerzere aber langsamere CRC-Routine
+
+; 28.10.2022: neue CRC-Routine von
+; https://wikiti.brandonw.net/index.php?title=Z80_Routines:Security:CRC16
+
+	EX	DE,HL		; Adresse in DE
+	LD	HL,0		; Startwert fuer Summe
+	PUSH	HL		; Summe in (SP) berechnen
+	LD	HL,0FFFFH	; Startwert fuer CRC
+CRC1:	LD	A,(DE)
+	ex	(sp),hl		; Summe in HL		CRC auf Stack
+	add	a,l
+	ld	l,a		; Summe berechnen
+	jr	nc,CRC2
+	inc	h
+CRC2:	ex	(sp),hl		; Summe wieder auf Stack legen
+	PUSH	BC		; Byte-Anzahl sichern
+	LD	A,(DE)		; Byte holen
+	INC	DE		; naechste Adresse
+	XOR	H		; XOR mit HWT der CRC
+	LD	H,A
+	LD	B,8
+CRC3:	ADD	HL,HL		; nach links rotieren
+	JR	NC,CRC4		; wenn MSB gesetzt
+	LD	A,H
+	XOR	10H		; mit Polynom verknuepfen 
+	LD	H,A
+	LD	A,L
+	XOR	21H
+	LD	L,A
+CRC4:	DJNZ	CRC3		; Schleife ueber 8 Bit
+	POP	BC		; Zaehler zurueck
+	DEC	BC
+	LD	A,B		; Ende erreicht ?
+	OR	C
+	JR	NZ,CRC1
+endif
+
+; Berechnungsergebnis anzeigen:
+
+	CALL	PV1
+	DB	OSTR
+	DB	'CRC16=',0
+	CALL	HLHEX		; CRC anzeigen
+	POP	HL		; Summe vom Stack holen
+	CALL	PV1
+	DB	OSTR
+	DB	'SUM16=',0	; Summe anzeigen
+HLCR:	CALL	HLHEX
+NL:	CALL	PV1
+	DB	CRLF
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; I/O-Port lesen
+; Aufruf: IN Port
+;
+	DEFW	0FDFDH
+	DB	'IN',1
+	DEC	A		; 1 Parameter erforderlich
+	JR	Z,IN0
+	CALL	HELP
+	DB	'IN PORT',0
+	;
+IN0:	LD	B,H
+	LD	C,L		; Portadresse in BC
+	IN	A,(C)		; Eingabe
+AHCR:	CALL	PV1
+	DB	AHEX		; und Wert anzeigen
+	JP	NL		; CR,LF
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; I/O-Port schreiben
+; Aufruf: OUT Port Byte [Byte ...]
+;
+	DEFW	0FDFDH
+	DB	'OUT',1
+	CP	2		; mind. 2 Parameter erforderlich
+	JR	NC,OUT0
+	CALL	HELP
+	DB	'OUT PORT BYTE (BYTE ...)',0
+	;
+OUT0:	LD	B,H
+	LD	C,L		; Portadresse in BC
+	LD	HL,ARG1
+OUT1:	DEC	A		; noch ein Parameter?
+	RET	Z		; nein, fertig
+	INC	HL
+	INC	HL
+	LD	D,(HL)		; Ausgabebyte
+	OUT	(C),D
+	JR	OUT1
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Speicherbereiche mit Daten fuellen
+; Aufruf: FILL Aadr Eadr+1 [Byte [Byte ...]]
+;
+	DEFW	0FDFDH
+	DB	'FILL',1
+	SUB	2		; mind. 2 Parameter erforderlich
+	JR	NC,FILL0
+	CALL	HELP
+	DB	'FILL AADR EADR+1 (BYTE ...)',0
+	;
+FILL0:	CALL	FORM		; Argumente transformieren / HL=Anfang, BC=Anzahl
+	EX	DE,HL		; DE = Adresse
+	LD	HL,ARG3		; Bytes ab ARG3 entnehmen
+	OR	A		; 2 Parameter fuer Adressen abziehen
+	JR	NZ,FILL1	; mehr als 2 Parameter
+	INC	A		; 3. Parameter annehmen
+	LD	(HL),0		; ARG3=0 wenn ohne Byte aufgerufen
+FILL1:	PUSH	AF		; Anzahl Bytes
+	PUSH	HL		; Beginn der Datenbytes
+FILL2:	LDI			; ein Byte eintragen
+	JP	PO,FILL3	; BC=0 -> fertig
+	INC	HL		; ARGn = 2 Byte
+	DEC	A
+	JR	NZ,FILL2	; noch ein Byte
+	POP	HL
+	POP	AF
+	JR	FILL1		; wieder von vorn
+	;
+FILL3:	POP	HL
+	POP	AF
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Speicherbereiche austauschen
+; Aufruf: EXCH Aadr Eadr+1 Adresse2
+;
+	DEFW	0FDFDH
+	DB	'EXCH',1
+	CP	3		; 3 Parameter erforderlich
+	JR	Z,EXCH0
+	CALL	HELP
+	DB	'EXCH AADR EADR+1 ADR2',0
+	;
+EXCH0:	CALL	FORM		; Argumente transformieren
+EXCH:	LD	A,(DE)
+	LDI
+	DEC	HL
+	LD	(HL),A
+	INC	HL
+	JP	PE,EXCH
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Speicherbereich verschieben (kopieren)
+; Aufruf: COPY Aadr Eadr+1 Adresse2
+;
+	DEFW	0FDFDH
+	DB	'COPY',1
+	CP	3		; 3 Parameter erforderlich
+	JR	Z,MOVE0
+	CALL	HELP
+	DB	'COPY AADR EADR+1 ADR2',0
+	;
+MOVE0:	CALL	FORM		; Argumente transformieren
+	SBC	HL,DE		; Kopierrichtung feststellen
+	ADD	HL,DE
+	JR	C,MOVE1
+	LDIR			; nach vorn -> LDIR (Quelle > Ziel)
+	RET
+;
+MOVE1:	ADD	HL,BC
+	EX	DE,HL
+	ADD	HL,BC
+	EX	DE,HL
+	DEC	HL
+	DEC	DE
+	LDDR			; nach hinten -> LDDR (Quelle < Ziel)
+	RET
+IF CALC
+; Taschenrechner aus CALC verwenden
+ELSE ; CALC
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Arithmetik	+/- 16 bit und * 32 Bit
+; Aufruf: ARITH Zahl1 Zahl2
+;
+	DW	0FDFDH
+	DB	'ARITH',5	; 2 Argumente erforderlich
+	PUSH	HL
+	ADD	HL,DE		; Summe berechnen
+	LD	A,'+'
+	CALL	DOCHR
+	CALL	HLHEX		; HL+DE anzeigen
+	POP	HL
+	PUSH	HL
+	OR	A		; CY=0
+	SBC	HL,DE
+	LD	A,'-'
+	CALL	DOCHR
+	CALL	HLHEX		; HL-DE anzeigen
+
+	LD	A,'*'
+	CALL	DOCHR
+
+	POP	BC		; Faktor aus Stack
+	LD	HL,0		; Multiplikation
+	LD	A,16
+	RR	D
+	RR	E
+HLP1:	JR	NC,HLP2
+	ADD	HL,BC
+HLP2:	RR	H
+	RR	L
+	RR	D
+	RR	E
+	DEC	A
+	JR	NZ,HLP1
+	CALL	HLHEX		; Hoeherwertiger Teil
+	LD	A,8
+	CALL	PV1		; Leerzeichen zurueck nehmen
+	DB	CRT
+	EX	DE,HL		; Niederwertiger Teil
+	JP	HLCR		; anzeigen und CR+LF
+ENDIF ; CALC
+;-------------------------------------------------------
+; Menuewort FIND		Suche nach Datenbyte(s) ab ADR
+; (Suchbereich immer volle 64K, also auch ueber FFFFh hinaus)
+;
+; Syntax: %FIND ADR Byte1 [Byte2] ... [Byte9]
+;
+	DW	0FDFDH
+	DB	'FIND',1
+	CP	2		; mindestens 2 Argumente erforderlich
+	JR	NC,FIND0
+	CALL	HELP
+	DB	'FIND ADR BYTE (BYTE ...)',0
+	;
+FIND0:	LD	BC,0		; Laenge Suchbereich
+FI2:	LD	DE,ARG2		; erstes zu suchendes Datenbyte
+	LD	A,(DE)
+	CPIR
+	RET	PO		; Byte nicht gefunden
+	PUSH	BC
+	PUSH	HL		; merken wie weit wir sind...
+	LD	BC,(ARGN-1)	; (ARGN) = Anzahl Datenbytes + 1
+	DJNZ	FI4		; B=Anzahl Datenbytes
+	;
+FI3:	INC	DE		; naechstes Byte (naechstes ARG)
+	INC	DE
+	LD	A,(DE)		; holen
+	CP	(HL)		; und vergleichen
+	INC	HL		; naechstes Byte (Speicher)
+	JR	NZ,FI6		; unterschiedlich
+FI4:	DJNZ	FI3		; weitere Datenbytes?
+	POP	HL
+	PUSH	HL		; gesuchte Byte(s) gefunden
+	DEC	HL
+	CALL	HLCR		; Adresse anzeigen und neue Zeile
+FI5:	CALL	PV1		; Tastatureingabe abwarten
+	DB	KBD
+	CP	3		; BRK bricht ab, alle anderen Tasten: weiter
+FI6:	POP	HL
+	POP	BC
+	JR	NZ,FI2		; nicht BRK, also weiter suchen
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; COMPARE - Vergleich zweier Speicherbereiche ab Adresse1 und Adresse2
+; Aufruf: CMP ADR1 ADR2
+;    Nach jedem unterschiedlichen Byte wird auf eine Taste gewarten.
+;    Es wird solange verglichen, bis man BRK drueckt.
+;
+	DW	0FDFDH
+	DB	'CMP',1
+	CP	2		; 2 Argumente erforderlich
+	JR	Z,CPA1
+	CALL	HELP
+	DB	'CMP ADR1 ADR2',0
+	;
+CPA1:	LD	A,(DE)
+	CP	(HL)		; Bytes vergleichen
+	JR	Z,CPA5		; identisch, weiter zur naechsten Adresse
+	LD	B,2		; wenn unterschiedlich:
+	JR	CPA3		; 2 Adresse/Inhalt-Paare anzeigen
+	;
+CPA2:	CALL	PV1		; dazwischen <>
+	DB	OSTR
+	DB	' <> ',0
+CPA3:	CALL	PV1
+	DB	HLHX		; Anzeige Adresse
+	LD	A,(HL)
+	CALL	PV1
+	DB	AHEX		; und deren Inhalt
+	EX	DE,HL
+	DJNZ	CPA2
+	CALL	NL		; neue Zeile
+	CALL	PV1		; Tastatureingabe abwarten
+	DB	KBD
+	CP	3
+	RET	Z		; BRK bricht ab, alle anderen Tasten: weiter
+CPA5:	INC	DE		; Adressen+1
+	INC	HL
+	JR	CPA1
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Setzen oder Anzeigen eines Unterbrechungspunktes
+; Aufruf: BREAK [Adresse]
+;
+	DEFW	0FDFDH
+	DB	'BREAK',1
+	LD	DE,NL		; CR,LF
+	PUSH	DE		; Auf Stack als RET-Adresse ablegen
+;
+; Breakpoint setzen/laden
+; PE:	A=0	nur anzeigen
+;	A>0	Breakpoint setzen
+;	HL	Adresse
+;
+BREAK1:	OR	A		; Argument?
+	JR	Z,BREAK0	; A=0, nur anzeigen
+	LD	(BREAK),HL	; Breakpoint setzen
+BREAK0:	CALL	PV1
+	DB	OSTR
+	DB	'BREAK=',0
+	LD	HL,(BREAK)	; aktueller Unterbrechungspunkt
+HLHEX:	CALL	PV1
+	DB	HLHX		; anzeigen
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; RST 38-Routine fuer Unterbrechungspunkt im RAM
+;
+RSTROM:	PUSH	AF
+	 PUSH	HL
+	  LD	HL,(BREAK)	; Adresse Unterbrechungspunkt
+	  LD	A,(BRKI)	; urspruenglicher Wert
+	  LD	(HL),A		; wieder eintragen
+	  LD	A,3
+	  LD	(MODE),A	; weiter MODE 3: Schrittbetrieb mit Steuerung
+	 POP	HL
+	JR	ICTC1		; weiter wie bei CTC-Breakpoint im ROM
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; CTC-Interruptroutine fuer Unterbrechungspunkt im ROM
+;
+INTROM:	PUSH	AF
+	 LD	A,3
+	 OUT	(CTC0),A	; CTC abschalten
+	 CALL	EIRETI		; Interrupt freigeben
+ICTC1:	POP	AF
+	LD	(RSP),SP	; Register SP erst einmal merken
+	DI
+	LD	SP,RSP		; Register hier rueckwaerts ablegen...
+	EXX
+	PUSH	HL		; Register HL'
+	PUSH	DE		; Register DE'
+	PUSH	BC		; Register BC'
+	EXX
+	EX	AF,AF'
+	PUSH	AF		; Register AF'
+	EX	AF,AF'
+	PUSH	IY		; Register IY
+	PUSH	IX		; Register IX
+	PUSH	HL		; Register HL
+	PUSH	DE		; Register DE
+	PUSH	BC		; Register BC
+	PUSH	AF		; Register AF
+	LD	SP,(RSP)	; Nach Stackablage SP wieder wie zuvor
+	LD	HL,(PCN)	; aktuellen Wert von PC neu
+	LD	(PCO),HL	; nach PC alt umladen (fuer Reassembler)
+	POP	HL		; PC (RET-Adresse zu Anwenderprogramm)
+	LD	(RSP),SP	; Register SP jetzt endgueltig
+	LD	(PCN),HL	; Adresse fuer Fortsetzung Anwenderprogramm
+	EX	DE,HL		; Zum Vergleich in DE bereithalten
+	POP	HL		; noch einen Wert vom Stack holen
+	LD	(RTS),HL	; naechster Wert von Stack
+	PUSH	HL		; Stack wieder auf richtigen Wert
+	EI
+
+	CALL	PV1
+	DB	KBDZ		; Taste gedrueckt? (Quittieren)
+	JR	NC,ICTC3	; nein
+	CP	13H		; Taste Stop?
+	JR	Z,ICTC2		; ja, dann Wechsel zu MODE 3
+
+ICTC3:	LD	HL,(BREAK)
+	SBC	HL,DE		; BREAK-Adresse erreicht?
+	JR	Z,ICTC2		; ja, dann Wechsel zu MODE 3
+
+	LD	A,(MODE)
+	DEC	A		; MODE 1?
+	JP	Z,GO4		; ja, Programm weiter abarbeiten
+	JR	ANZ0
+
+ICTC2:	LD	A,3		; Uebergang zu MODE 3 (Eingabemodus)
+	LD	(MODE),A
+ANZ0:	CALL	BILD2		; Daten fuer TEMO-Fenster laden/aktivieren
+	JP	ANZ		; dann zur Registeranzeige
+	;
+EIRETI:	EI
+	RETI
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Sprung in ein Anwenderprogramm mit Initialisierung des Unterbrechungspunktes
+; (mit RST 38 - wenn im RAM)
+; (mit CTC-Steuerung - wenn im ROM)
+; Aufruf: GO [Adresse]
+;
+	DEFW	0FDFDH
+	DB	'GO',1
+	AND	A		; wenn keine Adresse, dann
+	JR	Z,GO0		; weiter an abgespeicherter PC-Adresse
+	LD	(PCN),HL	; neue PC-Adresse setzen
+	ld	de,mem1
+	ld	bc,4		; maximal 4 Byte
+	ldir			; Kopie des aktuellen Befehls anlegen
+GO0:	IN	A,(89h)
+	OR	1Fh		; Lautstaerke = 0
+	OUT	(89h),A
+GO1:	LD	HL,(BREAK)	; Unterbrechungspunkt
+	LD	A,(HL)
+	LD	(BRKI),A	; Inhalt hier merken
+	LD	(HL),0FFH	; RST 38H eintragen
+	LD	A,(HL)		; Wert zur Kontrolle zuruecklesen
+	INC	A		; wenn RAM, dann ist das FFH
+	JR	Z,GO2		; RAM: Mode 0 (Echtzeitbetrieb)
+	LD	A,1		; ROM: Mode 1 (Schrittbetrieb ohne Anzeige)
+GO2:	LD	(MODE),A	; MODE eintragen
+GO3:	CALL	BILD1		; Daten fuer USER-Fenster laden/aktivieren
+	LD	HL,(ZHL)	; HL'
+	LD	DE,(ZDE)	; DE'
+	LD	BC,(ZBC)	; BC'
+	EXX			; alle Zweitregister sind geladen
+	LD	HL,(ZAF)	; AF'
+	PUSH	HL
+	POP	AF
+	EX	AF,AF'		; jetzt auch AF'
+	LD	BC,(RBC)	; BC
+	LD	SP,(RSP)	; ab hier wird der USER-Stack benutzt
+GO4:	LD	HL,(PCN)
+	PUSH	HL		; PC auf Stack
+	LD	HL,(RAF)
+	PUSH	HL		; AF auf Stack
+;	LD	IX,(RIX)	; IX darf sich nicht aendern!
+	LD	IY,(RIY)	; Wert in IY laden
+	LD	HL,(RHL)	; Wert in HL laden
+	LD	DE,(RDE)	; Wert in DE laden
+	JP	GORAM-RST38+0038H	; den Rest im RAM0 abarbeiten...
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Programm im Schrittbetrieb abarbeiten
+; Aufruf: STEP [Adresse]
+;
+	DEFW	0FDFDH
+	DB	'STEP',1
+	LD	DE,(CURSO)	; Cursorposition
+	LD	(WINDOW2+5),DE	; in Fensterdaten abspeichern
+	AND	A		; Adresse angegeben?
+	JR	Z,ANZ2		; nein, weiter wo wir waren
+ANZ1:	LD	(PCN),HL	; neue PC-Adresse fuer Schrittbetrieb einstellen
+ANZ2:	IN	A,(89h)
+	OR	1Fh		; Lautstaerke = 0
+	OUT	(89h),A
+	LD	A,3		; STEP mit MODE3 starten
+	LD	(MODE),A
+	ld	hl,(PCN)	; HL = Adresse naechster Befehl
+	ld	de,mem1
+	ld	bc,10
+	ldir			; Kopie des aktuellen Befehls anlegen
+;
+; Einsprung von Unterbrechungspunkt (RST38 oder CTC-Interrupt)
+;
+ANZ:	LD	SP,(SYSP)	; jetzt TEMO-Stack verwenden!
+	CALL	PV1
+	DB	HOME		; Cursor in Home-Position setzen fuer
+	CALL	REG		; Registeranzeige
+	XOR	A	; CY=0
+	LD	(MS),A		; Markenschalter setzen
+	LD	H,A
+	LD	L,A
+	LD	(CMODE),HL	; CMODE=0 und DMODE=0 fuer Reassembler
+	ld	hl,(PCO)	; HL = Adresse letzter Befehl
+	ld	de,mem2		; DE = Adresse der Kopie im RAM0
+	sbc	hl,de		; = Offset fuer Reassembler
+	LD	(ROFFS),HL	; Ausgabe-Offset fuer Reassembler
+	CALL	DISASS		; 1. List-Zeile (letzter Befehl)
+	LD	A,1DH
+	LD	(CURSO),A	; Cursorspalte setzen
+	XOR	A
+	LD	(DMODE),A	; Specialmode zuruecksetzen da neue Adresse
+	CALL	BREAK0		; Breakpoint anzeigen (A=0)
+	ld	hl,(PCN)	; HL = Adresse naechster Befehl
+	ld	de,mem1		; Adresse der Kopie im RAM0
+	and	a	; CY=0
+	sbc	hl,de		; = Offset fuer Reassembler
+	LD	(ROFFS),HL	; Ausgabe-Offset fuer Reassembler
+	LD	B,2		; 2 weitere List-Zeilen
+	LD	A,11h		; aktuelle Zeile rot/blau
+ANZ3:	LD	(COLOR),A	; Textfarbe einstellen
+	PUSH	BC
+	CALL	DISASS		; List-Zeile (aktueller+naechster Befehl)
+	CALL	NL		; CR,LF
+	POP	BC
+	ld	a,39h		; dann wieder weiss/blau
+	DJNZ	ANZ3		; wiederholen
+	LD	A,(MODE)
+	CP	2		; mit Tastaturabfrage?
+	JP	Z,GO3		; nein, weiter abarbeiten
+	CALL	PV1
+	DB	OSTR
+	DB	2		; Zeile loeschen
+	DB	' WEITER MIT: CR, LF, BRK, G, U, I, S?',0
+ANZ4:	CALL	PV1		; Zeicheneingabe (Tastatur)
+	DB	INTB
+	AND	0DFH		; Upcase fuer Kleinbuchstaben
+	CP	'U'
+	JR	Z,USER		; U = Anzeige USER-Bildschirm		OK.
+	CP	3
+	JR	Z,BBRK		; BRK = -> Monitor-Loop			OK.
+	CP	CR
+	JP	Z,GO3		; CR = einen Befehl im Schrittbetrieb abarbeiten
+	CP	LF
+	JR	Z,TGO		; LF = Go und Breakpoint auf naechsten Befehl
+	CP	'I'
+	JR	Z,IGNOR		; I = Ignore: naechsten Befehl ueberspringen
+	CP	'G'
+	JP	Z,GO1		; G = Go: Programm weiter abarbeiten (MODE 0/1)
+	CP	'S'
+	JR	NZ,ANZ4		; S = Stepbetrieb mit laufender Anzeige
+	LD	A,2
+	JP	GO2		; MODE 2: Stepbetrieb mit Anzeige (Step)
+
+BBRK:	LD	HL,(WINDOW2+5)	; abgespeicherte Cursorposition
+	LD	(CURSO),HL	; Cursor-Position regenerieren
+	JP	PRSE		; LOOP
+;
+; LF = neuer Unterbrechungspunkt auf naechsten Befehl setzen
+;
+TGO:	CALL	NXTST		; Berechnung Befehlslaenge
+	LD	(BREAK),HL	; neuer Unterbrechungspunkt
+	JP	GO1
+;
+; I = naechsten Befehl ignorieren/ueberspringen
+;
+IGNOR:	LD	HL,(PCN)	; aktuelle PC-Adresse
+	LD	(PCO),HL	; nach PC alt kopieren
+	CALL	NXTST		; Berechnung der naechsten Adresse
+	JP	ANZ1		; PC_neu eintragen
+;
+; U = USER-Bildschirm anzeigen und Tastatureingabe abwarten
+;
+USER:	ld	hl,(curso)
+	push	hl
+	CALL	BILD1		; USER-Bild/Fenster laden/aktivieren
+	CALL	PV1
+	DB	KBD
+	CALL	BILD2		; TEMO-Bild/Fenster laden/aktivieren
+	pop	hl
+	ld	(curso),hl
+	JP	ANZ4
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Unterprogramm: TEMO initialisieren:
+;
+INIT:	CALL	BILD2		; Daten fuer TEMO-Fenster laden/aktivieren
+INIT2:	LD	DE,0038H	; Adresse von RST38
+	LD	HL,RST38	; Hilfsprogramm vom ROM
+	LD	BC,RSTEND-RST38
+	LDIR			; in den RAM0 kopieren
+;
+; die folgenden 4 Befehle koennen entfallen, da Werte bekant sind:
+;	IN	A,(88H)
+;	LD	(nn1-RST38+38H+1),A	; Sollzustand PIO-A
+;	LD	A,(IX+4)
+;	LD	(nn2-RST38+38H+1),A	; Sollzustand Port 86H
+;
+	LD	A,I		; Init CTC-Interrupt
+	LD	H,A
+	LD	L,0E8H		; Interrupt-Vektor CTC0
+	LD	DE,ICTC-RST38+38H	; Interuptroutine im RAM0
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	ret
+;---------------------------------------
+;
+; Unterprogramm zum Berechnen der Adresse des naechsten Befehls
+; PE:	PCN	Adresse aktueller Befehl
+; PA:	HL	Adresse naechster Befehl
+;
+NXTST:	ld	hl,mem1		; Kopie des aktuellen Befehls im RAM0
+	CALL	LENG		; Befehlslaenge bestimmen in Reassembler...
+	LD	A,(MS)
+	BIT	2,A		; folgt Adresse nach UREL?
+	JR	Z,NEWPC
+	INC	BC		; dann noch zwei Bytes mehr!
+	INC	BC
+NEWPC:	ld	hl,(PCN)	; aktuelle PC-Adresse
+	ADD	HL,BC		; Laenge addieren
+	RET
+;
+;*__*__*__*__*__*__*__*__*__*__*__*__*__
+;
+; Stackpointer anzeigen (zum Test...)
+;
+if stack
+	DEFW	7F7FH		; verstecktes Menuewort fuer CAOS
+	DB	'STACK ',1
+	LD	HL,2
+	CALL	STACK1
+	JP	CEXIT		; USER-ROM abschalten (Code von JEDIT/CALC benutzen)
+;
+	DEFW	0FDFDH		; verstecktes Menuewort fuer TEMO
+	DB	'STACK ',1
+	LD	HL,0
+STACK1:	ADD	HL,SP
+	CALL	HLHEX		; Stackpointer anzeigen
+
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	JP	HLCR		; und Stackinhalt, danach CR,LF
+endif
+;
+; Hilfe-Funktion, Aufruf per CALL gefolgt von Hilfetext
+;
+HELP:	CALL	PV1
+	DB	OSTR,0BH,9,0	; Cursor hoch und 1x nach rechts
+	POP	HL		; Zeichenkette von Stack holen
+	CALL	PV1
+	DB	ZKOUT		; anzeigen
+	JP	NL		; und neue Zeile
+TEND:	; TEMO-Ende

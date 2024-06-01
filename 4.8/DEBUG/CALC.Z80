@@ -1,0 +1,854 @@
+;-------------------------------------------------------------------------------
+;	CAOS-Taschenrechner
+;
+; (verwendet fuer die Arithmetik den Basic-Interpreter)
+;		ROM-Version fuer CAOS 4.3+
+;
+; Benutzt den BASIC-Speicher von 0300H bis 09EFH (ca.2 KByte), und
+; sichert/regeneriert den urspruenglichen Inhalt im versteckten IRM
+;
+; Frank Ludwig, 15.04.2012 - 15.05.2021
+;-------------------------------------------------------------------------------
+;
+; Mario Leubner 16.11.2013:
+; - Kommentare angepasst, deutsche Umlaute entfernt
+; - an Uebersetzung mit CP/M-Assembler angepasst
+; - INTPBR in INTPRB umbenannt
+; - BASZEL in WSP umbenannt
+; - CAOS-Prolog direkt als 7F7Fh geschrieben
+; - Menuewort fuer TEMO eingebaut
+;
+; Mario Leubner 18.11.2013:
+; - IY-Register retten fuer TEMO-Routine
+; - Menuewort CALC geaendert in "?"
+;
+; Frank Ludwig 24.11.2013:
+; - geaendertes Verhalten der Steuertasten im CALC-Fenster (Vorschlag von Mario)
+;    Sh+CLR : schliessen + Aufruf urspruengliche Funktion 
+;    BRK    : schliessen + Rueckgabe des Rechenergebnis
+;    ENTER in leerer Eingabezeile : schliessen
+; - UP fuer Sh+CLR auf feste Adresse 0108h gelegt, Code optimiert
+; - Programmstart (>?, %?c) Code optimiert 
+; - Stringspeicher auf 40 Byte begrenzt
+;
+; Mario Leubner 02.12.2013:
+; - neuen Code von Frank Ludwig uebernommen und angepasst
+;
+; Mario Leubner 15.12.2013:
+; - Auf die Nutzung von ARGC verzichtet, damit CAOS 4.6 dort den urspruenglichen
+;   Schaltzustand des USER-ROM uebergeben kann.
+;
+; Frank Ludwig 29.12.2013:
+; - Speicherschaltung fuer das Debugger-Segment im User-ROM optimiert
+; - keine Fehlermeldung wenn RAM0 aus oder schreibgeschuetzt ist
+; - Pruefung ob CAOS-Arbeitsbereich innerhalb des CALC-Arbeitsbereichs liegt
+;
+; Mario Leubner 31.12.2013:
+; - Abfrage von MIXIT durch Anfrage von IX ersetzt
+;
+; Mario Leubner 04.01.2014:
+; - REL-Option von TEMO-Menuewort entfernt
+;
+; Frank Ludwig 11.01.2014:
+; - UP fuer Sh+CLR geaendert, kein selbstmodifizierender Code mehr
+; - Der Ausdruck darf im CALC-Fenster ab Spalte 1 eingegeben werden
+;
+; Frank Ludwig 09.03.2014:
+; - Die zusaetzliche Eingabeaufforderung, falls CALC ohne Parameter aufgerufen
+;   wurde, ist unnoetig und wurde entfernt. 
+;
+; Frank Ludwig 10.03.2014:
+; - Hilfe bei Aufruf ohne Ausdruck eingebaut
+;
+; Frank Ludwig 23.02.2021:
+; - Ein-/Ausgabe der Hexadezimalzahlen auf 24Bit erweitert
+;
+; Frank Ludwig 27.02.2021:
+; - kuerzerer Code fuer den Aufruf der UP's im BASIC-ROM
+;
+; Mario Leubner 14.03.2021:
+; - 6stellige HEX-Ausgabe nur, wenn die ersten beiden Stellen <> 00 sind
+;
+; Mario Leubner 28.03.2021:
+; - Code-Optimierung (Mitnutzung von HLHEX aus TEMO-Ebene)
+;
+; Frank Ludwig 15.05.2021:
+; - kuerzerer Code fuer CRHEX 
+; - Sonderbehandlung fuer Zeichenfolge "DEF" (=Token 94H) eingebaut
+;
+;-------------------------------------------------------------------------------
+;
+; BASIC-Arbeitszellen:			..abweichende Bezeichnung in BASIC:
+WSP	EQU	0300H		; BASIC-Notizspeicher
+STDPTR	EQU	0356H		; Stackende
+CULINO	EQU	0358H		; aktuelle Zeilennummer
+INPBUF	EQU	0362H		; Eingabepuffer			INPBUF+1
+EOINPB	EQU	INPBUF+74	; Eingabepufferende
+DATYPE	EQU	03AEH		; Datentyp
+MEMSIZ	EQU	03B0H		; Speicherende
+WRA1	EQU	03E5H		; Arithmetikregister 1
+INTPRB	EQU	03EAH		; PRINT-Puffer
+EXTFLG	EQU	03FCH		; Flag fuer BASIC-Erweiterungen
+;
+; Startadresse Drucktasten-UP
+DTUP    EQU	0108H   	; Zwischen 108h und 150h ist momentan eine
+				; Luecke in BASEX. Das kommt daher, dass der
+				; Bereich D8..108h eigentlich von SERVICE.KCC
+				; kommt und der Bereich ab 150h von BASEX.KCC
+
+;
+; CALC-Arbeitszellen im RAM (nach BASIC-Programm):
+;
+BSTRSZ	EQU	40		; 40 Byte Stringspeicher
+;
+BASSP	EQU	047FH		; Basic-Stack (bei CALC4 045FH)
+BASEND	EQU	BASSP+BSTRSZ	; Ende Stringspeicher
+MCBEG	EQU	BASEND+1	; MC-Code fuer den Sprung ins Basic
+;
+OMONI	EQU	MCBEG+UPEND-UPBEG	; 128 Byte Monitor-RAM gesichert
+OSYSP	EQU	OMONI+SYSP-MONI		; Original von SYSP
+OOUTB	EQU	OMONI+OUTAB-MONI	; Original von OUTAB
+OUOUT	EQU	OMONI+UOUT1+1-MONI	; Original von UOUT1
+NFTAST	EQU	OMONI+FTAST-MONI	; Neuer Wert fuer FTAST
+;
+; Hinter OMONI: Sicherung des Inhaltes des CALC-Fensters
+OVRAM	EQU	OMONI+128	; VRAM
+OPXRAM	EQU	OVRAM+120	; Pixel-RAM
+;
+CSTACK  EQU	OPXRAM+960	; CALC-Stack 68 Bytes
+CALCSP	EQU	CSTACK+68
+OP88	EQU	CALCSP		; Port 88H Orig.
+NP88	EQU	OP88+1		; Port 88H Neu
+OSP	EQU	NP88+1		; Stack Orig.
+PRGEND	EQU	OSP+2		; Ende Arbeitszellen (Adr.09EFH)
+;
+; Adressen aus dem BASIC-ROM:
+BRAMST	EQU	0C0BDH		; Notizspeichererstbelegung	RAMST
+TOKTBB	EQU	0C120H		; Wortliste im BASIC		MNEMTB-1
+SNALY	EQU	0CD3AH		; Arithmetik
+TEXTO	EQU	0D1C9H		; Ausgabe ASCIIZ-Zeichenkette
+TEXTO1	EQU	0D1CCH		; Stringausgabe
+NEW1	EQU	0C641H		; Notizspeicher Init, NEW
+SGN1	EQU	0D6AEH		; Uebernahme Zahl aus Reg. BADE nach WRA1
+INTMV1	EQU	0D745H+6	; Ganzzahliger Teil aus WRA1 nach CDE	       
+NUMKON	EQU	0D834H		; Zahl formatiert in PRINT-Puffer
+TOKTBC	EQU	0E00CH		; Wortliste im CAOS
+;
+; CALC-Arbeitszellen:
+MONI	EQU	ARGC	; 0B780H = Monitor-RAM (128 Byte / werden gesichert!)
+;
+RAM0ON	EQU	0AH		; RAM0 an und Schreibschutz aus
+
+; Undokumentierter Opcode als Macro:
+;	RES	BI,(IX+DISP),A
+RESIXA	MACRO	BI,DISP
+	 DB	0DDh,0CBh,DISP
+	 DB	BI SHL 3 OR 10000111b
+	ENDM
+;
+;	SET	BI,(IX+DISP),A
+SETIXA	MACRO	BI,DISP
+	 DB	0DDh,0CBh,DISP
+	 DB	BI SHL 3 OR 11000111b
+	ENDM
+;--------------------------------------
+; Programmstart:
+;--------------------------------------
+	DW	0FDFDH		; Menuewort von TEMO
+	DB	'?',1FH		; hier ebenfalls unsichtbar
+CALC1:	CALL	LTRIM		; Aufruf mit Parameter ?
+	JR	Z,CHELP		; nein => Fehlermeldung
+	CALL	RAMSAV		; Speicher freischaufeln und initialisieren
+	LD	E,ERRM
+	JP	C,PV3		; Fehler 
+	CALL	PRCALC		; Ausdruck berechnen
+	LD	HL,(OSYSP)	; SYSP zurueck
+	LD	(SYSP),HL
+	CALL	RAMRET		; gesicherten RAM zurueck aus verstecktem IRM
+	RET
+CHELP:	CALL	PV1
+	DB	OSTR
+	DB	0BH,9,'? Ausdruck',CR,LF,0
+	RET
+;
+	DW	7F7FH		; Menuewort von CAOS
+	DB	'?c',1FH	; Ausdruck als Parameter moeglich
+	CALL	CALC1		; Funktion wie in TEMO
+	JR	CEXIT		; USER-ROM abschalten!
+;
+; Initialisierung der "Drucktaste" Shift+CLR
+;--------------------------------------
+	DW	7F7FH
+	DB	'?i',1
+	LD	HL,(HCADR)	; alte Serviceroutine
+	LD	DE,DTUP		; neue Serviceroutine
+	AND	A		; (CY:=0)
+	SBC	HL,DE		; bereits installiert ?
+	JR	Z,CEXIT		; dann fertig
+	ADD	HL,DE
+	LD	(HCADR),DE	; neue Routine eintragen
+	PUSH	HL
+	LD	HL,DTBEG	; Vorlage im ROM
+	LD	BC,DTEND-DTBEG
+	LDIR			; Code kopieren
+	POP	HL
+	LD	(DTUP-DTBEG+OHCADR+1),HL ; alte Routine merken
+;--------------------------------------
+CEXIT:	LD	DE,(ARGC-1)	; D = urspruenglicher Schaltzustand USER-C
+	JP	JEXIT3		; gleichen Code von JEDIT mit benutzen!
+;	LD	A,2		; USER-ROM
+;	LD	L,A		; abschalten
+;	LD	DE,MODU		; D=0, E=MODU
+;	JP	PV3		; zuerst USER-ROM ausschalten, dann zu CAOS
+;--------------------------------------
+;
+; Drucktasten Serviceroutinen: 
+;--------------------------
+; Fenster fuer die Berechnung
+;--------------------------
+;
+DTSR:	EX	AF,AF'
+	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	PUSH	IY
+	CALL	RAMSAV		; Speicher freischaufeln und initialisieren
+	JR	C,DTEX1		; Ueberlappung mit CAOS-Arbeitsbereich
+;
+; Fenster einstellen und Inhalt retten
+				; DE=OVRAM
+	LD	HL,DTFT		; 2.Drucktasten-UP aktivieren
+				; (Rueckgabe des Ergebnisses)
+	LD	(HCADR),HL
+	LD	A,(IX+1)	; Port 84H
+	PUSH	AF		; sichern
+	RES	1,A		; Pixelebene
+	SET	3,A		; niedrige Farbaufloesung
+	LD	(IX+1),A	; (OUT 84 erledigt CRT)
+	LD	HL,STBT
+	LD	(HL),12H	; ESC aktiv, schreiben COLOR-IRM aus
+	AND	1		; sichtbares Fenster
+	ADD	'1'		; zum Aktiven machen	CY=0
+	CALL	PV1
+	DB	CRT
+	LD	HL,328H		; Fenstergroesse (40x3 Zeichen)
+	LD	(WINLG),HL
+	SBC	HL,HL		; HL:=0
+	LD	(WINON),HL	; Fensteranfang
+	LD	(INTPRB),HL	; Printpuffer loeschen
+	CALL	CPYWND		; Pixel und VRAM vom Fenster sichern (CY ist 0)
+	CALL	PV1
+	DB	OSTR
+	DB	12H,CLS,0	; Scroll-Modus,CLS
+;
+; Ausdruecke abfragen und berechnen bis BRK oder nichts eingegeben wurde
+;
+DTLOOP:	CALL	INPUT		; Ausdruck anfordern
+	JR	C,DTERG		; CY=1, raus und Ergebnis zurueckgeben
+	JR	Z,DTEXIT	; ZF=1, raus
+	CALL	PRCALC		; berechnen
+	JR	DTLOOP
+;
+DTEX1:	LD	A,7		;bei Fehler in RAMSAV
+	CALL	PV1		;BEEP
+	DB	CRT
+	JR	DTEX2		;und raus, CY' ist 0
+;
+; Drucktaste im CALC-Fenster, Aufruf der Originalfunktion
+; (2. Drucktasten-Serviceroutine innerhalb vom CALC-Fenster)
+;---------------------------
+;
+DTFT:	LD	SP,CALCSP-2	; Stack bereinigen
+	SCF			; CY=1: Original HCADR aufrufen
+	JR	DTEXIT
+;
+; Rechenergebnis zurueckgeben (BRK im CALC-Fenster)
+;---------------------------
+;
+DTERG:	LD	DE,INTPRB	; letzte Zahl aus Printpuffer
+	CALL	LTRIM		; fuehrende Leerzeichen entfernen (loescht CY)
+	LD	BC,13		; bis zu 13 Zeichen
+	LD	HL,WNDFN-14	; an das Ende des F-Tastenspeichers kopieren
+	LD	(HL),B		; gegebenenfalls Ende von F12 abschneiden
+	INC	HL
+	LD	(NFTAST),HL
+	EX	DE,HL
+	LDIR
+	SET	6,(IX+8)	; als F-Taste aktivieren
+	; CY ist 0: kein Aufruf der original HCADR
+;
+; Aufraeumen und Beenden
+;
+DTEXIT:	EX	AF,AF'		; Aufruf original HCADR in CY' merken
+	LD	HL,OMONI	; gesicherten
+	LD	DE,MONI		; Monitor-RAM
+	LD	BC,128
+	LDIR			; zurueckschreiben
+	EX	DE,HL		; DE:=OVRAM
+	SCF			; Pixel und VRAM zurueck
+	CALL	CPYWND
+	POP	AF		; Port 84H zurueck
+	LD	(IX+1),A
+	OUT	(84H),A
+	CALL	RAMRET		; RAM wiederherstellen
+DTEX2:	POP	IY
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	EX	AF,AF'
+	RET			; PA:CY Aufruf original HCADR
+;
+;--------------------------------------
+; RAM sichern/wiederherstellen
+;--------------------------------------
+; kopiert den RAM ab Adresse 300H in den
+; vom CAOS 4.3+ ungenutzen versteckten IRM Bereich
+;
+; RAMSAV: RAM sichern und initialisieren
+; PA:	CY=1: Ueberlappung mit CAOS-Arbeitsbereich
+;	bei CY=0	SP=CALCSP
+;			DE=Adresse OVRAM
+;
+; RAMRET: RAM und SP wiederherstellen
+; PE:	SP=CALCSP-2
+;
+RAMRET:	POP	IY		; Ruecksprungadr. nach IY
+	POP	DE		; OP88,NP88 nach DE
+	LD	A,D		; CALC-Ebene
+	LD	D,E		; spaeter PIO-A wie vor Aufruf von CALC
+	POP	HL		; OSP nach HL
+	LD	SP,HL		; Stack zurueck
+	LD	B,1		; RAM wiederherstellen
+	JR	RAMSV2
+;
+RAMSAV:	DB	0DDH		; Prefix IX
+	LD	A,H		; (LD A,HX) CAOS-Arbeitsbereich H-Teil in A
+;	LD	A,(MIXIT)	; Fehler wenn CAOS-Arbeitsbereich...
+	ADD	A		; im IRM
+	RET	C
+	SUB	HIGH(WSP)*2	; oder Ueberlappung mit CALC-Arbeitsbereich
+	CP	(HIGH(PRGEND)-HIGH(WSP))*2
+	RET	C
+	POP	IY		; Ruecksprungadr. nach IY
+	IN	A,(88H)		; PIO-A
+	LD	E,A		; fuer OP88 merken
+	LD	HL,0-4000H	; Stack liegt im RAM0 ?
+	LD	B,L		; RAM sichern
+	ADD	HL,SP
+	JR	NC,RAMSV1
+	OR	A,RAM0ON	; nein, sicherstellen das RAM0 an ist
+RAMSV1:	LD	D,A		; fuer NP88 merken
+;
+RAMSV2:	PUSH	DE
+	DEC	A		; CAOS-ROM E aus
+	DI
+	OUT	(88H),A		; PIO-A
+	LD	A,(IX+1)
+	PUSH	AF
+	AND	0F9H		; passende IRM-Ebene einstellen:
+	OR	002H		; Bild 0, COLOR-RAM
+	OUT	(84H),A
+	CALL	RAMSV5		; Kopieren, Ruecksprung mit JP
+RAMSV3:	LD	B,6		; Stack aufraeumen
+RAMSVL:	POP	AF		; Hilfs-MC loeschen
+	DJNZ	RAMSVL
+	OUT	(84H),A		; wie vor dem Kopieren
+	POP	HL
+	LD	A,H
+	OUT	(88H),A		; CAOS-ROM E an
+	EI
+	SLA	D		; CY=1: sichern (DE=IRM-Adresse)
+	JR	NC,RAMSV4	; RAM ist wiederhergestellt
+;
+; nach dem Freischaufeln, Speicher initialisieren
+;-----------------------
+	LD	(OSP),SP	; Original-SP merken
+	LD	SP,OP88+2	; Stack fuer CALC verwenden
+	PUSH	HL		; HL nach OP88/NP88
+;
+; kopiere UP's fuer Sprung ins Basic
+;
+	LD	HL,UPBEG
+	LD	DE,MCBEG
+	LD	C,UPEND-UPBEG	; (B ist noch 0)
+	LDIR
+;
+; Monitor-RAM sichern
+				; DE=OMONI
+	LD	HL,MONI		; Beginn Monitor-RAM
+	LD	C,128		; B ist noch 0
+	LDIR
+;
+; Warte bis Taste losgelassen
+; Das lange DI verursacht sonst Fehler im Tastaturtreiber.
+RAMSV4:	LD	(IX+13),0	; bewirkt FastRepeat
+	LD	A,120/6		; 120ms warten
+	CALL	PV1
+	DB	WAIT
+	CALL	PV1
+	DB	KBDZ		; Taste noch gedrueckt ?
+	JR	C,RAMSV4
+	JP	(IY)		; RET mit DE=OVRAM und CY=0
+;
+; RAM 0300H-09EFH in/aus versteckten IRM (Color-RAM, Bild 0) kopieren
+;-------------------------
+RAMSV5:	LD	HL,0C386H	; Hilfs-MC direkt auf den Stack ablegen
+	PUSH	HL		; (SP)=RAMSV3
+	LD	HL,0D3F1H
+	PUSH	HL
+	LD	HL,0B0EDH
+	PUSH	HL
+	LD	HL,086D3H
+	PUSH	HL
+	SBC	HL,HL		; HL:=0 (CY ist 0)
+	ADD	HL,SP		; Startadresse Hilfs-MC
+	LD	A,(IX+4)	; CAOS-ROM C ist aus
+	PUSH	AF
+	OR	80H		; CAOS-ROM C an
+	PUSH	HL		; Stack-Adresse Hilfs-MC
+	LD	HL,WSP		; BASIC
+	LD	DE,0B800H	; versteckte IRM-Ebene ab hier frei
+	DJNZ	RAMSV6
+	EX	DE,HL		; Kopierrichtung tauschen
+RAMSV6:	LD	BC,PRGEND-WSP	; ca.2k kopieren
+	RET	; Sprung ins Hilfs-MC auf den Stack
+;
+; Hilfs-MC:
+; D3 86	OUT	(86H),A	; CAOS-ROM C und versteckter IRM an
+; ED B0	LDIR
+; F1	POP	AF
+; D3 86	OUT	(86H),A	; CAOS-ROM C versteckter IRM aus
+; C3	JP	RAMSV3
+;
+;--------------------------------------
+; Pixel und VRAM sichern/wiederherstellen
+;----------------------------
+; PE:	CY=0:	sichern
+;	CY=1:	wiederherstellen
+;	DE=Adresse OVRAM
+; PA:	BC=0
+;
+CPYWND:	LD	HL,(VRAM)	; VRAM-Adr vom aktuellen Bild, =Fensteranfang
+	LD	BC,3*40		; 3 Zeilen in voller Breite
+	CALL	CPCPY		; VRAM im Fenster sichern
+	LD	HL,0A700H	; PixelRAM-Adr fuer Fenster (Spalten rueckwaerts)
+CPWN1:	LD	C,3*8		; Pixel fuer 3 Zeichen
+	CALL	CPCPY
+	LD	A,(HL)		; unter dem Fenster Linie zeichnen/loeschen
+	CPL			; durch Negieren der Pixel!
+	LD	(HL),A
+	LD	L,B		; L:=0 (oberste Zeile)
+	DEC	H		; naechste Spalte
+	RET	P		; bis HL<8000H
+	JR	CPWN1
+;
+CPCPY:	JR	NC,CPCP1
+	EX	DE,HL		; Tauschen = wiederherstellen
+CPCP1:	LDIR
+	RET	NC
+	EX	DE,HL		; zuruecktauschen
+	RET
+;
+;--------------------------------------
+; Eingabe des Ausdrucks
+;----------------------------
+; Fordert zur Eingabe des Ausdrucks auf
+; und sucht das erste Zeichen in der Zeichenkette
+;
+; INPUT:	Ausdruck immer anfordern
+; LTRIM:	sucht das erste Nichtleerzeichen im Ausdruck
+;
+; PE (LTRIM):	DE=Zeiger auf Ausdruck, mit #0 abgeschlossen
+; PA:	CY=1	BRK gedrueckt
+;	CY=0 und ZF=0	Ausdruck vorhanden, dann 
+;	 DE=ARG9=Zeiger auf erstes Zeichen (>Space) im Ausdruck
+;
+INPUT:	LD	A,'?'		; nein, jetzt eingeben
+	CALL	PV1
+	DB	OCHR
+	CALL	PV1
+	DB	INLIN
+	RET	C		; BRK ?
+	LD	A,(DE)		; Fragezeichen wurde ueberschrieben ?
+	CP	'?'
+	JR	NZ,LTRIM
+INP1:	INC	DE		; suche erstes Zeichen
+LTRIM:	LD	A,(DE)
+	AND	A		; #0, dann nichts gefunden
+	RET	Z		; CY=0, ZF=1
+	CP	' '+1
+	JR	C,INP1
+	LD	(ARG9),DE	; gefunden, Adresse merken
+	AND	A
+	RET			; CY=0, ZF=0
+;
+;--------------------------------------
+; Berechnung und Anzeige des Ausdrucks
+;----------------------------
+; PE:	ARG9=Zeiger auf Ausdruck, mit #0 abgeschlossen
+;	veraendert SYSP!
+;
+PRCALC:	LD	(SYSP),SP	; Ruecksprungadr vor Ueberschreiben 
+				; durch PV4 und Co. schuetzen
+;
+; Bildschirmausgaben abfangen
+;
+	LD	HL,NOUTAB+MCBEG-UPBEG
+	LD	(OUTAB),HL	; Zeiger auf UP-Nummer = 02H
+	INC	HL		; Adresse NUOUT1
+	LD	(UOUT1+1),HL	; als Sprungziel eintragen
+;
+; Initialisierung Basic-Arbeitsbereich
+;
+	LD	HL,BRAMST	; Notizspeicher-Default-Belegung
+	LD	BC,62H		; von 0300H bis 0361H initialisieren
+	LD	DE,BLDIR+MCBEG-UPBEG ; LDIR mit DE=0300H
+	CALL	CBASDE+MCBEG-UPBEG
+	LD	HL,WSP+61H	; Rest von 0362H bis 0400H loeschen
+	LD	C,400H-0361H
+	LDIR
+	LD	HL,BASEND
+	LD	(MEMSIZ),HL	; Speicherende vorgeben
+	LD	L,LOW(BASSP)
+	LD	(STDPTR),HL	; Stackende davor
+	LD	DE,NEW1         ; NEW
+	CALL	CBASDE+MCBEG-UPBEG ; PA:A=0, SP=BASIC-Stack
+;	LD	(ARGC),A	; ARGC:=CRT
+	DEC	A		; A=0FFh
+	LD	(EXTFLG),A	; Basic-Erweiterungen vorhanden
+	LD	(CULINO),A	; aktuelle Zeilennummer = 0FFFFH
+				; H-Teil ist bereits FF von Defaultwert...
+;
+; Ausdruck holen und verdichten
+;
+	LD	HL,(ARG9)	; Zeiger auf Ausdruck
+	LD	DE,INPBUF	; BASIC-Eingabepuffer
+	PUSH	DE
+	CALL	SCANN
+	POP	HL
+;
+; Ausdruck berechnen
+;
+	LD	DE,SNALY
+	CALL	CBASDE+MCBEG-UPBEG ; PE: HL=Ausdruck
+;	Hier gehts nur weiter wenn kein Fehler aufgetreten ist,
+;	sonst bei PREND.
+	CALL	OURET		; Bildschirmausgaben wieder normal
+        LD      DE,TEXTO1       ; Voreinstellung: Anzeige Zeichenkette
+	LD	A,(DATYPE)	; Zeichenkette ?
+	AND	A
+	JR	NZ,PRTXT
+;
+; Zahl in Zeichenkette umwandeln
+;
+	LD	HL,(WRA1+2)	; Exponent und HWT
+	LD	A,H
+	SUB	81H		; Zahl<1 ?
+	CP	95H-81H		; Zahl>=2^20 ?
+	JR	NC,PRDEZ	; dann nur Dezimal
+	LD	DE,INTMV1
+	CALL	CBASDE+MCBEG-UPBEG ; Ganzzahliger Teil nach CDE
+	LD	(WRA1+2),HL	; Vorzeichen wiederherstellen
+	EX	DE,HL
+	CALL	PV1		; Hex-Ausgabe:
+	DB	SPACE
+	LD	A,C		; oberste 2 Stellen
+	OR	A		; Test, ob diese leer sind
+	CALL	NZ,PV1		; oberste 2 Stellen (nur wenn ungleich 0)
+	DB	AHEX	; 1CH = INC E falls PV1 nicht aufgerufen wird
+	CALL	HLHEX		; uebrige Stellen
+	CALL	PV1
+	DB	OSTR
+	DB	8,'H ',0
+PRDEZ:	CALL	BNUMKN+MCBEG-UPBEG ; Dezimal-Ausgabe, PA:HL=PRINT-Puffer
+	LD	DE,TEXTO        ; ASCIIZ-Zeichenkette
+;
+; Zeichenkette anzeigen
+;
+PRTXT:	CALL	CBASDE+MCBEG-UPBEG
+;
+PREND:	LD	SP,(SYSP)
+	LD	A,(CURSO)
+	AND	A		; Zeilenanfang ?
+	RET	Z
+	CALL	PV1
+	DB	OSTR
+	DB	' ',CR,LF,0
+	RET
+;
+;Ruecksetzen Ausgabeumleitung
+;----------------------------
+;
+OURET:	PUSH	HL
+	LD	HL,(OOUTB)
+	LD	(OUTAB),HL
+	LD	HL,(OUOUT)
+	LD	(UOUT1+1),HL
+	POP	HL
+	RET
+;
+;--------------------------------------
+; UP zur Umwandlung des Ausdrucks in die BASIC-Token-Form
+;----------------
+; PE:	HL=Ausdruck
+;	DE=Basic-Eingabepuffer
+;
+; Verwendung Register BC:
+;	B<>0	kopiere Dezimalzahl
+;	C(0)=1	kopiere String
+;
+SCANH:	CP	'A'		; Sonderzeichen ?
+	JR	C,SCAN4
+SCANZ:	INC	B		; B=0 ?
+	DJNZ	SCAN4
+	PUSH	HL		; Test auf Hexzahl:
+	PUSH	DE
+	PUSH	BC
+	EX	DE,HL
+	CALL	CRHEX		; Leseversuch
+	LD	A,C		; A=HWT der Hexzahl
+	EX	DE,HL
+	POP	BC
+	POP	DE
+	JR	C,SCAND
+	EX	(SP),HL		; Hex => Dez:
+	PUSH	DE
+	LD	DE,(NUMNX)	; ADE=Hexzahl (Mantisse)
+	LD	B,98H		; Exponent
+	CALL	BSGN+MCBEG-UPBEG ; BADE => PRINT-Puffer
+	POP	DE		; Zahl kopieren, dabei Vorzeichen
+	CALL	SCANN		;  in Token umwandeln
+	POP	HL
+;
+SCANN:	LD	BC,0
+SCAN1:	LD	A,E		; Eingabepufferende erreicht ?
+	CP	LOW(EOINPB-1)	; (03ABH)
+	RET	NC
+	LD	A,(HL)
+	AND	A		; Ende-0?
+	RET	Z
+	CP	'"'
+	JR	Z,SCANS		; String?
+	BIT	0,C
+	JR	NZ,SCAN4	; kopiere String
+	CP	'9'+1
+	JR	NC,SCAN2	; keine Dezimalziffer
+	CP	'0'
+	JR	NC,SCANZ	; Zahl erkennen
+	CP	' '
+	JR	Z,SCAN3
+SCAN2:	PUSH	DE
+	PUSH	BC
+	LD	DE,TOKTBB	; BASIC-Wortliste im BASIC-ROM
+	LD	B,80H		; Zugehoerigen Token-Nummer
+	CALL	SCTOK
+	LD	DE,(TOKTBC)	; BASIC-Wortliste im CAOS-ROM
+	CALL	C,SCTOK		; weitersuchen, falls noch nicht gefunden
+	POP	BC
+	POP	DE
+	;JR	C,SCAN4		; <=falls Variablen erlaubt sind
+	JR	C,SCANH		; kein Token, Test ob Hexzahl
+SCAN3:	LD	B,0
+	DEC	C
+SCANS:	INC	C
+SCAN4:	LD	(DE),A		; tokenisiert in BASIC-Eingabepuffer schreiben
+	INC	HL
+	INC	DE
+	JR	SCAN1
+;
+SCAND:	POP	HL		; keine Hexzahl
+	INC	B
+	LD	A,(HL)
+	CP	'A'		; Buchstabe ?
+	JR	C,SCAN4
+	LD	A,80H		; dann SN-Error
+	LD	(DE),A
+	RET			; und raus
+;
+; Suche Token:
+;------------
+; PE:	B =Nr. erstes Token
+;	DE=Wortliste im ROM
+;	HL=Akt.Zeichen im Ausdruck
+; PA:	B =Nr. letztes getestetes Token
+;	HL=neue Position im Ausdruck-1
+;	CY=0: Token gefunden
+;	dann: A=Token, sonst: A=(HL)
+;
+SCT1:	INC	B		; naechstes Token
+	POP	HL		; Eingabepuffer zurueck
+SCTOK:	PUSH	HL		; suche Wortanfang:
+SCT2:	CALL	BTKCHR+MCBEG-UPBEG
+	JR	NC,SCT2		; Wortanfang ?
+	JR	Z,SCT5		; Listenende ?
+SCT3:	RRCA
+	LD	C,A
+	LD	A,(HL)		; => Grossbuchstaben
+	CP	'a'
+	JR	C,SCT4
+	CP	'z'+1
+	JR	NC,SCT4
+	SUB	20H
+SCT4:	CP	C		; Zeichen passt ?
+	JR	NZ,SCT1
+	INC	HL		; naechstes Zeichen
+	CALL	BTKCHR+MCBEG-UPBEG
+	JR	NC,SCT3		; naechstes Wort?
+	DEC	HL		; Token gefunden
+	LD	A,94H		; Anweisung "DEF"?
+	CP	B
+	SCF
+	JR	Z,SCT5		; Token ignorieren
+	POP	AF
+	LD	A,B
+	AND	A
+	RET
+SCT5:	POP	HL		; zurueck auf Wortanfang
+	LD	A,(HL)
+	RET
+;
+;--------------------------------------
+; Hexzahl erfassen (24Bit), muss mit 'H' enden
+;---------
+; PE:	DE=Position im Ausdruck
+; PA:	DE=neue Position im Ausdruck
+;	CY=0: Zahl gefunden
+;	dann: NUMNX,NUMVX=Wert der erfassten Zahl
+;	      C=HWT	
+;
+CRHEX:	LD	B,'9'-'0'-7	; Endekennzeichen zunaechst inaktiv
+	XOR	A
+	LD	HL,NUMVX+1
+	LD	(HL),A
+	DEC	HL		; HL=NUMVX
+	LD	(HL),A
+	DEC	HL		; HL=NUMNX
+	LD	(HL),A
+CRHX1:	LD	A,(DE)
+	INC	DE		;	       aus: 3A..40 41..60 61..80 81..FF
+	SUB	'0'		;<'0':Fehler  wird: 0A..10 11..30 31..50 51..CF
+	RET	C
+	CP	10		; Ziffer: Ok.
+	JR	C,CRHX2
+	SUB	17		; HEX-Korrektur	    F9..FF 00..1F 20..3F 40..BE
+	AND	11011111b	; klein -> gross    D9..DF 00..1F 00..1F 40..9E
+	ADD	10		; <'A': Fehler	    E3..E9 0A..29 0A..29 4A..A8
+	CP	B		; ='H': dann fertig
+	RET	Z
+	CP	16		; >'F': Fehler
+	CCF
+	RET	C
+CRHX2:	RLD			; Tetrade durchschieben
+	INC	HL
+	RLD
+	INC	HL
+	RLD
+	LD	C,(HL)		; HWT fuer Parameterrueckgabe nach C
+	DEC	HL
+	DEC	HL
+	LD	B,'H'-'0'-7	; Endekennzeichen aktiv
+	JR	CRHX1
+;
+;--------------------------------------
+; UP's fuer den Sprung in den BASIC-ROM
+;-------------------------------------
+UPBEG
+;
+; BASIC-Notizspeicher initialisieren
+;
+BLDIR:	LD	DE,WSP
+	LDIR
+	RET
+;
+; Zeichen aus Wortliste holen und testen
+; PE:	DE=Zeiger auf Zeichen
+; PA:	DE=DE+1
+;	A=Zeichen*2
+;	CY=1:Wortanfang
+;
+BTKCHR:	CALL	PON+MCBEG-UPBEG	; BASIC-Ebene ein
+	LD	A,(DE)
+	INC	DE
+	ADD	A
+        JR      POFF
+;
+; Zahl aus den Registern BADE nach Printpuffer
+; PE:	B=Exponent, ADE=Mantisse
+; PA:	HL=INTPRB
+;
+BSGN:	CALL	PON+MCBEG-UPBEG	; BASIC-Ebene ein
+	CALL	SGN1            ; BADE => WRA1
+BNUMKN:	LD	DE,NUMKON       ; WRA1 => Printpuffer
+;
+; Aufruf eines UP im BASIC-ROM
+;  mit Einschalten der Basic-Ebene beim Aufruf
+;  und Zurueckschalten in die CALC-Ebene beim Ruecksprung
+; PE: DE=Adresse des UP im BASIC-ROM
+; VR: IY
+;
+CBASDE: POP     IY              ; fuer NEW1 (veraendert SP)
+        CALL    PONDE+MCBEG-UPBEG ; Basic-Ebene ein und UP ausfuehren
+        PUSH    IY
+;
+POFF:	PUSH	AF		; CALC-Ebene einschalten
+	LD	A,(NP88)	; IRM an
+	OUT	(88H),A		; PIO-A
+	RESIXA	5,4		; RES 5,(IX+4),A  Basic => Debugger
+	JR	PO1
+;
+PONDE:  PUSH    DE              ; Sprung in das durch DE adressierte UP
+PON:	PUSH	AF		; BASIC-Ebene einschalten
+	SETIXA	5,4		; SET 5,(IX+4),A  Debugger => Basic
+PO1:	OUT	(86H),A
+	POP	AF
+	RET
+;
+; Ausgabeumleitung
+;----------------
+; Zeigt die Basic-Fehlermeldung an, verhindert aber den Wechsel in die
+; Basic-Kommandoebene.
+;
+NOUTAB:	DB	UOT1		; UP-Nummer
+NUOUT1:	CP	CR		; CR unterdruecken
+	CALL	NZ,PV1
+	DB	CRT	; wird bei CR als NOP ausgefuehrt
+	CP	' '
+	RET	NC		; Ende wenn Steuerzeichen
+	CALL	POFF+MCBEG-UPBEG
+	CALL	OURET
+	JP	PREND
+UPEND:
+;
+;--------------------------------------
+; UP im RAM fuer die Reaktion auf die Drucktaste (Shift+CLR)
+;-------------------------------------
+;
+; Schaltet das Speichersegment von CALC in den Vordergrund
+; und springt dann in das Programm hinein
+;
+DTBEG:	PUSH	AF
+	PUSH	DE
+	IN	A,(88H)		; Schaltzustand des Speichers merken
+	LD	E,A
+	OR	A,85H		; CALC in den Vordergrund
+	OUT	(88H),A		; PIO-A: USER-ROM an
+	LD	A,(IX+4)
+	LD	D,A		; Port 86H:
+	OR	A,40H		; - Debugger
+	AND	A,5FH		; - CAOS-ROM C aus
+	LD	(IX+4),A
+	OUT	(86H),A
+	CALL	DTSR		; CALC im USER-ROM aufrufen
+	LD	A,D		; Speicher wieder zurueck
+	LD	(IX+4),A	; Port 86H
+	OUT	(86H),A
+	LD	A,E
+	OUT	(88H),A		; und PIO-A
+	POP	DE
+OHCADR:	CALL	C,0		; Aufruf Original HCADR
+	POP	AF
+	RET
+DTEND:
+;--------------------------------------

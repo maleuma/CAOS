@@ -1,0 +1,68 @@
+TITLE	KC-Debugger
+;----------------------------------------------------------------
+;		KC-Debugger 2.3					I
+;		---------------					I
+;								I
+; Entwicklung aus dem Reassembler/Testmonitor des Moduls M027	I
+; "Development" durch Michael Pfeiffer & Henrik Haftmann (???)	I
+;								I
+; Weiterentwicklung: Mario Leubner				I
+; 26.07.2013:	erste Zusammenfassung der Quelltexte		I
+; 27.07.2013:	REAS von EDAS- in CP/M-Format gewandelt		I
+; 28.07.2013:	TEMO von EDAS- in CP/M-Format gewandelt		I
+; Kommentare und Marken von CD-ROM (Frank Klemm) uebernommen	I
+; 13.11.2013:	JEDIT Aenderungen von Frank Ludwig uebernommen	I
+; 31.12.2013:	Korrekturen in JEDIT und CALC von Frank Ludwig	I
+;		uebernommen.					I
+; 04.01.2014:	Optionen REL und NEW wieder entfernt		I
+; 21.03.2017:	BSAVE integriert				I
+; 16.02.2021:	umgestellt von CAOS47.INC auf CAOS48.INC	I
+; 06.02.2023:	QMR Fehlerkorrektur und Code-Optimierung	I
+;								I
+;		(c) ML-Soft 26.07.2013 - 06.02.2023		I
+;----------------------------------------------------------------
+	.Z80
+
+	INCLUDE	CAOS48.INC	; CAOS-Vereinbarungen
+
+; CAOS-Vorblock:
+	DB	'DEBUGGERKCC'	; Dateiname
+	DS	5,0
+	DB	2		; 2 Argumente
+	DW	ROMBEG		; Anfangsadresse
+	DW	ROMEND		; Endadresse
+	DW	0
+	DS	95,0
+	DB	'06.02.2023'	; Datum
+;---------------
+; Assembler-Optionen:	zusaetzlicher Speicherbedarf in Byte
+;
+JSAVE	EQU	1	; 183	; 0 = JEDIT ohne .SAVE
+				; 1 = JEDIT mit .SAVE
+CALC	EQU	1	; 857	; 1 = Taschenrechner CALC (Frank Ludwig)
+				; 0 = Taschenrechner ARITH (TEMO, einfach)
+STACK	EQU	1	; 39	; 0 = kein STACK-Menuewort in CAOS und TEMO
+				; 1 = STACK-Menuewort in CAOS und TEMO
+	.PHASE	0C000H
+ROMBEG:
+	INCLUDE	REAS.Z80	; Reassembler (DISASS, QMR)
+	INCLUDE	TEMO.Z80	; Testmonitor Debugger 2.3
+	INCLUDE	JEDIT.Z80	; Joystickeditor von Frank Ludwig
+IF CALC
+	INCLUDE	CALC.Z80	; Taschenrechner von Frank Ludwig
+ENDIF
+	INCLUDE	BSAVE.INC	; KCB-Datei abspeichern
+;
+; bisherigen Schaltzustand des User-ROM merken, Ruecksprungadresse vorbereiten
+; verwendet bei Menuewort CRC, JEDIT, BSAVE
+;
+UROM:	LD	A,(ARGC)	; Schaltzustand User-ROM merken
+	LD	(OUROM),A
+	LD	HL,JEXIT2	; Ruecksprungadresse (USER-ROM aus)
+	RET
+
+	ABSFILL	0E000h,<USER-ROM-Ende (Debugger)>
+
+ROMEND:
+	.DEPHASE
+	END

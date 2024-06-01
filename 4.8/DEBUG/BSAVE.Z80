@@ -1,0 +1,270 @@
+;******************   PROGRAMM BSAVE	**************************************
+;									     *
+; Abspeichern von BASIC-Programmen auf MC-Ebene mit AUTO-Start		     *
+; Es wird automatisch der Dateityp .KCB vergeben, um die Files von reinen    *
+; MC-Programmen unterscheiden zu koennen.				     *
+;									     *
+; Test, ob BASIC initialisiert wurde.					     *
+;									     *
+; BASIC-Programmspeicher kann auf 7FFFH begrenzt werden, um Programme kompa- *
+; tibel zum KC85/3 zu machen.						     *
+;									     *
+; NUR Menuewort %BSAVE							     *
+;									     *
+; 19.03.2017: Anpassungen fuer CAOS 4.7					     *
+;									     *
+;	(c) ML-Soft 26.01.1993-01.08.1997 (V 1.3) - 19.03.2017 (V 1.4)	     *
+;*****************************************************************************
+
+INCLUDE	CAOS47.INC		; CAOS-Vereinbarungen
+
+; BASIC-Vereinbarungen
+
+WSP	EQU	0300h		; BASIC-Arbeitsspeicher
+STDPTR	EQU	0356h		; Ende Stringspeicher (256 Byte vor Speicherende)
+PSTBEG	EQU	035Fh		; Programmstart-Adresse
+INPBUF	EQU	0361h		; Eingabepuffer
+MEMSIZ	EQU	03B0h		; Speiucherende (MEMORY SIZE)
+SWAPTR	EQU	03C4h		; Zeiger fuer naechsten String
+SVARPT	EQU	03D7h		; Ende des BASIC-Programms
+DVARPT	EQU	03D9h		; Adresse der Liste der Feldvariablen
+FSLPTR	EQU	03DBh		; Erste freie Adresse hinter den Listen
+
+; CAOS-Vorblock:
+
+	DB	'BSAVE14 KCC'	; 11 Byte Dateiname
+	DS	5,0
+	DB	3		; 2 Argumente
+	DW	AADR		; Anfangsadresse
+	DW	EADR		; Endadresse
+	DW	START		; Startadresse
+	DS	95,0
+	DB	'19.03.2017'	; Datum
+;-----------------------------------------------------------------------------
+	.PHASE	0BA00H
+AADR:
+;
+; BASIC-Autostart:
+;
+BSTART:	IN	A,(88H)
+	OR	80H		; BASIC-ROM on
+	AND	0FBH		; IRM off
+	OUT	(88H),A
+	LD	A,(IX+4)
+	OR	60H		; BASIC-Ebene
+	OUT	(86H),A
+	LD	(IX+4),A
+	LD	A,89H		; RUN
+	LD	(INPBUF+1),A
+	JP	0C41FH		; Eingabe ausfuehren
+;
+;-----------------------------------------------------------------------------
+;
+STARTE:	DW	7F7FH
+	DB	'BSAVE',1
+;
+;Test, ob BASIC initialisiert wurde:
+;
+	LD	A,(WSP)
+	CP	0C3H		; JP RSTLOC vorhanden?
+	JR	NZ,NBAS		; nein, BASIC nicht initialisiert
+	LD	A,(WSP+3)
+	CP	0C3H		; JP USRLOC vorhanden?
+	JR	NZ,NBAS		; nein, BASIC nicht initialisiert
+	LD	HL,PSTBEG
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)		; DE = Beginn BASIC-Programm
+	LD	HL,0400H
+	SBC	HL,DE		; muss 0401h oder hoeher sein!
+	JR	C,AANZ		; OK.
+NBAS:	CALL	PV1
+	DB	OSTR
+	DB	'BASIC nicht initialisiert!'
+	DB	7,CR,LF,0
+	RET
+;
+; Adressen anzeigen:
+;
+AANZ:	CALL	INIT		; Fenster, Farbe, Zeichensatz
+	CALL	PV1
+	DB	OSTR
+	DB	CLS,LF
+	DB	' BASIC-Programm als MC-File abspeichern'
+	DB	LF,LF,0
+	LD	A,12
+	LD	(CURSO),A
+	CALL	PV1
+	DB	OSTR
+	DB	'<V1.4>  ` ML-Soft 1993-2017',CR,LF,0
+	LD	A,'_'
+	LD	B,40
+UNST:	CALL	PV1
+	DB	CRT		; Unterstreichen
+	DJNZ	UNST
+	CALL	PV1
+	DB	OSTR
+	DB	CR,LF
+	DB	'Anfangsadresse: 0300H',CR,LF
+	DB	'Endadresse    : ',0
+	LD	HL,(SVARPT)
+	CALL	PV1
+	DB	HLHX		; Endadresse anzeigen
+	CALL	PV1
+	DB	OSTR
+	DB	8,'H',CR,LF,0	; H anhaengen
+	LD	A,H
+	AND	80H
+	JR	Z,EOK		; darf maximal bis 7FFFh gehen...
+	CALL	PV1
+	DB	OSTR
+	DB	CR,LF
+	DB	'--> Programm zu gro~!'
+	DB	7,CR,LF,0
+	RET
+	;
+EOK:	CALL	PV1
+	DB	OSTR
+	DB	'Startadresse  : 0370H'
+	DB	CR,LF
+	DB	'BASIC-RAM-Ende: ',0
+	LD	HL,(MEMSIZ)	; Speicherende (BFFFh bei KC85/4)
+	CALL	PV1
+	DB	HLHX
+	CALL	PV1
+	DB	OSTR
+	DB	8,'H',CR,LF,LF,0
+	LD	A,H
+	AND	80H
+	JR	Z,RAOK		; reicht nicht bis in den RAM8
+	LD	DE,(STDPTR)	; Ende Stringspeicher
+	SBC	HL,DE	; HL=0100H (Stack-Groesse 256 Byte)
+	EX	DE,HL	; DE=0100H
+	LD	HL,7FFFH	; neues Speicherende ohne RAM8
+	SBC	HL,DE	; HL=7EFFH
+	PUSH	HL
+	LD	HL,(SVARPT)	; Beginn Stringvariablen
+	LD	DE,256		; Mindestgroesse Stringspeicher
+	ADD	HL,DE
+	POP	DE	; DE=7EFFH
+	SBC	HL,DE
+	JR	NC,RAOK		; Begrenzung nicht moeglich
+	CALL	PV1
+	DB	OSTR
+	DB	'RAM auf 7FFFH begrenzen (J/N) ? ',0
+YN:	CALL	PV1
+	DB	KBD
+	CP	3
+	JP	Z,BRK		; Abbruch mit BRK
+	AND	0DFH
+	CP	'N'
+	JR	Z,RAOK		; nicht begrenzen
+	CP	'J'
+	JR	NZ,YN
+;
+; RAM-Ende begrenzen auf 7FFFh:
+;
+	LD	A,10H
+	LD	(CURSO),A
+	CALL	PV1
+	DB	OSTR
+	DB	0BH,0BH
+	DB	'7FFFH'		; neues RAM-Ende anzeigen
+	DB	CR,LF,LF,0
+	EX	DE,HL
+	LD	(STDPTR),HL	; neues Ende Stringspeicher
+	LD	HL,7FFFH
+	LD	(MEMSIZ),HL	; neues Speicherende
+	LD	(SWAPTR),HL	; Zeiger naechster String
+	LD	HL,(SVARPT)	; Ende BASIC-Programm
+	LD	(DVARPT),HL	; fuer Feldvariablen und
+	LD	(FSLPTR),HL	; als erste freie Adresse eintragen
+;
+; Startprogramm in Eingabepuffer kopieren:
+;
+RAOK:	LD	HL,BSTART
+	LD	DE,0370H	; Mitten im BASIC-Eingabepuffer
+	LD	BC,STARTE-BSTART
+	LDIR			; kopieren
+	LD	C,0EH		; Dateityp nicht mit aendern lassen
+	CALL	NAME		; Dateiname eingeben
+	RET	C		; BRK
+	EX	DE,HL		; Name in DE
+
+	LD	HL,WSP		; ANF-Adresse
+	LD	(ARG1),HL
+	LD	HL,(SVARPT)	; END-Adresse
+	LD	(ARG2),HL
+	LD	HL,370H		; START-Adresse
+	LD	(ARG3),HL
+	LD	A,3		; 3 Argumente
+	LD	(ARGN),A
+
+; Datei abspeichern:
+
+	EX	DE,HL		; Name in HL
+	CALL	PV1
+	DB	SAVE
+	RET
+;
+;--- Unterprogramme ---
+;
+START:
+INIT:	LD	HL,0		; Fenster ab links/oben
+	LD	(WINON),HL
+	LD	HL,2028H	; volle Groesse
+	LD	(WINLG),HL
+	LD	A,39H		; weiss auf blau
+	LD	(COLOR),A
+	LD	HL,0EE00H
+	LD	(CCTL0),HL	; Zeichensatz Grossbuchstaben
+	LD	HL,0FE00H
+	LD	(CCTL1),HL	; Zeichensatz Kleinbuchstaben
+	RET
+;
+; Name eingeben:
+;
+NAME:	CALL	PV1
+	DB	OSTR
+	DB	2,'Name :        KCB',0
+	LD	A,6
+	LD	(CURSO),A	; auf Position des Namen
+NAM1:	LD	HL,(CURSO)
+NAM:	CALL	PV1
+	DB	KBD		; Eingabe
+	CP	3
+	JR	Z,BRK		; BRK = Abbruch
+	CP	8
+	JR	C,NAM	; < 8
+	CP	LF
+	JR	C,ASC	; < 10 (CUL,CUR)
+	CP	CR
+	JR	Z,ENTER
+	CP	20H
+	JR	C,NAM	; < 20H
+ASC:	CALL	PV1
+	DB	CRT		; ASCII-Zeichen oder CUL, CUR anzeigen
+	LD	A,(CURSO)
+	CP	6
+	JR	C,MA2		; zu weit links raus
+	CP	C
+	JR	C,NAM1		; nicht zu weit rechts
+MA2:	LD	(CURSO),HL	; alte Cursorposition beibehalten
+	JR	NAM
+	;
+ENTER:	CALL	PV1		; Cursor auf neue Zeile
+	DB	CRLF
+	LD	DE,(CURSO)
+	DEC	D		; Zeile vorher
+	LD	E,6		; Spalte 6
+	CALL	PV1
+	DB	DABR		; VRAM-Adresse des Dateinamen
+	RET			; HL zeigt auf Dateinamen
+	;
+BRK:	CALL	PV1
+	DB	CRLF
+	SCF			; BRK-Flag!
+	RET
+;-------
+EADR:
+	.DEPHASE

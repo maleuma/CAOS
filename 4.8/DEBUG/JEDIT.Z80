@@ -1,0 +1,705 @@
+;----------------------------------------------
+; JOYSTICK-EDITOR fuer KC-CAOS 4.8
+;
+; Frank Ludwig, 14.07.2011 - 14.05.2021
+;----------------------------------------------
+;
+; Anpassungen fuer CAOS-ROM: (ML = Mario Leubner, FL = Frank Ludwig)
+;
+; 27.07.2013, ML:
+;		- Code von EDAS zu CP/M konvertiert (M -> HL, Marken mit :,
+;		  Umlaute ...)
+; 29.07.2013, ML:
+;		- verschieblichen Code fuer ROM-Version entfernt
+;		- Prologbyte muss nicht gemerkt werden, da Aufruf nur von
+;		  7Fh aus moeglich ist und damit Rueckkehr direkt zu 7Fh.
+; 04.08.2013, ML:
+;		- Codeverschiebungen und weitere Kommentare
+; 09.08.2013, ML:
+;		- Abschalten USER-ROM bei EXIT
+;		- %JEDIT fuehrt sofort zum Menu, nicht zum Editor
+;
+; 12.08.2013, FL:
+;		- Probleme mit Stackpointer bei Menue-Aufruf behoben
+;		  Prolog und Prompt werden erst nach Parameteruebernahme eingestellt
+;		- beim Beenden wird der USER-ROM abgeschalten
+;		- %JEDIT springt immer gleich in das Menue
+;		- Arbeitsbereich in den Kassettenpuffer ab B740H verschoben (Marke JWORK),
+;		  *.JOY-Files werden ab 0180H geladen (Marke JFILE)
+;		- Meldung "unbekannte Joystick-ISR" in "fremde ..." geaendert
+;		- UP JWAIT und .ADR: Code gespart
+;
+; 14.08.2013, ML:
+;		- Auslagern des WORK-RAM vorerst auskommentiert
+;
+; 26.09.2013, FL:
+;		- Beim Aufruf von %JEDIT mit Parameter werden die Wartezyklen 
+;		  auf 2 gesetzt (Standardwert)
+;
+; 01.12.2013, ML:
+;		- SAVE-Funktion optional abschaltbar gestaltet (Schalter JSAVE)
+;
+; 15.12.2013, ML:
+;		- Schaltzustand des USER-ROM-C regenerieren mit CAOS 4.6
+;
+; 28.12.2013, FL:
+;		- UP-Vorlage fuer *.JOY-Dateien im Schalter JSAVE aufgenommen
+;		- Schaltzustand der USER-ROM wird in OUROM gespeichert
+;		- statt "geschuetzte Adresse" wird "INVALID RANGE" vom Debugger angezeigt
+;
+; 31.12.2013, ML:
+;		- Sprung zu "INVALID RANGE" als Marke definiert in TEMO
+;		- Menu-Hack "JUMP" umgestellt von PV1 auf PV3
+;
+; 02.01.2014, ML:
+;		- Versionsabfrage auf CAOS 4.6+ fuer USER-C-Schaltzustand regenerieren
+;
+; 05.01.2014, FL:
+;		- Vorschlag fuer ein gemeinsames UP mit REAS zur Eingabe des Dateinamen
+;
+; 12.01.2014, ML:
+;		- Vorschlag angenommen, REAS entsprechend modifiziert
+;
+; 26.02.2016, ML:
+;		- CRLF eingefuegt nach CSRO da das von CAOS nicht mehr enthalten ist
+;		- Menuewort CANCEL in QUIT umbenannt
+;
+; 21.03.2017, ML:
+;		- Dateiname bei SAVE uebergeben in HL
+;
+; 12.05.2017, ML:
+;		- Abbruch bei SAVE wenn ISRO mit CY=1 zurueck kommt
+;
+; 23.03.2018, ML:
+;		- CAOS-Versionsabfrage auskommentiert da nur fuer CAOS 4.7
+;
+; 11.07.2018, ML:
+;		- Definition JOYIRM in EQU47.INC ausgelagert
+;
+; 14.02.2021, FL:
+;		- gesperrte Arbeitszellen fuer CAOS 4.8 angepasst
+;		  (SUTAB und DEVICE-Tabelle geschuetzt)
+;		- SAVE *.JOY auf vorgegebene Adresse (JOYTAB) begrenzt
+;
+; 16.02.2021, FL:
+;		- Fehler in GETPAR behoben
+;		- Kommentaren zur Tabelle ADRSEC korrigiert.
+;
+; 28.03.2021, ML:
+;		- Code-Optimierung bei Sprung zu ERRM
+;
+; 04.04.2021, ML:
+;		- Code-Optimierung bei RHEX
+;
+; 30.04.2021, FL:
+;		- Zeichenkette CMENU vom internen Menuewort genutzt
+;		  (muss nicht auf 0 enden, ein Steuerzeichen tut es auch)
+;
+; 15.05.2021, FL:
+;		- .WAIT an die neuen CAOS-Unterprogramme RDEZ und HLDEZ angepasst
+;
+; 28.10.2022, ML:
+;		- Unterprogramm UROM eingebaut (Verwendung 5x)
+;
+CARG	EQU	CASS+16		; Parameterbereich im Vorblock
+CPRG	EQU	CARG+7		; Autostartcode direkt danach
+;
+; Cursor-Positionen
+CUPOSY	EQU	3		; Cursor-Pos. oberste Taste
+CUPOSX	EQU	14
+CUPOSM	EQU	CUPOSY+11+1	; Anfang Menue
+CUPOSA	EQU	011AH		; Cursor-Pos. Joytab.adresse
+CUPOSW	EQU	0125H		; Cursor-Pos. Wartezyklen
+;
+; JEDIT Arbeitsbereich (definiert in EQU48.INC bzw. CAOS48.INC):
+;
+JOYADR	EQU	JWORK		; neue Adresse
+OADR	EQU	JWORK+2		; alte Adresse
+JOYKEY	EQU	JWORK+4		; Joycodes
+OPRMT	EQU	JWORK+16	; Promptzeichen
+OUROM	EQU	JWORK+17	; User-ROM vor Aufruf von %JEDIT
+;
+; Speicherbereich fuer die *.JOY-Dateien von .SAVE : 0180H-019BH
+JFILE	EQU	0180H
+;
+; MENU-HACK damit JUMP immer mit J abgekuerzt werden kann
+;
+PGBEG:	DW	7F7FH
+	DB	'J '
+	DB	3
+	LD	A,L
+	LD	E,JUMP		; CAOS-Funktion JUMP
+	JP	PV3		; anspringen ueber PV3
+;
+; .MENU
+;
+	DW	0A1A1H
+CMENU:	DB	'MENU',1
+	JP	JMENU1		; Menue anzeigen
+;
+; .ADR
+;
+	DW	0A1A1H
+	DB	'ADR',3		; ein Parameter erforderlich
+	PUSH	HL
+  ;berechne: Abstand ADRSEC-Adr => HL
+	LD	DE,ADRSEC
+  ;Adr innerhalb des Stack ?
+	LD	A,I
+	LD	B,A
+	LD	C,80H-11
+	LD	A,1
+	CALL	TSTAD1
+	POP	HL
+	PUSH	HL
+  ;uebrige Adressbereiche pruefen
+	LD	A,(DE)		; Anzahl Tests
+	INC	DE
+	CALL	TSTADR
+	POP	HL
+	LD	(JOYADR),HL
+	CALL	MAXWD		; max. Fenster
+	CALL	JADR		; Anzeige Joyadresse
+;
+; Fenster fuer MENU
+;
+MINWD:	LD	HL,(32-CUPOSM)*256+40
+	LD	(WINLG),HL
+	LD	HL,CUPOSM*256+0
+	JR	MWD1
+;
+; "Vollbild"
+;
+MAXWD:	LD	HL,2028H
+	LD	(WINLG),HL
+	LD	HL,0
+MWD1:	LD	(WINON),HL
+	RET
+;
+; .WAIT	Parameter als BCD-Zahl angeben
+;
+	DW	0A1A1H
+	DB	'WAIT'
+	DB	13H		; mindestens 1Parameter, dezimal
+	LD	A,L
+	LD	DE,-64
+	ADD	HL,DE
+	JR	C,MERRM		; max.63 Zyklen
+	LD	(JOYKEY),A	; Wartezyklen merken
+	CALL	MAXWD		; Max. Fenster
+	CALL	JWAIT		; anzeigen
+	JR	MINWD		; Fenster fuer Menue
+;
+MERRM:	JP	ERR		; Sprung zu: CALL PV1, DB ERRM, RET
+;
+; .SAVE
+;
+if jsave
+	DW	0A1A1H
+	DB	'SAVE'
+	DB	1
+	LD	HL,CJOY		; Dateityp JOY
+	CALL	RECIN		; Dateiname abfragen und Kassettenpuffer vorbereiten
+	RET	C		; Abbruch mit BRK
+	LD	E,LOW(CARG)	; DE = CASS+16 = B710H
+	LD	HL,SVPRG	; vorbereiteter Parameterbereich
+	LD	C,SVEND-SVPRG	; B ist 0
+	LDIR			; Parameter und Startprogramm danach
+  ;Joysticktabelle anhaengen
+	CALL	MKJTAB		; JOYTAB erzeugen in Kassettenpuffer (ab B727h)
+  ;Ausgabe
+	LD	HL,CASS		; Dateiname in Kassettenpuffer
+	LD	(IX+5),L
+	LD	(IX+6),H
+	CALL	PV1
+	DB	ISRO		; Dateiausgabe starten
+	RET	C		; Fehler (z.B. USB-Datei nicht ueberschreiben)
+	CALL	PV1
+	DB	OSTR
+	DB	2,'01',0	; Blocknummer
+	LD	(IX+5),LOW(CPRG)
+;	LD	(IX+6),HIGH(CPRG) ; unveraendert
+	LD	BC,160		; kurzer Vorton
+	CALL	PV1
+	DB	CSRO		; Ausgabe letzter Block
+	JP	NL		; CR,LF	neue Zeile (CSRO macht das nicht mehr!)
+endif
+;
+; .EDIT
+;
+	DW	0A1A1H
+	DB	'EDIT'
+	DB	1FH
+	CALL	GETPAR		; Parameter auswerten
+MMERRM:	JR	C,MERRM		; Fehler
+	JR	JEDIT
+;
+; %JEDIT
+;
+	DW	7F7FH		; CAOS-Menuewort
+	DB	'JEDIT'
+	DB	1FH		; Textparameter zulaessig
+	CALL	UROM		; Schaltzustand User-ROM merken
+	PUSH	HL		; Ruecksprungadresse auf Stack falls Fehler
+				; wenn kein Fehler einfach nur SP-2
+  ;Initialisierung
+	LD	HL,(JOYTAB)	; Adresse der Joytabelle
+	LD	(JOYADR),HL	; als neue Adresse eintragen
+	LD	(OADR),HL	; und als Originaladresse merken
+	CALL	CPYJOY		; Joysticktasten zur Bearbeitung kopieren
+	CALL	GETPAR		; Parameter auswerten
+	JR	C,MMERRM	; Fehler
+	DEC	A
+	JR 	Z,MJE0		; Aufruf mit Parameter ?
+	LD	A,2
+	LD	(JOYKEY),A	; dann Wartezyklen auf default (=2)
+MJE0:	LD	(IX+9),0A1H	; eigenes Prologbyte = A1h
+	LD	HL,PROMPT
+	LD	A,(HL)		; aktuelles Promptzeichen
+	LD	(OPRMT),A	; merken zum regenerieren
+	LD	(HL),'.'	; eigenes Promptzeichen
+	LD	A,I		; Joystick-ISR pruefen
+	LD	H,A
+	LD	L,0E1H		; HL=HWT JOYISR
+	LD	A,(HL)
+	CP	0E0H		; ISR ist im ROM ?
+	JR	C,MERRJ
+	LD	HL,JITAB	; Treiber starten
+	LD	BC,0592H	; falls angehalten
+	OTIR
+	JR	JMENU1
+;
+MERRJ:	CALL	PV1
+	DB	OSTR
+	DB	2,'fremde Joystick-ISR!',7,CR,LF,0
+	CALL	PV1
+	DB	KBD
+JMENU1:	XOR     A		; immer sofort ins Menue
+;
+JEDIT:	PUSH    AF
+	CALL	ANZJOY		; Anzeige aktuelle Tastenbelegung
+	POP	AF
+	DEC	A		; Aufruf mit Parameter ?
+	LD	A,0		; (ARGN ist unbestimmt)
+	LD	(ARGN),A
+	JR	NZ,JMENU2	; Menue anzeigen
+;
+;Joystick-Editor
+;
+	CALL	PV1
+	DB	OSTR
+	DB	CR,LF,'Please, select or press STOP',0
+	LD	HL,JOYEDI	; spez. Joytab
+	LD	(JOYTAB),HL
+	LD	C,CUPOSY	; erste Zeile
+	LD	B,0
+MJE1:	LD	A,C
+	LD	(CURSO+1),A
+	LD	HL,JOYKEY+1-CUPOSY
+	ADD	HL,BC		; Adresse fuer Taste
+	LD	DE,0900H	; D=CUR, E=CAOS-UP CRT
+	CALL	ANZCH1		; > < einblenden
+	PUSH	HL		; HL=Zaehler f.blinken
+	LD	DE,38H
+MJE2:	ADD	HL,DE
+	JR	NC,MJE3
+	CALL	PV1
+	DB	CUCP		; CURSOR blinken
+MJE3:	CALL	PV1		; Taste gedrueckt ?
+	DB	KBDZ
+	JR	NC,MJE2		; warten.
+	POP	HL
+	LD	D,A
+	CP	13H		; STOP ?
+	JR	Z,MJE5
+	SUB	80H		; Joysticktaste ?
+	CP	11
+	JR	C,MJE6		; dann Cursor dorthin
+	LD	(HL),D		; Taste merken
+	INC	C		; naechste Zeile
+MJE4:	CALL	ANZCHR		; Code anzeigen
+	LD	A,C
+	CP	CUPOSY+11	; fertig ?
+	JR	C,MJE1
+	INC	A		; Infozeile loeschen
+	LD	(CURSO+1),A
+	LD	A,2
+	CALL	PV1
+	DB	CRT
+;
+; Menue aufrufen
+;
+JMENU2: LD	HL,JOYTBD	; Joyst.Standardtabelle
+	LD	(JOYTAB),HL
+	CALL	MINWD		; Fenster fuer Menue
+	LD	H,0
+	LD	(CURSO),HL	; Position links/oben
+	POP	HL		; SP+4
+	POP	HL
+	CALL	PV1	
+	DB	MENU		; Menueworte auflisten -> Kommandoeingabe
+				; Stack sollte jetzt auf (SYSP)-2 zeigen
+;
+;STOP => Cursor auf letzte Zeile
+MJE5:	LD	C,CUPOSY+11
+	JR	MJE4
+;
+;Joysticktastencode=>Cursorpos.
+MJE6:	ADD	A,CUPOSY
+	LD	C,A
+MJE7:	LD	A,(IX+13)	; warten bis Joyst
+	DEC	A		; losgelassen (A=FFH)
+	CP	D		; oder diagonale
+	JR	C,MJE7		; Richtung gewaehlt
+	JR	MJE4		; (A>=D)
+;
+; .QUIT
+;
+	DW	0A1A1H
+	DB	'QUIT'
+	DB	1
+	LD	HL,(OADR)	; Joyadr zurueck
+	LD	(JOYTAB),HL
+JEXIT1:	CALL	MAXWD
+	LD	A,(OPRMT)	; Original-Prompt zurueck
+	LD	(PROMPT),A
+	LD	A,7FH		; Original-Prologbyte zurueck
+	LD	(IX+9),A	; wieder 7FH
+	LD	DE,CMENU	; "MENU"
+	LD	HL,0C000H	; Beginn Suchbereich
+	LD	B,L		; BC=0 Laenge Suchbereich
+	LD	C,L
+	CALL	PV1		; suche CAOS-Kommando MENU
+	DB	ZSUCH
+	INC	HL		; Epilogbyte ueberspringen
+	EX	(SP),HL		; als Return-Adresse auf den Stack legen
+JEXIT2:	LD	DE,(OUROM-1)	; D = urspruenglicher Schaltzustand USER-C
+JEXIT3:	LD	A,2		; USER-ROM
+	LD	L,A		; schalten
+	LD	E,MODU
+	JP	PV3		; zuerst USER-ROM schalten, dann zu CAOS
+;
+; .OK
+;
+	DW	0A1A1H
+	DB	'OK'
+	DB	1
+	LD	HL,(JOYADR)	; JOYADR setzen
+	LD	(JOYTAB),HL
+	EX	DE,HL
+	CALL	MKJTAB		; neue JOYTAB erzeugen
+	JR	JEXIT1
+;
+; Parameter auswerten und in Joycode-Tabelle eintragen
+; PE:	DE=Parameter im Video-RAM
+; PA:	CY=1: Fehler, A=1: keine Parameter
+;
+GETPAR:	LD	HL,JOYKEY+1	; Adresse 1. Taste
+	LD	B,11		; 11 Tasten
+MGP1:	LD	A,(DE)
+	INC	DE
+	AND	A		; keine weiteren Parameter ?
+	JR	Z,MGP4
+	CP	' '
+	JR	Z,MGP1
+	CP	','		; Komma+Zeichen ?
+	LD	A,(DE)		; dann Zeichen direkt aus Video-RAM
+	JR	Z,MGP2
+	DEC	DE
+	PUSH	HL
+	CALL	GETHEX		; ansonsten HEX-Code holen
+	POP	HL
+	RET	C		; Fehler
+	LD	A,(NUMVX)
+MGP2:	LD	(HL),A		; Code merken
+	INC	HL
+	INC	DE
+	DJNZ	MGP1		; bis 11 Parameter gelesen
+MGP4:	LD	A,B
+	SUB	10		; A<0: mehr als 1 Parameter
+	DEC	HL		; bei 1 Par.:HL=JOYKEY+1, A ist 0
+	JR	C,MGP5
+	RET	NZ		; kein Parameter: PA: A=1, CY=0
+	CP	(HL)		; Aufruf JEDIT 0 ?
+	JR	Z,SETDEF
+MGP5:	XOR	A		; PA: A=0, CY=0
+MGP6:	INC	HL
+	LD	(HL),A		; uebrige Joycodes = 0
+	DJNZ	MGP6
+	RET
+;
+; Standardwerte kopieren
+; HL=Quelle, DE=Ziel
+; JOYHLP wird rueckwaerts abgearbeitet
+;
+SETDEF: LD	HL,JOYIRM	; Adresse der Standard-Joysticktabelle
+	LD	(JOYADR),HL
+	LD	HL,JOYTBD	; Quelle (Standardbelegung)
+CPYJOY: PUSH	DE
+	LD	DE,JOYKEY	; Ziel
+	LD	BC,JOYHLP+12	; Hilfstabelle zur Adressumrechnung
+MDEF1:	LDI			; ein Byte kopieren
+	LD	A,(BC)
+	LD	E,A		; naechstes Ziel
+	AND	A		; fertig?
+	JR	NZ,MDEF1
+	POP	DE
+	RET			; PA(GETPAR): A=0, CY=0
+;
+; Anzeige eines Joystickcodes in > <
+; PE:	HL: Zeiger auf den Code
+; VR:	DE,AF
+;
+ANZCHR:	LD	D,(HL)
+	LD	E,CSTBT
+ANZCH1:	PUSH	BC		; Aufruf mit D=CUR, E=CAOS-UP CRT
+	PUSH	HL
+	LD	HL,CURSO	; Spalte einst.
+	LD	(HL),CUPOSX-1
+	LD	BC,0300H+'<'	; 3 Zeichen
+	LD	A,D
+	AND	A		; DUMMY ?
+	LD	A,'>'
+	JR	NZ,MAC1
+	LD	E,SPACE		; dann nur Leerz.
+MAC1:	CALL	PV3
+	LD	A,D		; naechstes Zeichen
+	LD	D,C
+	LD	C,A
+	DJNZ	MAC1
+	LD	A,E
+	CP	CSTBT		; "normales" Zeichen?
+	JR	NZ,MAC2
+	LD	(HL),CUPOSX+5
+	LD	A,C
+	CALL	PV1		; dann Hexdarstellung
+	DB	AHEX
+MAC2:	LD	(HL),CUPOSX
+	POP	HL
+	POP	BC
+	RET
+;
+; Anzeige der Joystickbelegung (mit Adresse und Waitzyklen)
+;
+ANZJOY:	CALL	MAXWD		; Fenster auf max.
+	CALL	PV1
+	DB	OSTR
+	DB	CLS,LF,'* JOYSTICK-EDITOR *   Adr:      Wait:'
+	DB	CR,LF,LF,0
+	LD	HL,JOYKEY+1	; Adresse der 1. Taste
+	PUSH	HL
+	LD	HL,JOYTXT	; Tabelle mit Offset der Teilstrings
+	LD	B,11		; fuer insgesamt 11 Codes
+MAJ1:	PUSH	HL
+	LD	E,(HL)		; Zeiger auf Teilstring
+	SRL	E		; Bit 1..7: Zeiger
+	LD	D,0
+	ADD	HL,DE
+	CALL	PV1		; Anzeige Teilstring
+	DB	ZKOUT
+	POP	HL
+	LD	A,(HL)
+	INC	HL		; Zeiger fuer naechsten Teilstring
+	RRCA			; Teilstring Bit 0: Textende
+	JR	NC,MAJ1
+	EX	(SP),HL		; Adresse auf Code
+	CALL	ANZCHR		; anzeigen
+	INC	HL		; Adresse fuer naechsten Code
+	EX	(SP),HL
+	CALL	PV1		; naechste Zeile
+	DB	CRLF
+	DJNZ	MAJ1
+	POP	HL
+	CALL	JADR		; Anzeige Joyadresse
+;
+; Anzeige der Wartezyklen (dezimal)
+;
+JWAIT:	LD	HL,(CURSO)	; Cursorposition merken
+	PUSH	HL
+	LD	HL,CUPOSW
+	LD	(CURSO),HL
+	CALL	PV1		; alte Anzeige loeschen
+	DB	OSTR
+	DB	'  ',8,8,0
+	LD	HL,(JOYKEY)
+	LD	H,0		; nur 8 Bit
+	CALL	PV1
+	DB	HLDEZ		; dezimal anzeigen
+	JR	MJA1
+;
+; Anzeige Adresse der Joysticktabelle
+;
+JADR:	LD	HL,(CURSO)	; Cursorposition merken
+	PUSH	HL
+	LD	HL,CUPOSA	; Position
+	LD	(CURSO),HL
+	LD	HL,(JOYADR)	; Adresse
+	CALL	HLHEX		; anzeigen (UP im TEMO)
+MJA1:	POP	HL
+	LD	(CURSO),HL	; Cursorposition wie vor Aufruf
+	RET
+;
+; Gueltigkeitspruefung der neuen Adresse fuer die Joysticktabelle
+; PE:	DE=Position in ADRSEC,
+;	HL=Adr, A=Anzahl Durchlaeufe
+;	springt im Fehlerfall gleich ins Menue
+;
+MTA1:	DEC	A 		; weiterer Bereich ?
+	RET	Z
+TSTADR: EX	DE,HL		; hole Bereichsanfang
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	EX	DE,HL
+TSTAD1:	AND	A
+	SBC	HL,BC
+	EX	DE,HL		; hole Groesse
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	EX	DE,HL
+	AND	A
+	SBC	HL,BC		; CY=1:innerhalb
+	JR	NC,MTA1
+	POP	AF		; Fehler: Stackkorrektur
+	POP	AF		; und Meldung
+	JP	RANGE1		; Anzeige "INVALID RANGE" im KC-Debugger (TEMO)
+;
+; Erzeuge Joysticktabelle
+; PE:	DE=Zieladresse
+;
+MKJTAB:	LD	BC,JOYHLP+12	; Hilfstabelle zur Adressumrechnung
+	LD	HL,JOYKEY
+MSV1:	LDI			; Byte fuer Byte rueckwarts kopieren
+	LD	A,(BC)		; naechste Adresse
+	LD	L,A		; in HL verfuegbar machen
+	AND	A		; fertig?
+	JR	NZ,MSV1
+	RET
+;
+; UP-Vorlage fuer die *.JOY-Dateien von SAVE
+;
+if jsave
+SVPRG:	DB	3		; 3 Adressen
+	DW	JFILE		; Anfangsadresse
+	DW	JFILE+SVEND-SVBEG+12 ; Endadresse
+	DW	JFILE		; Startadresse
+	;
+SVBEG:	LD	HL,JFILE+SVEND-SVBEG	; Autostartroutine kopiert die Tabelle
+	LD	DE,(JOYTAB)	; an den vorgegebenen Ort
+	LD	BC,12
+	LDIR
+	RET
+SVEND:
+endif
+;
+; Joystickbelegung im Editor
+;
+JOYEDI:	DB	2
+	DB	83H
+	DB	82H
+	DB	8AH
+	DB	80H
+	DB	86H
+	DB	88H
+	DB	85H
+	DB	81H
+	DB	87H
+	DB	89H
+	DB	84H
+;
+; Standardbelegung der Joysticktasten ab CAOS 4.5
+;
+JOYTBD:	DB	2		; Wartezyklen
+	DB	0Bh		; Up
+	DB	0Ah		; Down
+	DB	CR		; Fire+Fire2
+	DB	08h		; Left
+	DB	0		; Up+Left
+	DB	0		; Down+Left
+	DB	CR		; Fire
+	DB	09h		; Right
+	DB	0		; Up+Right
+	DB	0		; Down+Right
+	DB	' '		; Fire2
+;
+; Umsortierung JOYTAB<->JEDIT (Adresstabelle rueckwaerts)
+;
+JOYHLP:	DB	0		; Endemarkierung
+	DB	LOW(JOYKEY+5)	; Fire2
+	DB	LOW(JOYKEY+10)	; rechts+unten
+	DB	LOW(JOYKEY+8)	; rechts+oben
+	DB	LOW(JOYKEY+2)	; rechts
+	DB	LOW(JOYKEY+6)	; fire
+	DB	LOW(JOYKEY+9)	; links+unten
+	DB	LOW(JOYKEY+7)	; links+oben
+	DB	LOW(JOYKEY+1)	; links
+	DB	LOW(JOYKEY+11)	; fire+fire2
+	DB	LOW(JOYKEY+3)	; unten
+	DB	LOW(JOYKEY+4)	; oben
+	DB	LOW(JOYKEY+0)	; wait
+;
+; Tastenbezeichnungen:
+; Kombination der Teilstrings
+;
+JOYTXT:	DB	2*LOW(SLEFT-$)+1
+	DB	2*LOW(SRIGHT-$)+1
+	DB	2*LOW(SDOWN-$)+1
+	DB	2*LOW(SUP-$)+1
+	DB	2*LOW(SFIRE-$),  2*LOW(SZWEI-$)+1
+	DB	2*LOW(SFIRE-$)+1
+	DB	2*LOW(SLEFT-$),  2*LOW(SUP1-$)+1
+	DB	2*LOW(SRIGHT-$), 2*LOW(SUP1-$)+1
+	DB	2*LOW(SLEFT-$),  2*LOW(SDOWN1-$)+1
+	DB	2*LOW(SRIGHT-$), 2*LOW(SDOWN1-$)+1
+	DB	2*LOW(SFIRE-$),  2*LOW(SFIRE1-$),  2*LOW(SZWEI-$)+1
+;
+; Teilstrings:
+;
+SLEFT:	DB	'left ',0
+SRIGHT:	DB	'right',0
+SDOWN1:	DB	'+'
+SDOWN:	DB	'down',0
+SUP1:	DB	'+'
+SUP:	DB	'up',0
+SFIRE1:	DB	' +'
+SFIRE:	DB	'fire',0
+SZWEI:	DB	'2',0
+;
+CJOY:	DB	'JOY',0
+;
+; M008 in den Bitmode schalten (warten bis Taste gedrueckt)
+;
+JITAB:	DB	0E0H	; Interruptvektor
+	DB	0CFH	; Bit-Mode
+	DB	0FFH	; Eingabe
+	DB	097H	; Int.Steuerwort
+	DB	0C0H	; Int.Maske
+;
+; Liste der geschuetzen Adressbereiche fuer ADR
+;
+  ;JEDIT:Anfangsadr.(rel), Groesse
+ADRSEC:
+  ;Groesse Stack+IRQ+IX
+	DW	80H+11
+  ;weitere Tests:
+	DB	5			; Anzahl Tests
+  ;Standard Stack+IRQ+IX, Speicher fuer *.JOY-Dateien
+	DW	JFILE-11		; erlaubt 0000h..017Fh
+	DW	0200H-JFILE+11		; gesperrt 0180h..01FFh
+  ;BWS und IRM-Arbeitszellen mit Ausnahme der Joystick-Tabelle
+	DW	08000H-0200H-11		; erlaubt 0200h..7FFFh
+	DW	JOYIRM-8000H+11		; gesperrt 8000h..AABFh
+  ;SHADOW
+	DW	JOYIRM+12-JOYIRM-11	; Joystick-Tabelle erlaubt
+	DW	0AB00H-JOYIRM-12+11	; gesperrt AADDh..AAFFh
+  ;Video-RAM, Monitor-RAM, usw.
+	DW	0AD00H-0AB00H-11	; erlaubt AB00h..ACFFh
+	DW	0BA00H-0AD00H+11	; gesperrt AD00h..B9FFh
+  ;ROM
+	DW	0C000H-0BA00H-11	; erlaubt BA00h..BFFFh
+	DW	00000H-0C000H+11	; gesperrt C000h..FFFFh
+PGEND:
+;--------------------------------------
