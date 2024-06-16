@@ -40,6 +40,9 @@ CAOS-F:   15 Byte frei
 History:
 ========
 
+16.06.2024:
+- fehlendes Komma in CD48.INC ergaenzt (Hinweis von PIC18F2550)
+
 05.01.2024: (CAOS 4.8 Patch 7)
 - Bei Menuewort im USER-ROM bleibt der alternative Zeichensatz jetzt erhalten
 - Modul M044 mit Kennbyte 76H von "4M ROM" in "FLASH" umbenannt

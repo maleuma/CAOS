@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  D000h bis DAB7h	**
 ;**					**
-;**	letzte Aenderung: 05.01.2024	**
+;**	letzte Aenderung: 16.06.2024	**
 ;*****************************************
 
 ;	ORG	0D000H
@@ -1684,7 +1684,7 @@ HELP:	LD	A,1
 	LD	A,(IX+9)
 	CALL	AHOSTR		; Prolog und folgenden Text anzeigen
 ;	CALL	OSTR
-	DB	'):'CR,LF,LF,0
+	DB	'):',CR,LF,LF,0
 	LD	HL,HELPX	; Programmteil zur Menuewortsuche und Anzeige
 	LD	DE,CASS		; in den Kassettenpuffer kopieren
 	LD	BC,MENEND-HELPX	; maximal 128 Byte (reicht gerade so!!!)

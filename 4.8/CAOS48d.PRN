@@ -3531,7 +3531,7 @@ CC48    INC
     3                   ;**					**
     4                   ;**	Adresse:  D000h bis DAB7h	**
     5                   ;**					**
-    6                   ;**	letzte Aenderung: 05.01.2024	**
+    6                   ;**	letzte Aenderung: 16.06.2024	**
     7                   ;*****************************************
     8                   
     9                   ;	ORG	0D000H
@@ -5299,7 +5299,7 @@ CD48    INC
  1684 D998  DD 7E 09    	LD	A,(IX+9)
  1685 D99B  CD F0B0     	CALL	AHOSTR		; Prolog und folgenden Text anzeigen
  1686                   ;	CALL	OSTR
- 1687 D99E  29 3A 0D 0A 	DB	'):'CR,LF,LF,0
+ 1687 D99E  29 3A 0D 0A 	DB	'):',CR,LF,LF,0
  1688 D9A4  21 D9C3     	LD	HL,HELPX	; Programmteil zur Menuewortsuche und Anzeige
  1689 D9A7  11 B700     	LD	DE,CASS		; in den Kassettenpuffer kopieren
  1690 D9AA  01 0080     	LD	BC,MENEND-HELPX	; maximal 128 Byte (reicht gerade so!!!)
@@ -11461,4 +11461,4 @@ FE00FFFFINC
  0 Error(s) Detected.
  16512 Absolute Bytes. 1305 Symbols Detected.
 H, 000H, 044H, 044H, 028H, 028H, 010H, 000H	; 76h v
-   7
+   
