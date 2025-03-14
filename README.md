@@ -1,7 +1,8 @@
 # CAOS
  Betriebssysteme fuer die Kleincomputer KC85/2-5 von Muehlhausen (MPM)
 
- CAOS 2.2: Standardbetriebssystem fuer den KC85/2 von MPM
+## CAOS 2.2
+Standardbetriebssystem fuer den KC85/2 von MPM
 
  CAOS 3.1: Standardbetriebssystem fuer den KC85/3 von MPM
 
@@ -24,5 +25,5 @@
  CAOS 4.8: neues DEVICE-Treiber-System, 8 System-Baenke (KC85/5+ mit 512K FLASH ROM)
 
  CAOS 4.9: Fullscreen-Editor fuer BASIC, 16Bit-SWITCH fuer Module, RTC auf Portadresse 55h, TAPE-Directory auch fuer CP/M-Dateien
-  -> ab CAOS 4.9 Flash-ROM mit 16K ROM-C und 16K ROM-E im Grundgeraet erforderlich!
-  -> CAOS-Programmteile in USER-ROM ausgelagert (z.B. Fullscreen-Editor)
+- ab CAOS 4.9 Flash-ROM mit 16K ROM-C und 16K ROM-E im Grundgeraet erforderlich!
+- CAOS-Programmteile in USER-ROM ausgelagert (z.B. Fullscreen-Editor)
