@@ -17,7 +17,7 @@ Originalbetriebssystem von MPM, erste bekannte Version fuer den KC85/4
 Standardbetriebssystem von MPM, korrigierte Version fuer den KC85/4
 
 ### CAOS 4.3
-KC-Club - erste Version fuer den KC85/5 mit 256K RAM und 32K USER ROM
+erste Version vom KC-Club fuer den KC85/5 mit 256K RAM und 32K USER ROM
 
 ### CAOS 4.4
 Fehlerkorrekturen zu CAOS 4.3
@@ -32,7 +32,11 @@ DEVICE-Umschaltung TAPE/DISK (TAPE unter BASIC nicht nutzbar)
 DEVICE-Umschaltung USB hinzugefuegt, wahlweise 80-Zeichen-Editor oder FORTH
 
 ### CAOS 4.8
-neues DEVICE-Treiber-System, 8 System-Baenke (KC85/5+ mit 512K FLASH ROM)
+- neues DEVICE-Treiber-System
+- 8 System-Baenke ueber JUMP 0-7 (KC85/5+ mit 512K FLASH ROM)
+- 2-Monitor-Modus
+- neue CAOS-UP HLDEZ und RDEZ
+- dezimale Argumente bei WINDOW, COLOR und dem User-Bereich im Kommando CD
 
 ### CAOS 4.9
 ${\color{red}ACHTUNG! \space CAOS \space 4.9 \space benoetigt \space 16K \space ROM:C \space und \space 16K \space ROM:E \space (Flash \space ROM \space Erweiterung)}$
