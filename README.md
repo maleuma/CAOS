@@ -23,7 +23,7 @@ erste Version vom KC-Club fuer den KC85/5 mit 256K RAM und 32K USER ROM
 Fehlerkorrekturen zu CAOS 4.3
 
 ### CAOS 4.5
-Weiterentwicklung, fest integrierter Joystick-Treiber
+Weiterentwicklung, fest integrierter Joystick-Treiber+Editor, Taschenrechner CALC
 
 ### CAOS 4.6
 DEVICE-Umschaltung TAPE/DISK (TAPE unter BASIC nicht nutzbar)
