@@ -1,12 +1,12 @@
-Uebersicht der CAOS-Menueworte in CAOS 4.8:
-==========================================
+Uebersicht der CAOS-Menueworte in CAOS 4.8/4.9:
+==============================================
 ? = ?c, ?i
 A = ASM
 B = BASIC, BSAVE
 C = CD, COLOR
 D = DEVICE, DIR, DISASS, DISPLAY, DUMP
 E = EDIT, ERA
-F = (FORTH)
+F =
 G = GO
 H = HELP
 I = INIT
@@ -18,7 +18,7 @@ N =
 O =
 P = PRINT
 Q = QMR
-R = REASM, REBASIC, REEDIT, REN, RETEMO, (REFORTH)
+R = REASM, REBASIC, REEDIT, REN, RETEMO
 S = SAVE, SETRO, SETWR, STACK, SWITCH
 T = TEMO, TIME, TYPE
 U =
@@ -29,16 +29,36 @@ Y =
 Z =
 
 
+Speicherbelegung CAOS 4.9 (13.03.2025):
+=========================
+
+CAOS-C0:  93 Byte frei
+CAOS-C1:  87 Byte frei
+CAOS-E:   15 Byte frei
+CAOS-F:    7 Byte frei
+USER-C:    0 Byte frei (BASIC)
+USER-D:    3 Byte frei (REAS, TEMO, JEDIT, CALC, BSAVE)
+USER-E:  923 Byte frei (ASM, FSE, TIME)
+USER-F:  130 Byte frei (EDIT)
+
+History:
+========
+
+13.03.2025:
+- BASIC-Programmverteiler mit Fullscreen-Editor in USER-ROM ausgelagert
+- 16Bit SWITCH mit erweitertem Steuerbyte
+- Erkennung Flash-ROM-Kapazitaet von Modul M044
+- Unterschiedlicher Code in ROM-C (nicht nur Zeichensatz!)
+- TIME-Kommando verwendet RTC auf Portadresse 55h und von DEP 3.0
+- TAPE-Directory kann jetzt auch CP/M-Dateien anzeigen mit ARGN=1
+
+
 Speicherbelegung CAOS 4.8 (05.01.2024):
 =========================
 
 CAOS-C:   62 Byte frei
 CAOS-E:    0 Byte frei
 CAOS-F:   15 Byte frei
-
-
-History:
-========
 
 16.06.2024:
 - fehlendes Komma in CD48.INC ergaenzt (Hinweis von PIC18F2550)
