@@ -23,4 +23,6 @@
 
  CAOS 4.8: neues DEVICE-Treiber-System, 8 System-Baenke (KC85/5+ mit 512K FLASH ROM)
 
- CAOS 4.9 (in Planung): Fullscreen-Editor fuer BASIC, 16Bit-Steuerbytes fuer Module - Flash-ROM im Grundgeraet erforderlich!
+ CAOS 4.9: Fullscreen-Editor fuer BASIC, 16Bit-SWITCH fuer Module, RTC auf Portadresse 55h, TAPE-Directory auch fuer CP/M-Dateien
+  -> ab CAOS 4.9 Flash-ROM mit 16K ROM-C und 16K ROM-E im Grundgeraet erforderlich!
+  -> CAOS-Programmteile in USER-ROM ausgelagert (z.B. Fullscreen-Editor)
