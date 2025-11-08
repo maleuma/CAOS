@@ -44,3 +44,4 @@ ${\color{red}ACHTUNG! \space CAOS \space 4.9 \space benoetigt \space 16K \space 
 - 16Bit-SWITCH fuer Module, Erkennung Flash-ROM-Groesse bei M044
 - Time-Kommando erkennt RTC auf Portadresse 55h
 - TAPE-Directory listet nun auch CP/M-Dateien auf mit ARGN=1
+- Erweiterung Modulcheck bei M011 auf mehrere Ebenen
