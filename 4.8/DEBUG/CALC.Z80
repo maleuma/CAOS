@@ -250,8 +250,8 @@ DTLOOP:	CALL	INPUT		; Ausdruck anfordern
 	CALL	PRCALC		; berechnen
 	JR	DTLOOP
 ;
-DTEX1:	LD	A,7		;bei Fehler in RAMSAV
-	CALL	PV1		;BEEP
+DTEX1:	LD	A,7		; bei Fehler in RAMSAV
+	CALL	PV1		; BEEP
 	DB	CRT
 	JR	DTEX2		;und raus, CY' ist 0
 ;
@@ -394,13 +394,14 @@ RAMSV4:	LD	(IX+13),0	; bewirkt FastRepeat
 ;
 ; RAM 0300H-09EFH in/aus versteckten IRM (Color-RAM, Bild 0) kopieren
 ;-------------------------
-RAMSV5:	LD	HL,0C386H	; Hilfs-MC direkt auf den Stack ablegen
-	PUSH	HL		; (SP)=RAMSV3
-	LD	HL,0D3F1H
+; Hilfs-MC direkt auf den Stack ablegen, (SP)=RAMSV3
+RAMSV5:	LD	HL,0C386H	; 86 C3		(86H), JP ...
 	PUSH	HL
-	LD	HL,0B0EDH
+	LD	HL,0D3F1H	; F1 D3		POP AF, OUT ...
 	PUSH	HL
-	LD	HL,086D3H
+	LD	HL,0B0EDH	; ED B0		LDIR
+	PUSH	HL
+	LD	HL,086D3H	; D3 86		OUT (86H),A
 	PUSH	HL
 	SBC	HL,HL		; HL:=0 (CY ist 0)
 	ADD	HL,SP		; Startadresse Hilfs-MC
@@ -578,8 +579,8 @@ PREND:	LD	SP,(SYSP)
 	DB	' ',CR,LF,0
 	RET
 ;
-;Ruecksetzen Ausgabeumleitung
-;----------------------------
+; Ruecksetzen Ausgabeumleitung
+;-----------------------------
 ;
 OURET:	PUSH	HL
 	LD	HL,(OOUTB)
@@ -833,7 +834,7 @@ DTBEG:	PUSH	AF
 	IN	A,(88H)		; Schaltzustand des Speichers merken
 	LD	E,A
 	OR	A,85H		; CALC in den Vordergrund
-	OUT	(88H),A		; PIO-A: USER-ROM an
+	OUT	(88H),A		; PIO-A: USER-ROM, CAOS-E und IRM ein
 	LD	A,(IX+4)
 	LD	D,A		; Port 86H:
 	OR	A,40H		; - Debugger

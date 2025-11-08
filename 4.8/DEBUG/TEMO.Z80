@@ -532,6 +532,7 @@ LBL3:	CP	27H		; folgt ' ?
 LBL4:	INC	DE
 	CALL	GETHEX		; folgende Zahl lesen
 	JR	NC,LBL5		; kein Fehler
+; Marke ERR wird von CALC mitbenutzt!
 ERR:	CALL	PV1		; Fehlermeldung, Monitor-Loop
 	DB	ERRM
 	SCF		;CY=1
@@ -705,7 +706,8 @@ MODUL:	CALL	PV1
 	;
 AHSPC:	CALL	PV1
 	DB	AHEX
-	CALL	PV1
+; Marke SPACE1 wird von CALC mitbenutzt!
+SPACE1:	CALL	PV1
 	DB	SPACE
 	RET
 ;

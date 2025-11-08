@@ -516,7 +516,7 @@ REAS    Z80
     3                   ;	----------------------------------------	;
     4                   ;	(und CAOS-Editor, Assembler und Reassembler)	;
     5                   ;							;
-    6                   ; EDAS.INC		ML-Soft 21.01.2018-04.03.2020	;
+    6                   ; EDAS.INC		ML-Soft 21.01.2018-27.03.2023	;
     7                   ;-------------------------------------------------------;
     8                   
     9         0000      NAME0	EQU	0000H		; Dateiname 8 Zeichen, Typ 3 Zeichen
@@ -545,89 +545,88 @@ REAS    Z80
    32         003E      STAT	EQU	STRING+LSTR	; Merkzelle fuer verschiedene Einstellungen
    33                   		;Bit 0 = 1 - Floppy vorhanden
    34                   		;Bit 1 = 1 - DEP mit LW-Steuerung
-   35                   		;Bit 2 = 1 - Fehler bei Diskette
-   36                   		;	     oder MTAB-Ueberschreitung aufgetreten
+   35                   		;Bit 2 = 1 - Fehler bei MTAB-Ueberschreitung aufgetreten
+   36                   		;Bit 3 = 1 - Option 'S' merken
 KC-Debugger     							    SLR180 1.31 Page  10
 EDAS    INC
 
-   37                   		;Bit 3 = 1 - Option 'S' merken
-   38                   		;Bit 4 = 1 - Ueberschreiben (0=Einfuegen)
-   39                   		;Bit 5 = 1 - Zeichensatz (0=IBM, 1=deutsch)
-   40                   		;Bit 6 = 1 - Zeichensatz (0=IBM, 1=CAOS)
-   41                   		;Bit 7 = 1 - END-Befehl erkannt (ASM)
-   42                   
-   43                   ; Assembler-Arbeitszellen:
-   44                   
-   45         003F      OPT	EQU	STAT+1		; Assembler-Optionen
-   46                   		;Bit 0	L - Listing ausgeben
-   47                   		;Bit 1	P - Umschaltung Drucker
-   48                   		;Bit 2	+ - Markentabelle erweitern
-   49                   		;Bit 3	1 - nur PASS 1!
-   50                   		;Bit 4	3 - PASS 3 laeuft (Save MC)
-   51                   		;Bit 5	B - Bildschirmformat (40 Spalten)
-   52                   		;Bit 6	O - MC in Speicher laden
-   53                   		;Bit 7	2 - nur PASS 2
-   54         0040      OFFS	EQU	OPT+1		; Assembler-Offset
-   55         0042      OBJ	EQU	OFFS+2		; Beginn Maschinencode
-   56         0044      MBOT	EQU	OBJ+2		; RAM-Ende+1	8000H oder C000H
-   57         0046      MTOP	EQU	MBOT+2		; Marken-Tabelle (Anfang)
-   58         0048      PBL	EQU	MTOP+2		; Pointer auf Byte-Liste
-   59         004A      M78	EQU	PBL+2
-   60         004B      M79	EQU	M78+1
-   61         004C      MPC	EQU	M79+1		; Adressenzaehler fuer MC-Erzeugung
-   62         004E      ERRNO	EQU	MPC+2		; Zaehler (BCD) fuer Fehler beim Assemblieren
-   63         0050      MCL	EQU	ERRNO+2		; MC-Endadresse
-   64         0052      NUMB	EQU	MCL+2		; + Berechneter Wert eines Ausdrucks (Operand)
-   65         0054      DDFD	EQU	NUMB+2		; | DD/FD-Speicher
-   66         0055      KLAM	EQU	DDFD+1		; | Klammer-Speicher
-   67         0056      M84	EQU	KLAM+1		; | Merker, ob Operand gefunden wurde
-   68         0057      VORZ	EQU	M84+1		; | Rechenzeichen-Speicher
-   69         0058      REGNR	EQU	VORZ+1		; + Registerkennbyte
-   70         0059      REGC	EQU	REGNR+1		; Registercode
-   71                   	; Registerkennbyte	Registercode	DDFD
-   72                   	;				Bit
-   73                   	; A	00H		07H	8
-   74                   	; B	01H		00H	8
-   75                   	; C	02H		01H	8
-   76                   	; D	03H		02H	8
-   77                   	; E	04H		03H	8
-   78                   	; H	07H		04H	8
-   79                   	; HX	07H		04H	8	DD
-   80                   	; HY	07H		04H	8	FD
-   81                   	; L	0BH		05H	8
-   82                   	; LX	0BH		05H	8	DD
-   83                   	; LY	0BH		05H	8	FD
-   84                   	; I	08H		47H	8
-   85                   	; R	11H		4FH	8
-   86                   	; M(HL)	3AH		06H	8
-   87                   	; (IX+)	3AH		06H	8	DD	
-   88                   	; (IY+)	3AH		06H	8	FD
-   89                   	; BC	2BH		00H	16
-   90                   	; (BC)	2BH		00H	8
-   91                   	; DE	2FH		10H	16
-   92                   	; (DE)	2FH		10H	8
-   93                   	; HL	3AH		20H	16
-   94                   	; IX	3AH		20H	16	DD
+   37                   		;Bit 4 = 1 - Ueberschreiben (0=Einfuegen)
+   38                   		;Bit 5 = 1 - Zeichensatz (0=IBM, 1=deutsch)
+   39                   		;Bit 6 = 1 - Zeichensatz (0=IBM, 1=CAOS)
+   40                   		;Bit 7 = 1 - END-Befehl erkannt (ASM)
+   41                   
+   42                   ; Assembler-Arbeitszellen:
+   43                   
+   44         003F      OPT	EQU	STAT+1		; Assembler-Optionen
+   45                   		;Bit 0	L - Listing ausgeben
+   46                   		;Bit 1	P - Umschaltung Drucker
+   47                   		;Bit 2	+ - Markentabelle erweitern
+   48                   		;Bit 3	1 - nur PASS 1!
+   49                   		;Bit 4	3 - PASS 3 laeuft (Save MC)
+   50                   		;Bit 5	B - Bildschirmformat (40 Spalten)
+   51                   		;Bit 6	O - MC in Speicher laden
+   52                   		;Bit 7	2 - nur PASS 2
+   53         0040      OFFS	EQU	OPT+1		; Assembler-Offset
+   54         0042      OBJ	EQU	OFFS+2		; Beginn Maschinencode
+   55         0044      MBOT	EQU	OBJ+2		; RAM-Ende+1	8000H oder C000H
+   56         0046      MTOP	EQU	MBOT+2		; Marken-Tabelle (Anfang)
+   57         0048      PBL	EQU	MTOP+2		; Pointer auf Byte-Liste
+   58         004A      M78	EQU	PBL+2
+   59         004B      M79	EQU	M78+1
+   60         004C      MPC	EQU	M79+1		; Adressenzaehler fuer MC-Erzeugung
+   61         004E      ERRNO	EQU	MPC+2		; Zaehler (BCD) fuer Fehler beim Assemblieren
+   62         0050      MCL	EQU	ERRNO+2		; MC-Endadresse
+   63         0052      NUMB	EQU	MCL+2		; + Berechneter Wert eines Ausdrucks (Operand)
+   64         0054      DDFD	EQU	NUMB+2		; | DD/FD-Speicher
+   65         0055      KLAM	EQU	DDFD+1		; | Klammer-Speicher
+   66         0056      M84	EQU	KLAM+1		; | Merker, ob Operand gefunden wurde
+   67         0057      VORZ	EQU	M84+1		; | Rechenzeichen-Speicher
+   68         0058      REGNR	EQU	VORZ+1		; + Registerkennbyte
+   69         0059      REGC	EQU	REGNR+1		; Registercode
+   70                   	; Registerkennbyte	Registercode	DDFD
+   71                   	;				Bit
+   72                   	; A	00H		07H	8
+   73                   	; B	01H		00H	8
+   74                   	; C	02H		01H	8
+   75                   	; D	03H		02H	8
+   76                   	; E	04H		03H	8
+   77                   	; H	07H		04H	8
+   78                   	; HX	07H		04H	8	DD
+   79                   	; HY	07H		04H	8	FD
+   80                   	; L	0BH		05H	8
+   81                   	; LX	0BH		05H	8	DD
+   82                   	; LY	0BH		05H	8	FD
+   83                   	; I	08H		47H	8
+   84                   	; R	11H		4FH	8
+   85                   	; M(HL)	3AH		06H	8
+   86                   	; (IX+)	3AH		06H	8	DD	
+   87                   	; (IY+)	3AH		06H	8	FD
+   88                   	; BC	2BH		00H	16
+   89                   	; (BC)	2BH		00H	8
+   90                   	; DE	2FH		10H	16
+   91                   	; (DE)	2FH		10H	8
+   92                   	; HL	3AH		20H	16
+   93                   	; IX	3AH		20H	16	DD
+   94                   	; IY	3AH		20H	16	FD
 KC-Debugger     							    SLR180 1.31 Page  11
 EDAS    INC
 
-   95                   	; IY	3AH		20H	16	FD
-   96                   	; SP	49H		30H	16
-   97                   	; AF	2DH		31H	16
-   98                   
-   99                   ; Hilfsprogramme fuer Speicherzugriff hinter IRM und ROM-C bis DFFFh
-  100                   
-  101         005A      RAMC	EQU	REGC+1		; Hilfsprogramme fuer Speicherzugriff bis DFFFh
-  102                   	; 005Ch bis 00A0h	  nur bei ext. Editor erforderlich
-  103                   
-  104                   ; Assemblierpuffer:	(hier steht die erzeugte Quelltextzeile)
-  105                   
-  106         A880      NERR	EQU	0A880h		; 1 Byte Assembler-Fehlercode
-  107                   				; 1 Byte "Stern" wenn Fehlercode vorhanden ist
-  108         A882      ADR	EQU	NERR+2		; 4 Byte fuer Adresse
-  109                   				; 10 Byte fuer Hexcodes
-  110         A890      TEXT	EQU	NERR+16		; Quelltext (max. 80 Byte bei ext. Editor)
-  111                   	; A880h bis A8FFh
+   95                   	; SP	49H		30H	16
+   96                   	; AF	2DH		31H	16
+   97                   
+   98                   ; Hilfsprogramme fuer Speicherzugriff hinter IRM und ROM-C bis DFFFh
+   99                   
+  100         005A      RAMC	EQU	REGC+1		; Hilfsprogramme fuer Speicherzugriff bis DFFFh
+  101                   	; 005Ch bis 00A0h	  nur bei ext. Editor erforderlich
+  102                   
+  103                   ; Assemblierpuffer:	(hier steht die erzeugte Quelltextzeile)
+  104                   
+  105         A880      NERR	EQU	0A880h		; 1 Byte Assembler-Fehlercode
+  106                   				; 1 Byte "Stern" wenn Fehlercode vorhanden ist
+  107         A882      ADR	EQU	NERR+2		; 4 Byte fuer Adresse
+  108                   				; 10 Byte fuer Hexcodes
+  109         A890      TEXT	EQU	NERR+16		; Quelltext (max. 80 Byte bei ext. Editor)
+  110                   	; A880h bis A8FFh
    48                   ;
    49                   ; Edas-Assemblierpuffer im IRM, hier verwendet als:
    50                   ;
@@ -669,10 +668,10 @@ EDAS    INC
    86         B795      PRCU	EQU	ARG10+1	; Drucker - Pos. Curs.
    87                   
    88                   ;DTPTR	EQU	0B7DAH	; KPUFF-Zeiger (aus CAOS.INC)
+   89                   
 KC-Debugger     							    SLR180 1.31 Page  12
 REAS    Z80
 
-   89                   
    90                   ;---------------
    91 C000  6A 3A       BEG:	DB	6AH,Low(VED)	;ED..
    92 C002  39 06       	DB	39H,Low(NVB)	;normal
@@ -730,10 +729,10 @@ REAS    Z80
   144                    
   145 C035  C0          VCB:	DB	0C0H	;Maske4
   146 C036  00          	DB	0	;RLCA	RLC
+  147 C037  40          	DB	40H	;LD r,r	BIT
 KC-Debugger     							    SLR180 1.31 Page  13
 REAS    Z80
 
-  147 C037  40          	DB	40H	;LD r,r	BIT
   148 C038  80          	DB	80H	;ADD r	RES
   149 C039  C0          	DB	0C0H	;RST	SET
   150                    
@@ -791,10 +790,10 @@ REAS    Z80
   202                    
   203 C065  DE          	DEFB	'R'+O3		;01
   204 C066  51          	DEFB	'E'+O1
+  205 C067  60          	DEFB	'T'+O1	;RET
 KC-Debugger     							    SLR180 1.31 Page  14
 REAS    Z80
 
-  205 C067  60          	DEFB	'T'+O1	;RET
   206                    
   207 C068  DA          	DEFB	'N'+O3		;02
   208 C069  5B          	DEFB	'O'+O1
@@ -852,10 +851,10 @@ REAS    Z80
   260 C08F  69          	DEFB	'C'+O2	;SBC-
   261                    
   262 C090  CD          	DEFB	'A'+O3		;11
+  263 C091  5A          	DEFB	'N'+O1
 KC-Debugger     							    SLR180 1.31 Page  15
 REAS    Z80
 
-  263 C091  5A          	DEFB	'N'+O1
   264 C092  6A          	DEFB	'D'+O2	;AND-
   265                    
   266 C093  E4          	DEFB	'X'+O3		;12
@@ -913,10 +912,10 @@ REAS    Z80
   318 C0B5  4D          	DEFB	'A'+O1	;SRA
   319                    
   320 C0B6  DF          	DEFB	'S'+O3		;23
+  321 C0B7  58          	DEFB	'L'+O1
 KC-Debugger     							    SLR180 1.31 Page  16
 REAS    Z80
 
-  321 C0B7  58          	DEFB	'L'+O1
   322 C0B8  5F          	DEFB	'S'+O1	;SLS
   323                    
   324 C0B9  DF          	DEFB	'S'+O3		;24
@@ -974,10 +973,10 @@ REAS    Z80
   376 C0D6  B4          	DEFB	'('+O3		;39
   377 C0D7  1A          	DB	1AH
   378                   ;	DEFB	'+'+O1		; ??? fehlt in ROM-Version ???
+  379 C0D8  25          	DB	25H
 KC-Debugger     							    SLR180 1.31 Page  17
 REAS    Z80
 
-  379 C0D8  25          	DB	25H
   380 C0D9  35          	DEFB	')'+O1	;(ii+d)
   381                    
   382                   ;Befehle ohne Vorbyte:
@@ -1035,10 +1034,10 @@ REAS    Z80
   434 C100  4D          	DEFB	'A'+O1
   435 C101  58          	DEFB	'L'+O1
   436 C102  60          	DEFB	'T'+O1	;HALT
+  437                    
 KC-Debugger     							    SLR180 1.31 Page  18
 REAS    Z80
 
-  437                    
   438 C103  D6          	DEFB	'J'+O3		;47
   439 C104  76          	DEFB	'P'+O2
   440 C105  26          	DB	26H	;JP nn
@@ -1096,10 +1095,10 @@ REAS    Z80
   492 C12D  26          	DB	26H	;LD dd,nn
   493                    
   494 C12E  80          	DB	80H		;54
+  495 C12F  07          	DB	7
 KC-Debugger     							    SLR180 1.31 Page  19
 REAS    Z80
 
-  495 C12F  07          	DB	7
   496 C130  0B          	DB	11	;LD (dd),A
   497                    
   498 C131  84          	DB	84H		;55
@@ -1157,10 +1156,10 @@ REAS    Z80
   550 C159  CF          	DEFB	'C'+O3		;61
   551 C15A  4D          	DEFB	'A'+O1
   552 C15B  58          	DEFB	'L'+O1
+  553 C15C  72          	DEFB	'L'+O2
 KC-Debugger     							    SLR180 1.31 Page  20
 REAS    Z80
 
-  553 C15C  72          	DEFB	'L'+O2
   554 C15D  22          	DB	22H
   555 C15E  38          	DEFB	','+O1
   556 C15F  26          	DB	26H	;CALL cc,nn
@@ -1218,10 +1217,10 @@ REAS    Z80
   608 C184  60          	DEFB	'T'+O1
   609 C185  4F          	DEFB	'C'+O1
   610 C186  58          	DEFB	'L'+O1	;OTCL
+  611                    
 KC-Debugger     							    SLR180 1.31 Page  21
 REAS    Z80
 
-  611                    
   612 C187  80          	DB	80H		;6D
   613 C188  55          	DEFB	'I'+O1
   614 C189  0B          	DB	0BH	;LD I,A
@@ -1279,10 +1278,10 @@ REAS    Z80
   666 C1B1  38          	DEFB	','+O1
   667 C1B2  21          	DB	21H	;OUT (C),r
   668                    
+  669 C1B3  DA          	DEFB	'N'+O3		;7A
 KC-Debugger     							    SLR180 1.31 Page  22
 REAS    Z80
 
-  669 C1B3  DA          	DEFB	'N'+O3		;7A
   670 C1B4  51          	DEFB	'E'+O1
   671 C1B5  53          	DEFB	'G'+O1	;NEG
   672                    
@@ -1340,10 +1339,10 @@ REAS    Z80
   724                   ;
   725 C1DA  FE CB       NIND:	CP	0CBH		;CB?
   726 C1DC  21 6001     	LD	HL,BEG/2+1
+  727 C1DF  20 1E       	JR	NZ,NCB
 KC-Debugger     							    SLR180 1.31 Page  23
 REAS    Z80
 
-  727 C1DF  20 1E       	JR	NZ,NCB
   728 C1E1  2C          	INC	L
   729 C1E2  CB 49       	BIT	1,C		;Index?
   730 C1E4  28 20       	JR	Z,ZBYTE
@@ -1401,10 +1400,10 @@ REAS    Z80
   782 C226  F1          	POP	AF	;Bef.-Nr.
   783 C227  18 7A       	JR	PLA
   784                    
+  785 C229  1A          EE:	LD	A,(DE)
 KC-Debugger     							    SLR180 1.31 Page  24
 REAS    Z80
 
-  785 C229  1A          EE:	LD	A,(DE)
   786 C22A  13          	INC	DE
   787 C22B  6F          	LD	L,A
   788 C22C  26 00       	LD	H,0
@@ -1462,10 +1461,10 @@ REAS    Z80
   840 C270  3A B791     	LD	A,(POCU)
   841 C273  A7          	AND	A
   842 C274  C8          	RET	Z
+  843 C275  3A B7A0     SPC:	LD	A,(CURSO)
 KC-Debugger     							    SLR180 1.31 Page  25
 REAS    Z80
 
-  843 C275  3A B7A0     SPC:	LD	A,(CURSO)
   844 C278  FE 0A       	CP	10
   845 C27A  D0          	RET	NC
   846 C27B  CD CAFB     	CALL	AUSTAB		; Ausgabe Trennzeichen
@@ -1523,10 +1522,10 @@ REAS    Z80
   898 C2CC  7D          	LD	A,L
   899 C2CD  E6 07       	AND	7
   900 C2CF  FE 06       	CP	6
+  901 C2D1  20 03       	JR	NZ,HM
 KC-Debugger     							    SLR180 1.31 Page  26
 REAS    Z80
 
-  901 C2D1  20 03       	JR	NZ,HM
   902 C2D3  CB 71       	BIT	6,C
   903 C2D5  C0          	RET	NZ
   904 C2D6  3E 38       HM:	LD	A,','+O1
@@ -1584,10 +1583,10 @@ REAS    Z80
   963 C2FC  21 C062     	LD	HL,BMNE		; Tabelle der Mnemoniken
   964 C2FF  23          SCH:	INC	HL
   965 C300  CB 7E       	BIT	7,(HL)		; Token-Ende?
+  966 C302  28 FB       	JR	Z,SCH		; noch nicht
 KC-Debugger     							    SLR180 1.31 Page  27
 REAS    Z80
 
-  966 C302  28 FB       	JR	Z,SCH		; noch nicht
   967 C304  3D          	DEC	A		; Kennung gefunden?
   968 C305  20 F8       	JR	NZ,SCH		; noch nicht
   969 C307  7E          PRST:	LD	A,(HL)
@@ -1645,10 +1644,10 @@ REAS    Z80
  1021 C355  10 EE       	DJNZ	OU2
  1022 C357  04          	INC	B		; Falls alle 4 Stellen 0 sind, diese einmalig anzeigen
  1023 C358  C6 30       OU3:	ADD	30H		; 0..9
+ 1024 C35A  FE 3A       	CP	3AH		; groesser als 9?
 KC-Debugger     							    SLR180 1.31 Page  28
 REAS    Z80
 
- 1024 C35A  FE 3A       	CP	3AH		; groesser als 9?
  1025 C35C  38 0E       	JR	C,OU5		; nein
  1026 C35E  C6 07       	ADD	7		; HEX-Korrektur: A..F
  1027 C360  CB 71       	BIT	6,C		; Ausgabe laeuft?
@@ -1706,10 +1705,10 @@ REAS    Z80
  1079 C399  CD CAFB     	CALL	AUSTAB		; Ausgabe Trennzeichen
  1080 C39C  D5          ZEILE:	PUSH	DE
  1081 C39D  E1          	POP	HL
+ 1082 C39E  3A A882     	LD	A,(DMODE)	; TEST, ob DEFx auszugeben ist
 KC-Debugger     							    SLR180 1.31 Page  29
 REAS    Z80
 
- 1082 C39E  3A A882     	LD	A,(DMODE)	; TEST, ob DEFx auszugeben ist
  1083 C3A1  A7          	AND	A
  1084 C3A2  20 69       	JR	NZ,DIS1		; Special Mode
  1085 C3A4  CD CDDA     	CALL	LENG
@@ -1767,10 +1766,10 @@ REAS    Z80
  1137 C3FF  BE          	CP	(HL)
  1138 C400  20 08       	JR	NZ,ZU3
  1139 C402  23          	INC	HL
+ 1140 C403  13          	INC	DE
 KC-Debugger     							    SLR180 1.31 Page  30
 REAS    Z80
 
- 1140 C403  13          	INC	DE
  1141 C404  1A          	LD	A,(DE)
  1142 C405  BE          	CP	(HL)
  1143 C406  20 02       	JR	NZ,ZU3
@@ -1828,10 +1827,10 @@ REAS    Z80
  1195 C450  0E 00       	LD	C,0
  1196 C452  C3 C2FB     	JP	NM		; Anzeige "DB"
  1197                    
+ 1198                   ;DW xxxx-$-2 , (DMODE)=0:
 KC-Debugger     							    SLR180 1.31 Page  31
 REAS    Z80
 
- 1198                   ;DW xxxx-$-2 , (DMODE)=0:
  1199 C455  3E 87       DEF13:	LD	A,87H		; Kennung fuer DW
  1200 C457  0E 00       	LD	C,0
  1201 C459  CD C2FB     	CALL	NM		; Anzeige "DW"
@@ -1889,10 +1888,10 @@ REAS    Z80
  1253 C4CC  F1          	POP	AF
  1254 C4CD  FE 03       	CP	3
  1255 C4CF  30 02       	JR	NC,AR4		; >2 Parameter
+ 1256 C4D1  D1          	POP	DE
 KC-Debugger     							    SLR180 1.31 Page  32
 REAS    Z80
 
- 1256 C4D1  D1          	POP	DE
  1257 C4D2  D5          	PUSH	DE		; Ausgabeadresse = Reassembleradresse
  1258 C4D3  E1          AR4:	POP	HL
  1259 C4D4  EB          	EX	DE,HL
@@ -1950,10 +1949,10 @@ REAS    Z80
  1311 C530  42          	DEFB	CSTBT		; Zeichen anzeigen
  1312 C531  10 F8       	DJNZ	BY3
  1313 C533  D1          	POP	DE
+ 1314                   ;	LD	A,30
 KC-Debugger     							    SLR180 1.31 Page  33
 REAS    Z80
 
- 1314                   ;	LD	A,30
  1315                   ;	LD	(CURSO),A	; Spalte fuer HEX-Aanzeige setzen
  1316 C534  3A B7A0     BY4:	LD	A,(CURSO)
  1317 C537  FE 1E       	CP	30		; Spalte fuer Hex-Anzeige erreicht?
@@ -2011,10 +2010,10 @@ REAS    Z80
  1369 C592  ED 52       	SBC	HL,DE
  1370 C594  19          	ADD	HL,DE
  1371 C595  38 F3       	JR	C,LI8
+ 1372 C597  C1          	POP	BC
 KC-Debugger     							    SLR180 1.31 Page  34
 REAS    Z80
 
- 1372 C597  C1          	POP	BC
  1373 C598  10 E8       	DJNZ	LI7
  1374 C59A  FD E5       	PUSH	IY
  1375 C59C  D1          	POP	DE
@@ -2072,10 +2071,10 @@ REAS    Z80
  1427                   
  1428 C606  CD D3D5     	CALL	NL		; neue Zeile mit CRLF (aus TEMO.Z80)
  1429 C609  CD F003     EING5:	CALL	PV1
+ 1430 C60C  23          	DB	OSTR
 KC-Debugger     							    SLR180 1.31 Page  35
 REAS    Z80
 
- 1430 C60C  23          	DB	OSTR
  1431 C60D  02 4D 61 72 	DB	2,'Markenbereich: '
  1432 C61D  00          	DB	0
  1433 C61E  2A B782     	LD	HL,(ARG1)	; Anfangsadresse und
@@ -2133,10 +2132,10 @@ REAS    Z80
  1485 C691  CD D3D5     	CALL	NL		; neue Zeile mit CRLF (aus TEMO.Z80)
  1486 C694  CD F003     EING11:	CALL	PV1
  1487 C697  23          	DB	OSTR
+ 1488 C698  02 36 20 50 	DB	2,'6 Prologbytes: ',0
 KC-Debugger     							    SLR180 1.31 Page  36
 REAS    Z80
 
- 1488 C698  02 36 20 50 	DB	2,'6 Prologbytes: ',0
  1489 C6A9  06 04       	LD	B,4		; 4 Prologbytes vorgeben
  1490 C6AB  21 C386     	LD	HL,PROBY	; stehen hier im ROM
  1491 C6AE  7E          EING9:	LD	A,(HL)
@@ -2194,10 +2193,10 @@ REAS    Z80
  1543 C71B  CD F003     	CALL	PV1
  1544 C71E  23 0A 02    	DB	OSTR,LF,2	; neue Zeile loeschen
  1545 C721  32 2E 54 72 	DB	'2.Trennzeichen:',0
+ 1546 C731  21 A880     	LD	HL,MS		; Markenschalter
 KC-Debugger     							    SLR180 1.31 Page  37
 REAS    Z80
 
- 1546 C731  21 A880     	LD	HL,MS		; Markenschalter
  1547 C734  3E 10       EING21:	LD	A,10H
  1548 C736  32 B7A0     	LD	(CURSO),A
  1549 C739  CB 76       	BIT	6,(HL)		; aktuell TAB oder Leerzeichen?
@@ -2255,10 +2254,10 @@ REAS    Z80
  1601 C7B8  20 E1       	JR	NZ,EING14	; 4 = Edas/ASM
  1602 C7BA  CD F003     EING13:	CALL	PV1
  1603 C7BD  00          	DB	CRT		; Zeichen zur Bestaetigung anzeigen
+ 1604 C7BE  CD F003     	CALL	PV1
 KC-Debugger     							    SLR180 1.31 Page  38
 REAS    Z80
 
- 1604 C7BE  CD F003     	CALL	PV1
  1605 C7C1  23          	DB	OSTR
  1606 C7C2  0A 02 00    	DB	LF,2,0		; naechste Zeile loeschen
  1607 C7C5  26 00       	LD	H,0		; Special-Mode = AUS
@@ -2316,10 +2315,10 @@ REAS    Z80
  1659 C861  CD F003     EING32:	CALL	PV1
  1660 C864  23          	DB	OSTR
  1661 C865  0A 02 00    	DB	LF,2,0		; Neue Zeile loeschen
+ 1662 C868  CD F003     EING19:	CALL	PV1
 KC-Debugger     							    SLR180 1.31 Page  39
 REAS    Z80
 
- 1662 C868  CD F003     EING19:	CALL	PV1
  1663 C86B  23          	DB	OSTR
  1664 C86C  0A 02 4F 6B 	DB	LF,2,'Ok ? (J)/N',LF,2,0
  1665 C87B  CD F003     	CALL	PV1
@@ -2377,10 +2376,10 @@ REAS    Z80
  1717 C8EB  21 A880     	LD	HL,MS		; Markenschalter
  1718 C8EE  CB AE       	RES	5,(HL)
  1719 C8F0  CD CB2A     	CALL	AUSTR
+ 1720 C8F3  0D 0A 09    	DB	CR,LF,9		; neue Zeile, mit TAB beginnen
 KC-Debugger     							    SLR180 1.31 Page  40
 REAS    Z80
 
- 1720 C8F3  0D 0A 09    	DB	CR,LF,9		; neue Zeile, mit TAB beginnen
  1721 C8F6  4F 52 47 00 	DB	'ORG',0
  1722 C8FA  CD CB48     	CALL	AUS9		; Tabulator oder Leerzeichen
  1723 C8FD  3E 30       	LD	A,'0'
@@ -2438,10 +2437,10 @@ REAS    Z80
  1775 C97B  2A 0046     	LD	HL,(MTOP)	; Speicherende
  1776 C97E  2B          	DEC	HL
  1777 C97F  22 001A     	LD	(T2E),HL	; Ende Text 2
+ 1778 C982  36 03       	LD	(HL),3		; Ende-Kennung eintragen
 KC-Debugger     							    SLR180 1.31 Page  41
 REAS    Z80
 
- 1778 C982  36 03       	LD	(HL),3		; Ende-Kennung eintragen
  1779 C984  2B          	DEC	HL
  1780 C985  36 0A       	LD	(HL),LF		; letzte Zeile mit CR,LF abschliessen
  1781 C987  2B          	DEC	HL
@@ -2499,10 +2498,10 @@ REAS    Z80
  1833 C9F7  F1          	POP	AF
  1834 C9F8  FE 05       	CP	5
  1835 C9FA  28 16       	JR	Z,DIZ5
+ 1836 C9FC  B7          	OR	A
 KC-Debugger     							    SLR180 1.31 Page  42
 REAS    Z80
 
- 1836 C9FC  B7          	OR	A
  1837 C9FD  20 7A       	JR	NZ,DIZ15
  1838 C9FF  CD CDDA     	CALL	LENG
  1839 CA02  28 0E       	JR	Z,DIZ5		; PC veraendernder Befehl
@@ -2560,10 +2559,10 @@ REAS    Z80
  1891 CA52  3C          	INC	A		; Anzahl um 1 erhoehen
  1892 CA53  47          DIZ12:	LD	B,A
  1893 CA54  3E 55       	LD	A,'U'		; Marke mit 'U' einleiten
+ 1894 CA56  CD CB5C     DIZ13:	CALL	AUS
 KC-Debugger     							    SLR180 1.31 Page  43
 REAS    Z80
 
- 1894 CA56  CD CB5C     DIZ13:	CALL	AUS
  1895 CA59  3E 30       	LD	A,'0'		; falls noetig, fuehrende Nullen ergaenzen
  1896 CA5B  10 F9       	DJNZ	DIZ13
  1897 CA5D  E1          	POP	HL
@@ -2621,10 +2620,10 @@ REAS    Z80
  1949 CAB1  CD CB55     	CALL	AUSCR		; Ausgabe neue Zeile (CR+LF)
  1950 CAB4  CD CDAD     	CALL	ARGNT6		; Ausgabe Unnnn Tabulator
  1951 CAB7  CD CB2A     	CALL	AUSTR
+ 1952 CABA  45 51 55 00 	DB	'EQU',0
 KC-Debugger     							    SLR180 1.31 Page  44
 REAS    Z80
 
- 1952 CABA  45 51 55 00 	DB	'EQU',0
  1953 CABE  CD CB48     	CALL	AUS9		; Tabulator oder Leerzeichen
  1954 CAC1  3E 30       	LD	A,'0'		; Adressen beginnen immer mit einer Ziffer
  1955 CAC3  CD CB5C     	CALL	AUS
@@ -2682,10 +2681,10 @@ REAS    Z80
  2007                   	;
  2008 CB13  F1          AUSZS:	POP	AF
  2009 CB14  E5          	PUSH	HL
+ 2010 CB15  2A A891     	LD	HL,(PZS)
 KC-Debugger     							    SLR180 1.31 Page  45
 REAS    Z80
 
- 2010 CB15  2A A891     	LD	HL,(PZS)
  2011 CB18  77          	LD	(HL),A		; Puffer
  2012 CB19  23          	INC	HL
  2013 CB1A  22 A891     	LD	(PZS),HL
@@ -2743,10 +2742,10 @@ REAS    Z80
  2065 CB55  3E 0D       AUSCR:	LD	A,CR
  2066 CB57  CD CB5C     	CALL	AUS
  2067 CB5A  3E 0A       	LD	A,LF
+ 2068 CB5C  C5          AUS:	PUSH	BC
 KC-Debugger     							    SLR180 1.31 Page  46
 REAS    Z80
 
- 2068 CB5C  C5          AUS:	PUSH	BC
  2069 CB5D  D5          	PUSH	DE
  2070 CB5E  E5          	PUSH	HL
  2071 CB5F  F5          	PUSH	AF		; Zeichencode
@@ -2804,10 +2803,10 @@ REAS    Z80
  2123 CBB5  3C          	INC	A		; Zeiger erhoehen
  2124 CBB6  E6 7F       	AND	7FH		; Puffer ist 128 Byte gross
  2125 CBB8  32 B7DA     	LD	(DTPTR),A	; neuen Zeiger eintragen
+ 2126 CBBB  C2 CC82     	JP	NZ,END		; Puffer ist noch nicht voll
 KC-Debugger     							    SLR180 1.31 Page  47
 REAS    Z80
 
- 2126 CBBB  C2 CC82     	JP	NZ,END		; Puffer ist noch nicht voll
  2127 CBBE  01 0100     	LD	BC,100H		; kurzer Vorton
  2128 CBC1  CD F021     	CALL	PV7		; Ausgabe Datenblock
  2129 CBC4  00          	DB	0		; mit MBO
@@ -2865,10 +2864,10 @@ REAS    Z80
  2181 CC31  ED 5B B782  	LD	DE,(ARG1)
  2182 CC35  E1          	POP	HL
  2183 CC36  E5          	PUSH	HL
+ 2184 CC37  CD CB1F     	CALL	AUSHL	;Adresse
 KC-Debugger     							    SLR180 1.31 Page  48
 REAS    Z80
 
- 2184 CC37  CD CB1F     	CALL	AUSHL	;Adresse
  2185 CC3A  EB          	EX	DE,HL
  2186 CC3B  ED 52       	SBC	HL,DE
  2187 CC3D  7D          	LD	A,L
@@ -2926,10 +2925,10 @@ REAS    Z80
  2239 CC96  38 0C       	JR	C,AUSPR3
  2240 CC98  06 21       	LD	B,33		;Tab2
  2241 CC9A  B8          	CP	B
+ 2242 CC9B  38 07       	JR	C,AUSPR3
 KC-Debugger     							    SLR180 1.31 Page  49
 REAS    Z80
 
- 2242 CC9B  38 07       	JR	C,AUSPR3
  2243 CC9D  06 26       	LD	B,38		;Tab3
  2244 CC9F  B8          	CP	B
  2245 CCA0  38 02       	JR	C,AUSPR3
@@ -2987,10 +2986,10 @@ REAS    Z80
  2297 CCF7  28 04       	JR	Z,IMT8
  2298 CCF9  E1          	POP	HL	;Stack clear
  2299 CCFA  E1          	POP	HL
+ 2300 CCFB  18 C8       	JR	IMT1
 KC-Debugger     							    SLR180 1.31 Page  50
 REAS    Z80
 
- 2300 CCFB  18 C8       	JR	IMT1
  2301                    
  2302 CCFD  F1          IMT8:	POP	AF
  2303 CCFE  E1          	POP	HL
@@ -3048,10 +3047,10 @@ REAS    Z80
  2355 CD4D  38 DF       	JR	C,IMT31		; weitersuchen
  2356 CD4F  2B          	DEC	HL
  2357 CD50  2B          	DEC	HL		; naechste Speicherzelle
+ 2358 CD51  ED 4B A88D  IMT32:	LD	BC,(MTA)
 KC-Debugger     							    SLR180 1.31 Page  51
 REAS    Z80
 
- 2358 CD51  ED 4B A88D  IMT32:	LD	BC,(MTA)
  2359 CD55  C5          	PUSH	BC
  2360 CD56  D5          	PUSH	DE
  2361 CD57  CD CF86     	CALL	IRM_OF
@@ -3109,10 +3108,10 @@ REAS    Z80
  2413 CDA0  28 04       	JR	Z,ARGNT5	; ja, Marke ausgeben
  2414 CDA2  38 E8       	JR	C,ARGNT1	; nein, keine Marke
  2415 CDA4  18 EF       	JR	ARGNT4		; weitersuchen
+ 2416                   	;
 KC-Debugger     							    SLR180 1.31 Page  52
 REAS    Z80
 
- 2416                   	;
  2417 CDA6  CD CF7F     ARGNT5:	CALL	IRM_ON
  2418 CDA9  ED 53 A88F  	LD	(MTM),DE	; Zeiger weiter ruecken
  2419                   ;
@@ -3170,10 +3169,10 @@ REAS    Z80
  2471 CDF3  B9          	CP	C
  2472 CDF4  28 D2       	JR	Z,SMEN3		; Prologbyte gefunden!
  2473 CDF6  13          SMEN1:	INC	DE
+ 2474 CDF7  10 F6       	DJNZ	SMEN2
 KC-Debugger     							    SLR180 1.31 Page  53
 REAS    Z80
 
- 2474 CDF7  10 F6       	DJNZ	SMEN2
  2475                    
  2476 CDF9  2B          SJPA:	DEC	HL		; zurueck auf erstes Befehlsbyte
  2477 CDFA  01 0004     	LD	BC,4		; 4 Byte Laenge annehmen
@@ -3231,10 +3230,10 @@ REAS    Z80
  2529 CE4B  28 42       	JR	Z,RE11		; 01,11,21,31		16-Bit-Ladebefehle
  2530 CE4D  0D          	DEC	C	; C=2
  2531 CE4E  E6 C7       	AND	0C7H
+ 2532 CE50  28 54       	JR	Z,SJP9		; 00,08,10,18,20,28,30,38
 KC-Debugger     							    SLR180 1.31 Page  54
 REAS    Z80
 
- 2532 CE50  28 54       	JR	Z,SJP9		; 00,08,10,18,20,28,30,38
  2533 CE52  FE C2       	CP	0C2H
  2534 CE54  28 04       	JR	Z,SJP4		; C2,CA,D2,DA,E2,EA,F2,FA
  2535 CE56  FE C4       	CP	0C4H
@@ -3292,10 +3291,10 @@ REAS    Z80
  2587 CE9C  E6 F7       	AND	0F7H
  2588 CE9E  FE D3       	CP	0D3H
  2589 CEA0  28 ED       	JR	Z,RE11		; D3,DB				IN/OUT
+ 2590 CEA2  0D          SJP8:	DEC	C	; C=1
 KC-Debugger     							    SLR180 1.31 Page  55
 REAS    Z80
 
- 2590 CEA2  0D          SJP8:	DEC	C	; C=1
  2591 CEA3  79          	LD	A,C		; kein PC-veraendernder Befehl (Z=0)
  2592 CEA4  18 E9       	JR	RE11
  2593                   
@@ -3353,10 +3352,10 @@ REAS    Z80
  2645 CEF0  18 C7       	JR	SLD1
  2646                    
  2647 CEF2  23          SLD5:	INC	HL	;DD FD
+ 2648 CEF3  7E          	LD	A,(HL)
 KC-Debugger     							    SLR180 1.31 Page  56
 REAS    Z80
 
- 2648 CEF3  7E          	LD	A,(HL)
  2649 CEF4  FE 21       	CP	21H
  2650 CEF6  28 D7       	JR	Z,SLD3
  2651 CEF8  FE 22       	CP	22H
@@ -3414,10 +3413,10 @@ REAS    Z80
  2703 CF49  FE 0D       EIZ1:	CP	CR
  2704 CF4B  28 27       	JR	Z,EIZ6		; CR
  2705 CF4D  FE 20       	CP	20H
+ 2706 CF4F  30 10       	JR	NC,EIZ3		; ASCII-Zeichen
 KC-Debugger     							    SLR180 1.31 Page  57
 REAS    Z80
 
- 2706 CF4F  30 10       	JR	NC,EIZ3		; ASCII-Zeichen
  2707 CF51  FE 09       	CP	9
  2708 CF53  28 0C       	JR	Z,EIZ3		; ->
  2709 CF55  FE 08       	CP	8
@@ -3475,10 +3474,10 @@ REAS    Z80
    12                   ; 0038-009Dh	RST38, CTC-Interrupt und Speicherumschaltung	;
    13                   ; 009E-00A1h	Kopie letzter Befehl (4 Byte)			;
    14                   ; 00A2-00ABh	Kopie aktueller + folgender Befehl (10 Byte)	;
+   15                   ; 00AC-00ADh	USER-Prompt, USER-Prolog			;
 KC-Debugger     							    SLR180 1.31 Page  58
 TEMO    Z80
 
-   15                   ; 00AC-00ADh	USER-Prompt, USER-Prolog			;
    16                   ; 00AE-00FFh	zur Zeit noch frei (fuer USB-Tastatur-Interrupt);
    17                   ;								;
    18                   ; REAS.Z80			ML-Soft 14.12.1992-08.05.2021	;
@@ -3536,10 +3535,10 @@ TEMO    Z80
    70                   ; 27.11.2013	Kopie der aktuellen Programmteile fuer DISASS	;
    71                   ;		jetzt nach RAM0 kopiert um Schrittebtrieb im	;
    72                   ;		CAOS ROM-C verfolgen zu koennen. (Option new)	;
+   73                   ; 10.12.2013	Retten/Laden von Promptzeichen und Prologbyte	;
 KC-Debugger     							    SLR180 1.31 Page  59
 TEMO    Z80
 
-   73                   ; 10.12.2013	Retten/Laden von Promptzeichen und Prologbyte	;
    74                   ; 11.12.2013	Fehler bei Schrittbetrieb mit veraendertem IX	;
    75                   ;		beseitigt					;
    76                   ; 14.12.2013	Arbeitszellen verlagert, so dass 0..0bh frei	;
@@ -3597,10 +3596,10 @@ TEMO    Z80
   128                   ;	>ARITH		- Addition, Subtraktion, Multiplikation	ok.
   129                   ;	>?		- BASIC-Taschenrechner (Ersatz fuer ARITH)
   130                   ;	>BREAK		- Unterbrechungspunkt setzen/anzeigen	ok.
+  131                   ;	>GO		- Sprung in Anwenderprogramm mit Initialisierung des Unterbrechungspunktes
 KC-Debugger     							    SLR180 1.31 Page  60
 TEMO    Z80
 
-  131                   ;	>GO		- Sprung in Anwenderprogramm mit Initialisierung des Unterbrechungspunktes
   132                   ;	>STEP		- Schrittbetrieb: LF,CR,U...
   133                   ;	>.		- Stackmodifizieren			ok.
   134                   ;	>STACK		- Anzeige Stackpointer			ok.
@@ -3658,10 +3657,10 @@ TEMO    Z80
   186                   	; 2 Byte:	CCTL0 (Grossbuchstaben)
   187                   ;
   188                   ; Mitverwendete Arbeitszellen von REAS im IRM:
+  189                   ; --------------------------------------------
 KC-Debugger     							    SLR180 1.31 Page  61
 TEMO    Z80
 
-  189                   ; --------------------------------------------
   190                   ; MS	EQU	0B7F2H	; Markenschalter (alt ARGN=0B781h)
   191                   ; CMODE	EQU	0B7F3H	; Ausgabe auf: 0=Bildschirm ...
   192                   ; DMODE	EQU	CMODE+1	; Special-Mode: 0=normal
@@ -3719,10 +3718,10 @@ TEMO    Z80
   244 CFDA  3E 43       nn2:	ld	a,43h		; Standard (RAM4 ein, CAOS-C aus, USER=DEBUG)
   245 CFDC  DD 77 04    	ld	(ix+4),a	; mit passenden ROM-Ebenen
   246 CFDF  D3 86       	out	(86H),a
+  247 CFE1  F1          	pop	af
 KC-Debugger     							    SLR180 1.31 Page  62
 TEMO    Z80
 
-  247 CFE1  F1          	pop	af
   248 CFE2  C9          	ret			; Hier Absprung in den ROM (INTROM / RSTROM)
   249                   ;
   250                   ; Startroutine von GO mit Speicherschaltung
@@ -3780,10 +3779,10 @@ TEMO    Z80
   302 D028  28 25       	jr	z,te0		; nein
   303 D02A  CD DFF3     	CALL	UROM		; Schaltzustand User-ROM merken
   304 D02D  E5          	PUSH	HL		; nach Ausfuehrung wieder abschalten
+  305 D02E  3E FD       	LD	A,0FDH		; Prologbyte
 KC-Debugger     							    SLR180 1.31 Page  63
 TEMO    Z80
 
-  305 D02E  3E FD       	LD	A,0FDH		; Prologbyte
   306 D030  21 D36E     	LD	HL,CRC		; Beginn der Menuewortsuche ab CRC
   307 D033  01 0205     	LD	BC,CPA5-CRC	; Laenge Suchbereich bis CMP
   308 D036  CD F003     	CALL	PV1
@@ -3841,10 +3840,10 @@ TEMO    Z80
   360                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
   361                   ;
   362                   ;	TEMO-Warmstart
+  363                   ;
 KC-Debugger     							    SLR180 1.31 Page  64
 TEMO    Z80
 
-  363                   ;
   364 D09A  7F7F        	DW	7F7FH
   365 D09C  52 45 54 45 	DB	'RETEMO',1
   366 D0A3  ED 57       	LD	A,I
@@ -3902,10 +3901,10 @@ TEMO    Z80
   418 D106  DD 7E 09    	ld	a,(IX+9)	; aktuelles Prologbyte
   419 D109  32 0037     	ld	(UPROL),a	; als USER-Prolog merken
   420 D10C  3A B7EC     	ld	a,(PROMPT)	; aktuelles Promptzeichen
+  421 D10F  32 0036     	ld	(UPROMPT),A	; als USER-Prompt merken
 KC-Debugger     							    SLR180 1.31 Page  65
 TEMO    Z80
 
-  421 D10F  32 0036     	ld	(UPROMPT),A	; als USER-Prompt merken
   422 D112  3E 2B       	ld	a,'+'		; Promptzeichen fuer TEMO
   423 D114  06 FD       	ld	B,0FDH		; Prologbyte fuer TEMO
   424 D116  32 B7EC     WININI:	ld	(PROMPT),A	; neues Promptzeichen
@@ -3963,10 +3962,10 @@ TEMO    Z80
   476 D18F  2E C4       	LD	L,0C4H
   477 D191  22 B7AE     	LD	(SYSP),HL	; normalen System-SP setzen
   478 D194  F9          	LD	SP,HL
+  479                   ;
 KC-Debugger     							    SLR180 1.31 Page  66
 TEMO    Z80
 
-  479                   ;
   480                   ; Monitor-Loop:
   481                   ;
   482 D195  CD F003     PRSE:	CALL	PV1
@@ -4022,910 +4021,912 @@ TEMO    Z80
   532 D1DA  13          LBL4:	INC	DE
   533 D1DB  CD CF8F     	CALL	GETHEX		; folgende Zahl lesen
   534 D1DE  30 06       	JR	NC,LBL5		; kein Fehler
-  535 D1E0  CD F003     ERR:	CALL	PV1		; Fehlermeldung, Monitor-Loop
-  536 D1E3  19          	DB	ERRM
+  535                   ; Marke ERR wird von CALC mitbenutzt!
+  536 D1E0  CD F003     ERR:	CALL	PV1		; Fehlermeldung, Monitor-Loop
+  537 D1E3  19          	DB	ERRM
 KC-Debugger     							    SLR180 1.31 Page  67
 TEMO    Z80
 
-  537 D1E4  37          	SCF		;CY=1
-  538 D1E5  C9          	RET
-  539                   	;
-  540 D1E6  ED 5B B797  LBL5:	LD	DE,(NUMVX)	; Zahl holen
-  541 D1EA  21 0010     	LD	HL,RAF		; Beginn Registerspeicher
-  542 D1ED  3E 2C       	LD	A,FLAGL-REGL-2
-  543 D1EF  91          	SUB	C		; A = Nr. des Registers
-  544 D1F0  CB 6F       	BIT	5,A
-  545 D1F2  20 28       	JR	NZ,DOPP		; Doppelregister
-  546 D1F4  0F          	RRCA			; /2
-  547 D1F5  CB 5F       	BIT	3,A
-  548 D1F7  28 18       	JR	Z,REGI		; Einfachregister
-  549                   ;	LD	L,RAF		; Flags
-  550 D1F9  CB 40       	BIT	0,B
-  551 D1FB  28 02       	JR	Z,FL1
-  552 D1FD  2E 1C       	LD	L,ZAF		; Flags Zweitregister
-  553 D1FF  E6 07       FL1:	AND	7
-  554 D201  01 FDF8     	LD	BC,BITTAB	; Bitmaske aus CAOS
-  555 D204  81          	ADD	A,C
-  556 D205  4F          	LD	C,A
-  557 D206  0A          	LD	A,(BC)		; Maske geholt
-  558 D207  CB 43       	BIT	0,E
-  559 D209  28 02       	JR	Z,RESF
-  560 D20B  B6          	OR	(HL)		; Bit setzen
-  561 D20C  01          	DB	01h	; LD BC,nn
-  562                   ;
-  563 D20D  2F          RESF:	CPL
-  564 D20E  A6          	AND	(HL)		; Bit loeschen
-  565 D20F  77          	LD	(HL),A
-  566 D210  C9          	RET			; Monitor-Loop
-  567                   ;
-  568                   ; Einzelregister modifizieren
-  569                   ;
-  570 D211  CB 40       REGI:	BIT	0,B		; Zweitregister?
-  571 D213  28 02       	JR	Z,REGI1
-  572 D215  C6 0C       	ADD	A,12		; Einzelregister aus Zweitregistersatz
-  573 D217  C6 10       REGI1:	ADD	A,RAF
-  574 D219  6F          	LD	L,A
-  575 D21A  73          	LD	(HL),E
-  576 D21B  C9          	RET
-  577                   ;
-  578                   ; Doppelregister modifizieren
-  579                   ;
-  580 D21C  CB AF       DOPP:	RES	5,A
-  581 D21E  2E 1A       	LD	L,RIY		; Registeradresse IY
-  582 D220  FE 08       	CP	8
-  583 D222  28 0F       	JR	Z,REGI3
-  584 D224  2E 24       	LD	L,RSP		; Registeradresse SP
-  585 D226  FE 0A       	CP	10
-  586 D228  28 09       	JR	Z,REGI3
-  587 D22A  2E 2A       	LD	L,PCN		; Registeradresse PC
-  588 D22C  FE 0C       	CP	12
-  589 D22E  28 03       	JR	Z,REGI3
-  590 D230  CD D211     	CALL	REGI		; Registeradresse berechnen
-  591 D233  73          REGI3:	LD	(HL),E		; Low(Doppelregister) eintragen
-  592 D234  23          	INC	HL
-  593 D235  72          	LD	(HL),D		; High(Doppelregister) eintragen
-  594 D236  C9          	RET
+  538 D1E4  37          	SCF		;CY=1
+  539 D1E5  C9          	RET
+  540                   	;
+  541 D1E6  ED 5B B797  LBL5:	LD	DE,(NUMVX)	; Zahl holen
+  542 D1EA  21 0010     	LD	HL,RAF		; Beginn Registerspeicher
+  543 D1ED  3E 2C       	LD	A,FLAGL-REGL-2
+  544 D1EF  91          	SUB	C		; A = Nr. des Registers
+  545 D1F0  CB 6F       	BIT	5,A
+  546 D1F2  20 28       	JR	NZ,DOPP		; Doppelregister
+  547 D1F4  0F          	RRCA			; /2
+  548 D1F5  CB 5F       	BIT	3,A
+  549 D1F7  28 18       	JR	Z,REGI		; Einfachregister
+  550                   ;	LD	L,RAF		; Flags
+  551 D1F9  CB 40       	BIT	0,B
+  552 D1FB  28 02       	JR	Z,FL1
+  553 D1FD  2E 1C       	LD	L,ZAF		; Flags Zweitregister
+  554 D1FF  E6 07       FL1:	AND	7
+  555 D201  01 FDF8     	LD	BC,BITTAB	; Bitmaske aus CAOS
+  556 D204  81          	ADD	A,C
+  557 D205  4F          	LD	C,A
+  558 D206  0A          	LD	A,(BC)		; Maske geholt
+  559 D207  CB 43       	BIT	0,E
+  560 D209  28 02       	JR	Z,RESF
+  561 D20B  B6          	OR	(HL)		; Bit setzen
+  562 D20C  01          	DB	01h	; LD BC,nn
+  563                   ;
+  564 D20D  2F          RESF:	CPL
+  565 D20E  A6          	AND	(HL)		; Bit loeschen
+  566 D20F  77          	LD	(HL),A
+  567 D210  C9          	RET			; Monitor-Loop
+  568                   ;
+  569                   ; Einzelregister modifizieren
+  570                   ;
+  571 D211  CB 40       REGI:	BIT	0,B		; Zweitregister?
+  572 D213  28 02       	JR	Z,REGI1
+  573 D215  C6 0C       	ADD	A,12		; Einzelregister aus Zweitregistersatz
+  574 D217  C6 10       REGI1:	ADD	A,RAF
+  575 D219  6F          	LD	L,A
+  576 D21A  73          	LD	(HL),E
+  577 D21B  C9          	RET
+  578                   ;
+  579                   ; Doppelregister modifizieren
+  580                   ;
+  581 D21C  CB AF       DOPP:	RES	5,A
+  582 D21E  2E 1A       	LD	L,RIY		; Registeradresse IY
+  583 D220  FE 08       	CP	8
+  584 D222  28 0F       	JR	Z,REGI3
+  585 D224  2E 24       	LD	L,RSP		; Registeradresse SP
+  586 D226  FE 0A       	CP	10
+  587 D228  28 09       	JR	Z,REGI3
+  588 D22A  2E 2A       	LD	L,PCN		; Registeradresse PC
+  589 D22C  FE 0C       	CP	12
+  590 D22E  28 03       	JR	Z,REGI3
+  591 D230  CD D211     	CALL	REGI		; Registeradresse berechnen
+  592 D233  73          REGI3:	LD	(HL),E		; Low(Doppelregister) eintragen
+  593 D234  23          	INC	HL
+  594 D235  72          	LD	(HL),D		; High(Doppelregister) eintragen
+  595 D236  C9          	RET
 KC-Debugger     							    SLR180 1.31 Page  68
 TEMO    Z80
 
-  595                   ;
-  596                   ; Register anzeigen:
-  597                   ;
-  598 D237  2A 0024     REGANZ:	LD	HL,(RSP)	; Anwender-Stack
-  599 D23A  7E          	LD	A,(HL)
-  600 D23B  23          	INC	HL
-  601 D23C  66          	LD	H,(HL)
-  602 D23D  6F          	LD	L,A		; HL = Inhalt von Stack
-  603 D23E  22 0026     	LD	(RTS),HL	; hier aktualisieren
-  604                   ;
-  605                   ; Registeranzeige
-  606                   ;
-  607                   ; PE:	Register in den TEMO-Arbeitszellen
-  608                   ; VR:	HL, DE, BC, AF
-  609                   ;
-  610 D241  CD F003     REG:	CALL	PV1		; Registernamen erste Zeile
-  611 D244  23          	DB	OSTR
-  612 D245  41 20 20 2D 	DB	'A  -FLAGS-- B C  D E  H L  M  IX   IY   ',0
-  613 D26E  21 0010     	LD	HL,RAF		; Start mit Register AF
-  614 D271  CD D2A1     	CALL	PRLINE		; Erstregistersatz  AF bis IX+IY
-  615                   
-  616 D274  CD F003     	CALL	PV1		; Registernamen zweite Zeile
-  617 D277  23          	DB	OSTR
-  618 D278  41 27 20 2D 	DB	'A'' -FLAGS''- B''C'' D''E'' H''L'' M'' SP   (SP) ',0
-  619                   ;	CALL	PRLINE		; Zweitregistersatz AF' bis SP + (SP)
-  620                   ;	RET			; reinlaufen ...
-  621                   ;
-  622                   ; Auflisten der Registerinhalte (1 Zeile) ohne CR+LF da Zeile voll ist
-  623                   ; PE:	HL	Zeiger auf Registerliste
-  624                   ;
-  625 D2A1  4E          PRLINE:	LD	C,(HL)		; Flags
-  626 D2A2  23          	INC	HL
-  627 D2A3  7E          	LD	A,(HL)
-  628 D2A4  23          	INC	HL
-  629 D2A5  CD D318     	CALL	AHSPC		; --A--
-  630                   
-  631 D2A8  06 09       	LD	B,8+1		; --Flags--
-  632 D2AA  11 D170     	LD	DE,FLAGL	; FLAG-Bezeichner
-  633 D2AD  3E 20       PRL1:	LD	A,' '		; Leerzeichen (Flag nicht gesetzt)
-  634 D2AF  CB 21       	SLA	C
-  635 D2B1  30 01       	JR	NC,PRL2
-  636 D2B3  1A          	LD	A,(DE)		; Zeichen des Flags
-  637 D2B4  13          PRL2:	INC	DE
-  638 D2B5  CD CB0E     	CALL	DOCHR
-  639 D2B8  10 F3       	DJNZ	PRL1
-  640                   
-  641 D2BA  06 03       	LD	B,3		; 3 Doppelregister:
-  642 D2BC  CD D2C5     	CALL	WORDS		; -BC-DE-HL-
-  643 D2BF  1A          	LD	A,(DE)
-  644 D2C0  CD D318     	CALL	AHSPC		; --M--
-  645                   
-  646 D2C3  06 02       	LD	B,2		; 2 Doppelregister: IX, IY
-  647                   ;
-  648 D2C5  5E          WORDS:	LD	E,(HL)		; Ausgabe 16 bit-Wort
-  649 D2C6  23          	INC	HL
-  650 D2C7  56          	LD	D,(HL)
-  651 D2C8  23          	INC	HL
-  652 D2C9  EB          	EX	DE,HL
+  596                   ;
+  597                   ; Register anzeigen:
+  598                   ;
+  599 D237  2A 0024     REGANZ:	LD	HL,(RSP)	; Anwender-Stack
+  600 D23A  7E          	LD	A,(HL)
+  601 D23B  23          	INC	HL
+  602 D23C  66          	LD	H,(HL)
+  603 D23D  6F          	LD	L,A		; HL = Inhalt von Stack
+  604 D23E  22 0026     	LD	(RTS),HL	; hier aktualisieren
+  605                   ;
+  606                   ; Registeranzeige
+  607                   ;
+  608                   ; PE:	Register in den TEMO-Arbeitszellen
+  609                   ; VR:	HL, DE, BC, AF
+  610                   ;
+  611 D241  CD F003     REG:	CALL	PV1		; Registernamen erste Zeile
+  612 D244  23          	DB	OSTR
+  613 D245  41 20 20 2D 	DB	'A  -FLAGS-- B C  D E  H L  M  IX   IY   ',0
+  614 D26E  21 0010     	LD	HL,RAF		; Start mit Register AF
+  615 D271  CD D2A1     	CALL	PRLINE		; Erstregistersatz  AF bis IX+IY
+  616                   
+  617 D274  CD F003     	CALL	PV1		; Registernamen zweite Zeile
+  618 D277  23          	DB	OSTR
+  619 D278  41 27 20 2D 	DB	'A'' -FLAGS''- B''C'' D''E'' H''L'' M'' SP   (SP) ',0
+  620                   ;	CALL	PRLINE		; Zweitregistersatz AF' bis SP + (SP)
+  621                   ;	RET			; reinlaufen ...
+  622                   ;
+  623                   ; Auflisten der Registerinhalte (1 Zeile) ohne CR+LF da Zeile voll ist
+  624                   ; PE:	HL	Zeiger auf Registerliste
+  625                   ;
+  626 D2A1  4E          PRLINE:	LD	C,(HL)		; Flags
+  627 D2A2  23          	INC	HL
+  628 D2A3  7E          	LD	A,(HL)
+  629 D2A4  23          	INC	HL
+  630 D2A5  CD D318     	CALL	AHSPC		; --A--
+  631                   
+  632 D2A8  06 09       	LD	B,8+1		; --Flags--
+  633 D2AA  11 D170     	LD	DE,FLAGL	; FLAG-Bezeichner
+  634 D2AD  3E 20       PRL1:	LD	A,' '		; Leerzeichen (Flag nicht gesetzt)
+  635 D2AF  CB 21       	SLA	C
+  636 D2B1  30 01       	JR	NC,PRL2
+  637 D2B3  1A          	LD	A,(DE)		; Zeichen des Flags
+  638 D2B4  13          PRL2:	INC	DE
+  639 D2B5  CD CB0E     	CALL	DOCHR
+  640 D2B8  10 F3       	DJNZ	PRL1
+  641                   
+  642 D2BA  06 03       	LD	B,3		; 3 Doppelregister:
+  643 D2BC  CD D2C5     	CALL	WORDS		; -BC-DE-HL-
+  644 D2BF  1A          	LD	A,(DE)
+  645 D2C0  CD D318     	CALL	AHSPC		; --M--
+  646                   
+  647 D2C3  06 02       	LD	B,2		; 2 Doppelregister: IX, IY
+  648                   ;
+  649 D2C5  5E          WORDS:	LD	E,(HL)		; Ausgabe 16 bit-Wort
+  650 D2C6  23          	INC	HL
+  651 D2C7  56          	LD	D,(HL)
+  652 D2C8  23          	INC	HL
+  653 D2C9  EB          	EX	DE,HL
 KC-Debugger     							    SLR180 1.31 Page  69
 TEMO    Z80
 
-  653 D2CA  CD D597     	CALL	HLHEX
-  654 D2CD  EB          	EX	DE,HL
-  655 D2CE  10 F5       	DJNZ	WORDS
-  656 D2D0  C9          	RET
-  657                   ;
-  658                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
-  659                   ;
-  660                   ; SWITCH - Module listen, lesen, schalten:
-  661                   ; Aufruf: SWITCH [Steckplatz [Steuerbyte]]
-  662                   ;			L	E
-  663                   ;
-  664 D2D1  FDFD        	DW	0FDFDH
-  665 D2D3  53 57 49 54 	DB	'SWITCH',1
-  666 D2DA  FE 01       	CP	1
-  667 D2DC  38 30       	JR	C,MODUL		; kein Argument -> Module auflisten
-  668 D2DE  28 09       	JR	Z,SWI2		; Modulzustand nur lesen/anzeigen
-  669 D2E0  53          	LD	D,E		; Steuerbyte
-  670 D2E1  4F          	LD	C,A	; ARGN
-  671 D2E2  7D          	LD	A,L		; Steckplatz
-  672 D2E3  FE 03       	CP	3
-  673 D2E5  DA D1E0     	JP	C,ERR		; RAM0, IRM und USER-ROM hier nicht schaltbar!
-  674 D2E8  79          	LD	A,C	; ARGN
-  675 D2E9  F5          SWI2:	PUSH	AF
-  676 D2EA  CD F003     	CALL	PV1
-  677 D2ED  26          	DB	MODU		; Modul lesen/schalten
-  678 D2EE  5F          	LD	E,A
-  679 D2EF  7D          	LD	A,L
-  680 D2F0  CD D318     	CALL	AHSPC		; Steckplatz L anzeigen
-  681 D2F3  7C          	LD	A,H
-  682 D2F4  CD D318     	CALL	AHSPC		; Kennbyte Modul
-  683 D2F7  7B          	LD	A,E
-  684 D2F8  CD F003     	CALL	PV1
-  685 D2FB  1C          	DB	AHEX		; Steuerbyte alt
-  686 D2FC  F1          	POP	AF
-  687 D2FD  3D          	DEC	A
-  688 D2FE  28 0B       	JR	Z,SWI5		; das war nur lesen
-  689 D300  3E 09       	LD	A,9
-  690 D302  CD F003     	CALL	PV1
-  691 D305  42          	DB	CSTBT		; Pfeil nach rechts anzeigen
-  692 D306  7A          	LD	A,D
-  693 D307  CD F003     	CALL	PV1
-  694 D30A  1C          	DB	AHEX		; Steuerbyte neu
-  695 D30B  C3 D3D5     SWI5:	JP	NL
-  696                   
-  697                   ; alle Module auflisten:
-  698                   
-  699 D30E  CD F003     MODUL:	CALL	PV1
-  700 D311  23          	DB	OSTR
-  701 D312  1B 36       	DB	ESC,'6'		; Systemcheck (int. Module)
-  702 D314  1B 35       	DB	ESC,'5'		; Modulcheck (ext. Module)
-  703 D316  00          	DB	0
-  704 D317  C9          	RET
-  705                   	;
-  706 D318  CD F003     AHSPC:	CALL	PV1
-  707 D31B  1C          	DB	AHEX
-  708 D31C  CD F003     	CALL	PV1
-  709 D31F  2B          	DB	SPACE
-  710 D320  C9          	RET
+  654 D2CA  CD D597     	CALL	HLHEX
+  655 D2CD  EB          	EX	DE,HL
+  656 D2CE  10 F5       	DJNZ	WORDS
+  657 D2D0  C9          	RET
+  658                   ;
+  659                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  660                   ;
+  661                   ; SWITCH - Module listen, lesen, schalten:
+  662                   ; Aufruf: SWITCH [Steckplatz [Steuerbyte]]
+  663                   ;			L	E
+  664                   ;
+  665 D2D1  FDFD        	DW	0FDFDH
+  666 D2D3  53 57 49 54 	DB	'SWITCH',1
+  667 D2DA  FE 01       	CP	1
+  668 D2DC  38 30       	JR	C,MODUL		; kein Argument -> Module auflisten
+  669 D2DE  28 09       	JR	Z,SWI2		; Modulzustand nur lesen/anzeigen
+  670 D2E0  53          	LD	D,E		; Steuerbyte
+  671 D2E1  4F          	LD	C,A	; ARGN
+  672 D2E2  7D          	LD	A,L		; Steckplatz
+  673 D2E3  FE 03       	CP	3
+  674 D2E5  DA D1E0     	JP	C,ERR		; RAM0, IRM und USER-ROM hier nicht schaltbar!
+  675 D2E8  79          	LD	A,C	; ARGN
+  676 D2E9  F5          SWI2:	PUSH	AF
+  677 D2EA  CD F003     	CALL	PV1
+  678 D2ED  26          	DB	MODU		; Modul lesen/schalten
+  679 D2EE  5F          	LD	E,A
+  680 D2EF  7D          	LD	A,L
+  681 D2F0  CD D318     	CALL	AHSPC		; Steckplatz L anzeigen
+  682 D2F3  7C          	LD	A,H
+  683 D2F4  CD D318     	CALL	AHSPC		; Kennbyte Modul
+  684 D2F7  7B          	LD	A,E
+  685 D2F8  CD F003     	CALL	PV1
+  686 D2FB  1C          	DB	AHEX		; Steuerbyte alt
+  687 D2FC  F1          	POP	AF
+  688 D2FD  3D          	DEC	A
+  689 D2FE  28 0B       	JR	Z,SWI5		; das war nur lesen
+  690 D300  3E 09       	LD	A,9
+  691 D302  CD F003     	CALL	PV1
+  692 D305  42          	DB	CSTBT		; Pfeil nach rechts anzeigen
+  693 D306  7A          	LD	A,D
+  694 D307  CD F003     	CALL	PV1
+  695 D30A  1C          	DB	AHEX		; Steuerbyte neu
+  696 D30B  C3 D3D5     SWI5:	JP	NL
+  697                   
+  698                   ; alle Module auflisten:
+  699                   
+  700 D30E  CD F003     MODUL:	CALL	PV1
+  701 D311  23          	DB	OSTR
+  702 D312  1B 36       	DB	ESC,'6'		; Systemcheck (int. Module)
+  703 D314  1B 35       	DB	ESC,'5'		; Modulcheck (ext. Module)
+  704 D316  00          	DB	0
+  705 D317  C9          	RET
+  706                   	;
+  707 D318  CD F003     AHSPC:	CALL	PV1
+  708 D31B  1C          	DB	AHEX
+  709                   ; Marke SPACE1 wird von CALC mitbenutzt!
+  710 D31C  CD F003     SPACE1:	CALL	PV1
+  711 D31F  2B          	DB	SPACE
 KC-Debugger     							    SLR180 1.31 Page  70
 TEMO    Z80
 
-  711                   ;
-  712                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  712 D320  C9          	RET
   713                   ;
-  714                   ; Display
-  715                   ; Aufruf: DISPLAY Adresse [Zeilen [Bytes]]
-  716                   ;
-  717 D321  FDFD        	DEFW	0FDFDH
-  718 D323  44 49 53 50 	DB	'DISPLAY',3	; mind. 1 Parameter erforderlich
-  719 D32B  CD F003     	CALL	PV1
-  720 D32E  3B          	DB	DISP
-  721 D32F  C9          	RET
-  722                   ;
-  723                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  714                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  715                   ;
+  716                   ; Display
+  717                   ; Aufruf: DISPLAY Adresse [Zeilen [Bytes]]
+  718                   ;
+  719 D321  FDFD        	DEFW	0FDFDH
+  720 D323  44 49 53 50 	DB	'DISPLAY',3	; mind. 1 Parameter erforderlich
+  721 D32B  CD F003     	CALL	PV1
+  722 D32E  3B          	DB	DISP
+  723 D32F  C9          	RET
   724                   ;
-  725                   ; Modify
-  726                   ; Aufruf: MODIFY Adresse [Bytes]
-  727                   ;
-  728 D330  FDFD        	DEFW	0FDFDH
-  729 D332  4D 4F 44 49 	DB	'MODIFY',3	; mind. 1 Parameter erforderlich
-  730 D339  CD F003     MOD1:	CALL	PV1
-  731 D33C  2E          	DB	MODI
-  732 D33D  C9          	RET
-  733                   ;
-  734                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  725                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  726                   ;
+  727                   ; Modify
+  728                   ; Aufruf: MODIFY Adresse [Bytes]
+  729                   ;
+  730 D330  FDFD        	DEFW	0FDFDH
+  731 D332  4D 4F 44 49 	DB	'MODIFY',3	; mind. 1 Parameter erforderlich
+  732 D339  CD F003     MOD1:	CALL	PV1
+  733 D33C  2E          	DB	MODI
+  734 D33D  C9          	RET
   735                   ;
-  736                   ; Stackmodifizieren
+  736                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
   737                   ;
-  738 D33E  FDFD        	DEFW	0FDFDH
-  739 D340  2E 01       	DEFM	'.',1
-  740 D342  2A 0024     	LD	HL,(RSP)	; Anwender-Stack als Adresse
-  741 D345  3E 02       	LD	A,2		; 2 Parameter
-  742 D347  5F          	LD	E,A		; 2 Byte parallel aendern
-  743 D348  18 EF       	JR	MOD1
-  744                   ;
-  745                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  738                   ; Stackmodifizieren
+  739                   ;
+  740 D33E  FDFD        	DEFW	0FDFDH
+  741 D340  2E 01       	DEFM	'.',1
+  742 D342  2A 0024     	LD	HL,(RSP)	; Anwender-Stack als Adresse
+  743 D345  3E 02       	LD	A,2		; 2 Parameter
+  744 D347  5F          	LD	E,A		; 2 Byte parallel aendern
+  745 D348  18 EF       	JR	MOD1
   746                   ;
-  747                   ; Transformationsprogramm
-  748                   ; nur in Stacktiefe 1 aufrufen !!!
-  749                   ;
-  750                   ; PE:	HL: Anfang
-  751                   ;	DE: Ende+1
-  752                   ;	BC: Wert
-  753                   ;	A:  ARGN
-  754                   ; PA:	HL: Anfang
-  755                   ;	DE: Wert
-  756                   ;	BC: Laenge
-  757                   ;	A:  ARGN
-  758                   ;	CY=0
-  759                   ;
-  760 D34A  EB          FORM:	EX	DE,HL		; Anfang/Ende tauschen
-  761 D34B  2B          	DEC	HL		; ENDE-1
-  762 D34C  ED 52       	SBC	HL,DE		; Laenge berechnen
-  763 D34E  38 07       	JR	C,RANGE		; Ende <= Anfang
-  764 D350  23          	INC	HL		; Laenge +1
-  765 D351  EB          	EX	DE,HL		; Anfang wieder in HL
-  766 D352  C5          	PUSH	BC		; Wert auf Stack legen
-  767 D353  42          	LD	B,D
-  768 D354  4B          	LD	C,E		; Laenge jetzt in BC
+  747                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  748                   ;
+  749                   ; Transformationsprogramm
+  750                   ; nur in Stacktiefe 1 aufrufen !!!
+  751                   ;
+  752                   ; PE:	HL: Anfang
+  753                   ;	DE: Ende+1
+  754                   ;	BC: Wert
+  755                   ;	A:  ARGN
+  756                   ; PA:	HL: Anfang
+  757                   ;	DE: Wert
+  758                   ;	BC: Laenge
+  759                   ;	A:  ARGN
+  760                   ;	CY=0
+  761                   ;
+  762 D34A  EB          FORM:	EX	DE,HL		; Anfang/Ende tauschen
+  763 D34B  2B          	DEC	HL		; ENDE-1
+  764 D34C  ED 52       	SBC	HL,DE		; Laenge berechnen
+  765 D34E  38 07       	JR	C,RANGE		; Ende <= Anfang
+  766 D350  23          	INC	HL		; Laenge +1
+  767 D351  EB          	EX	DE,HL		; Anfang wieder in HL
+  768 D352  C5          	PUSH	BC		; Wert auf Stack legen
+  769 D353  42          	LD	B,D
 KC-Debugger     							    SLR180 1.31 Page  71
 TEMO    Z80
 
-  769 D355  D1          	POP	DE		; Wert jetzt in DE
-  770 D356  C9          	RET
-  771                   ;
-  772 D357  E1          RANGE:	POP	HL		; Stack eine Ebene zurueck
-  773 D358  CD F003     RANGE1:	CALL	PV1		; Aufruf RANGE1 wird von JEDIT mitgenutzt!
-  774 D35B  23          	DB	OSTR		; Fehlermeldung anzeigen
-  775 D35C  49 4E 56 41 	DB	'INVALID RANGE',7,0
-  776 D36B  C3 D3D5     	JP	NL		; CR,LF
-  777                   ;
-  778                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  770 D354  4B          	LD	C,E		; Laenge jetzt in BC
+  771 D355  D1          	POP	DE		; Wert jetzt in DE
+  772 D356  C9          	RET
+  773                   ;
+  774 D357  E1          RANGE:	POP	HL		; Stack eine Ebene zurueck
+  775 D358  CD F003     RANGE1:	CALL	PV1		; Aufruf RANGE1 wird von JEDIT mitgenutzt!
+  776 D35B  23          	DB	OSTR		; Fehlermeldung anzeigen
+  777 D35C  49 4E 56 41 	DB	'INVALID RANGE',7,0
+  778 D36B  C3 D3D5     	JP	NL		; CR,LF
   779                   ;
-  780                   ; Berechnung Pruefsumme und CRC16
-  781                   ; Aufruf: CRC Aadr Eadr+1
-  782                   ;
-  783 D36E  FDFD        CRC:	DEFW	0FDFDH
-  784 D370  43 52 43 01 	DB	'CRC',1
-  785 D374  FE 02       	CP	2		; 2 Argumente erforderlich
-  786 D376  28 13       	JR	Z,CRC0
-  787 D378  CD D7CB     	CALL	HELP
-  788 D37B  43 52 43 20 	DB	'CRC AADR EADR+1',0
-  789                   	;
-  790 D38B  CD D34A     CRC0:	CALL	FORM		; Argumente transformieren
-  791                   
-  792                   ; Berechnung Summe16 und CRC16: (HL=Adresse BC=Anzahl)
+  780                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  781                   ;
+  782                   ; Berechnung Pruefsumme und CRC16
+  783                   ; Aufruf: CRC Aadr Eadr+1
+  784                   ;
+  785 D36E  FDFD        CRC:	DEFW	0FDFDH
+  786 D370  43 52 43 01 	DB	'CRC',1
+  787 D374  FE 02       	CP	2		; 2 Argumente erforderlich
+  788 D376  28 13       	JR	Z,CRC0
+  789 D378  CD D7CB     	CALL	HELP
+  790 D37B  43 52 43 20 	DB	'CRC AADR EADR+1',0
+  791                   	;
+  792 D38B  CD D34A     CRC0:	CALL	FORM		; Argumente transformieren
   793                   
-  794         0000      fastcrc	equ	0		; schnelle CRC-Routine
-  795         0000      if	fastcrc			; dafuer 11 Byte laenger
-  839                   else	; fastcrc		; kuerzere aber langsamere CRC-Routine
-  840                   
-  841                   ; 28.10.2022: neue CRC-Routine von
-  842                   ; https://wikiti.brandonw.net/index.php?title=Z80_Routines:Security:CRC16
-  843                   
-  844 D38E  EB          	EX	DE,HL		; Adresse in DE
-  845 D38F  21 0000     	LD	HL,0		; Startwert fuer Summe
-  846 D392  E5          	PUSH	HL		; Summe in (SP) berechnen
-  847 D393  21 FFFF     	LD	HL,0FFFFH	; Startwert fuer CRC
-  848 D396  1A          CRC1:	LD	A,(DE)
-  849 D397  E3          	ex	(sp),hl		; Summe in HL		CRC auf Stack
-  850 D398  85          	add	a,l
-  851 D399  6F          	ld	l,a		; Summe berechnen
-  852 D39A  30 01       	jr	nc,CRC2
-  853 D39C  24          	inc	h
-  854 D39D  E3          CRC2:	ex	(sp),hl		; Summe wieder auf Stack legen
-  855 D39E  C5          	PUSH	BC		; Byte-Anzahl sichern
-  856 D39F  1A          	LD	A,(DE)		; Byte holen
-  857 D3A0  13          	INC	DE		; naechste Adresse
-  858 D3A1  AC          	XOR	H		; XOR mit HWT der CRC
-  859 D3A2  67          	LD	H,A
-  860 D3A3  06 08       	LD	B,8
-  861 D3A5  29          CRC3:	ADD	HL,HL		; nach links rotieren
-  862 D3A6  30 08       	JR	NC,CRC4		; wenn MSB gesetzt
-  863 D3A8  7C          	LD	A,H
-  864 D3A9  EE 10       	XOR	10H		; mit Polynom verknuepfen 
-  865 D3AB  67          	LD	H,A
-  866 D3AC  7D          	LD	A,L
-  867 D3AD  EE 21       	XOR	21H
-  868 D3AF  6F          	LD	L,A
-  869 D3B0  10 F3       CRC4:	DJNZ	CRC3		; Schleife ueber 8 Bit
+  794                   ; Berechnung Summe16 und CRC16: (HL=Adresse BC=Anzahl)
+  795                   
+  796         0000      fastcrc	equ	0		; schnelle CRC-Routine
+  797         0000      if	fastcrc			; dafuer 11 Byte laenger
+  841                   else	; fastcrc		; kuerzere aber langsamere CRC-Routine
+  842                   
+  843                   ; 28.10.2022: neue CRC-Routine von
+  844                   ; https://wikiti.brandonw.net/index.php?title=Z80_Routines:Security:CRC16
+  845                   
+  846 D38E  EB          	EX	DE,HL		; Adresse in DE
+  847 D38F  21 0000     	LD	HL,0		; Startwert fuer Summe
+  848 D392  E5          	PUSH	HL		; Summe in (SP) berechnen
+  849 D393  21 FFFF     	LD	HL,0FFFFH	; Startwert fuer CRC
+  850 D396  1A          CRC1:	LD	A,(DE)
+  851 D397  E3          	ex	(sp),hl		; Summe in HL		CRC auf Stack
+  852 D398  85          	add	a,l
+  853 D399  6F          	ld	l,a		; Summe berechnen
+  854 D39A  30 01       	jr	nc,CRC2
+  855 D39C  24          	inc	h
+  856 D39D  E3          CRC2:	ex	(sp),hl		; Summe wieder auf Stack legen
+  857 D39E  C5          	PUSH	BC		; Byte-Anzahl sichern
+  858 D39F  1A          	LD	A,(DE)		; Byte holen
+  859 D3A0  13          	INC	DE		; naechste Adresse
+  860 D3A1  AC          	XOR	H		; XOR mit HWT der CRC
+  861 D3A2  67          	LD	H,A
+  862 D3A3  06 08       	LD	B,8
+  863 D3A5  29          CRC3:	ADD	HL,HL		; nach links rotieren
+  864 D3A6  30 08       	JR	NC,CRC4		; wenn MSB gesetzt
+  865 D3A8  7C          	LD	A,H
+  866 D3A9  EE 10       	XOR	10H		; mit Polynom verknuepfen 
+  867 D3AB  67          	LD	H,A
+  868 D3AC  7D          	LD	A,L
+  869 D3AD  EE 21       	XOR	21H
+  870 D3AF  6F          	LD	L,A
 KC-Debugger     							    SLR180 1.31 Page  72
 TEMO    Z80
 
-  870 D3B2  C1          	POP	BC		; Zaehler zurueck
-  871 D3B3  0B          	DEC	BC
-  872 D3B4  78          	LD	A,B		; Ende erreicht ?
-  873 D3B5  B1          	OR	C
-  874 D3B6  20 DE       	JR	NZ,CRC1
-  875                   endif
-  876                   
-  877                   ; Berechnungsergebnis anzeigen:
+  871 D3B0  10 F3       CRC4:	DJNZ	CRC3		; Schleife ueber 8 Bit
+  872 D3B2  C1          	POP	BC		; Zaehler zurueck
+  873 D3B3  0B          	DEC	BC
+  874 D3B4  78          	LD	A,B		; Ende erreicht ?
+  875 D3B5  B1          	OR	C
+  876 D3B6  20 DE       	JR	NZ,CRC1
+  877                   endif
   878                   
-  879 D3B8  CD F003     	CALL	PV1
-  880 D3BB  23          	DB	OSTR
-  881 D3BC  43 52 43 31 	DB	'CRC16=',0
-  882 D3C3  CD D597     	CALL	HLHEX		; CRC anzeigen
-  883 D3C6  E1          	POP	HL		; Summe vom Stack holen
-  884 D3C7  CD F003     	CALL	PV1
-  885 D3CA  23          	DB	OSTR
-  886 D3CB  53 55 4D 31 	DB	'SUM16=',0	; Summe anzeigen
-  887 D3D2  CD D597     HLCR:	CALL	HLHEX
-  888 D3D5  CD F003     NL:	CALL	PV1
-  889 D3D8  2C          	DB	CRLF
-  890 D3D9  C9          	RET
-  891                   ;
-  892                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  879                   ; Berechnungsergebnis anzeigen:
+  880                   
+  881 D3B8  CD F003     	CALL	PV1
+  882 D3BB  23          	DB	OSTR
+  883 D3BC  43 52 43 31 	DB	'CRC16=',0
+  884 D3C3  CD D597     	CALL	HLHEX		; CRC anzeigen
+  885 D3C6  E1          	POP	HL		; Summe vom Stack holen
+  886 D3C7  CD F003     	CALL	PV1
+  887 D3CA  23          	DB	OSTR
+  888 D3CB  53 55 4D 31 	DB	'SUM16=',0	; Summe anzeigen
+  889 D3D2  CD D597     HLCR:	CALL	HLHEX
+  890 D3D5  CD F003     NL:	CALL	PV1
+  891 D3D8  2C          	DB	CRLF
+  892 D3D9  C9          	RET
   893                   ;
-  894                   ; I/O-Port lesen
-  895                   ; Aufruf: IN Port
-  896                   ;
-  897 D3DA  FDFD        	DEFW	0FDFDH
-  898 D3DC  49 4E 01    	DB	'IN',1
-  899 D3DF  3D          	DEC	A		; 1 Parameter erforderlich
-  900 D3E0  28 0B       	JR	Z,IN0
-  901 D3E2  CD D7CB     	CALL	HELP
-  902 D3E5  49 4E 20 50 	DB	'IN PORT',0
-  903                   	;
-  904 D3ED  44          IN0:	LD	B,H
-  905 D3EE  4D          	LD	C,L		; Portadresse in BC
-  906 D3EF  ED 78       	IN	A,(C)		; Eingabe
-  907 D3F1  CD F003     AHCR:	CALL	PV1
-  908 D3F4  1C          	DB	AHEX		; und Wert anzeigen
-  909 D3F5  C3 D3D5     	JP	NL		; CR,LF
-  910                   ;
-  911                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  894                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  895                   ;
+  896                   ; I/O-Port lesen
+  897                   ; Aufruf: IN Port
+  898                   ;
+  899 D3DA  FDFD        	DEFW	0FDFDH
+  900 D3DC  49 4E 01    	DB	'IN',1
+  901 D3DF  3D          	DEC	A		; 1 Parameter erforderlich
+  902 D3E0  28 0B       	JR	Z,IN0
+  903 D3E2  CD D7CB     	CALL	HELP
+  904 D3E5  49 4E 20 50 	DB	'IN PORT',0
+  905                   	;
+  906 D3ED  44          IN0:	LD	B,H
+  907 D3EE  4D          	LD	C,L		; Portadresse in BC
+  908 D3EF  ED 78       	IN	A,(C)		; Eingabe
+  909 D3F1  CD F003     AHCR:	CALL	PV1
+  910 D3F4  1C          	DB	AHEX		; und Wert anzeigen
+  911 D3F5  C3 D3D5     	JP	NL		; CR,LF
   912                   ;
-  913                   ; I/O-Port schreiben
-  914                   ; Aufruf: OUT Port Byte [Byte ...]
-  915                   ;
-  916 D3F8  FDFD        	DEFW	0FDFDH
-  917 D3FA  4F 55 54 01 	DB	'OUT',1
-  918 D3FE  FE 02       	CP	2		; mind. 2 Parameter erforderlich
-  919 D400  30 1C       	JR	NC,OUT0
-  920 D402  CD D7CB     	CALL	HELP
-  921 D405  4F 55 54 20 	DB	'OUT PORT BYTE (BYTE ...)',0
-  922                   	;
-  923 D41E  44          OUT0:	LD	B,H
-  924 D41F  4D          	LD	C,L		; Portadresse in BC
-  925 D420  21 B782     	LD	HL,ARG1
-  926 D423  3D          OUT1:	DEC	A		; noch ein Parameter?
-  927 D424  C8          	RET	Z		; nein, fertig
+  913                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  914                   ;
+  915                   ; I/O-Port schreiben
+  916                   ; Aufruf: OUT Port Byte [Byte ...]
+  917                   ;
+  918 D3F8  FDFD        	DEFW	0FDFDH
+  919 D3FA  4F 55 54 01 	DB	'OUT',1
+  920 D3FE  FE 02       	CP	2		; mind. 2 Parameter erforderlich
+  921 D400  30 1C       	JR	NC,OUT0
+  922 D402  CD D7CB     	CALL	HELP
+  923 D405  4F 55 54 20 	DB	'OUT PORT BYTE (BYTE ...)',0
+  924                   	;
+  925 D41E  44          OUT0:	LD	B,H
+  926 D41F  4D          	LD	C,L		; Portadresse in BC
+  927 D420  21 B782     	LD	HL,ARG1
+  928 D423  3D          OUT1:	DEC	A		; noch ein Parameter?
 KC-Debugger     							    SLR180 1.31 Page  73
 TEMO    Z80
 
-  928 D425  23          	INC	HL
-  929 D426  23          	INC	HL
-  930 D427  56          	LD	D,(HL)		; Ausgabebyte
-  931 D428  ED 51       	OUT	(C),D
-  932 D42A  18 F7       	JR	OUT1
-  933                   ;
-  934                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  929 D424  C8          	RET	Z		; nein, fertig
+  930 D425  23          	INC	HL
+  931 D426  23          	INC	HL
+  932 D427  56          	LD	D,(HL)		; Ausgabebyte
+  933 D428  ED 51       	OUT	(C),D
+  934 D42A  18 F7       	JR	OUT1
   935                   ;
-  936                   ; Speicherbereiche mit Daten fuellen
-  937                   ; Aufruf: FILL Aadr Eadr+1 [Byte [Byte ...]]
-  938                   ;
-  939 D42C  FDFD        	DEFW	0FDFDH
-  940 D42E  46 49 4C 4C 	DB	'FILL',1
-  941 D433  D6 02       	SUB	2		; mind. 2 Parameter erforderlich
-  942 D435  30 1F       	JR	NC,FILL0
-  943 D437  CD D7CB     	CALL	HELP
-  944 D43A  46 49 4C 4C 	DB	'FILL AADR EADR+1 (BYTE ...)',0
-  945                   	;
-  946 D456  CD D34A     FILL0:	CALL	FORM		; Argumente transformieren / HL=Anfang, BC=Anzahl
-  947 D459  EB          	EX	DE,HL		; DE = Adresse
-  948 D45A  21 B786     	LD	HL,ARG3		; Bytes ab ARG3 entnehmen
-  949 D45D  B7          	OR	A		; 2 Parameter fuer Adressen abziehen
-  950 D45E  20 03       	JR	NZ,FILL1	; mehr als 2 Parameter
-  951 D460  3C          	INC	A		; 3. Parameter annehmen
-  952 D461  36 00       	LD	(HL),0		; ARG3=0 wenn ohne Byte aufgerufen
-  953 D463  F5          FILL1:	PUSH	AF		; Anzahl Bytes
-  954 D464  E5          	PUSH	HL		; Beginn der Datenbytes
-  955 D465  ED A0       FILL2:	LDI			; ein Byte eintragen
-  956 D467  E2 D472     	JP	PO,FILL3	; BC=0 -> fertig
-  957 D46A  23          	INC	HL		; ARGn = 2 Byte
-  958 D46B  3D          	DEC	A
-  959 D46C  20 F7       	JR	NZ,FILL2	; noch ein Byte
-  960 D46E  E1          	POP	HL
-  961 D46F  F1          	POP	AF
-  962 D470  18 F1       	JR	FILL1		; wieder von vorn
-  963                   	;
-  964 D472  E1          FILL3:	POP	HL
-  965 D473  F1          	POP	AF
-  966 D474  C9          	RET
-  967                   ;
-  968                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  936                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  937                   ;
+  938                   ; Speicherbereiche mit Daten fuellen
+  939                   ; Aufruf: FILL Aadr Eadr+1 [Byte [Byte ...]]
+  940                   ;
+  941 D42C  FDFD        	DEFW	0FDFDH
+  942 D42E  46 49 4C 4C 	DB	'FILL',1
+  943 D433  D6 02       	SUB	2		; mind. 2 Parameter erforderlich
+  944 D435  30 1F       	JR	NC,FILL0
+  945 D437  CD D7CB     	CALL	HELP
+  946 D43A  46 49 4C 4C 	DB	'FILL AADR EADR+1 (BYTE ...)',0
+  947                   	;
+  948 D456  CD D34A     FILL0:	CALL	FORM		; Argumente transformieren / HL=Anfang, BC=Anzahl
+  949 D459  EB          	EX	DE,HL		; DE = Adresse
+  950 D45A  21 B786     	LD	HL,ARG3		; Bytes ab ARG3 entnehmen
+  951 D45D  B7          	OR	A		; 2 Parameter fuer Adressen abziehen
+  952 D45E  20 03       	JR	NZ,FILL1	; mehr als 2 Parameter
+  953 D460  3C          	INC	A		; 3. Parameter annehmen
+  954 D461  36 00       	LD	(HL),0		; ARG3=0 wenn ohne Byte aufgerufen
+  955 D463  F5          FILL1:	PUSH	AF		; Anzahl Bytes
+  956 D464  E5          	PUSH	HL		; Beginn der Datenbytes
+  957 D465  ED A0       FILL2:	LDI			; ein Byte eintragen
+  958 D467  E2 D472     	JP	PO,FILL3	; BC=0 -> fertig
+  959 D46A  23          	INC	HL		; ARGn = 2 Byte
+  960 D46B  3D          	DEC	A
+  961 D46C  20 F7       	JR	NZ,FILL2	; noch ein Byte
+  962 D46E  E1          	POP	HL
+  963 D46F  F1          	POP	AF
+  964 D470  18 F1       	JR	FILL1		; wieder von vorn
+  965                   	;
+  966 D472  E1          FILL3:	POP	HL
+  967 D473  F1          	POP	AF
+  968 D474  C9          	RET
   969                   ;
-  970                   ; Speicherbereiche austauschen
-  971                   ; Aufruf: EXCH Aadr Eadr+1 Adresse2
-  972                   ;
-  973 D475  FDFD        	DEFW	0FDFDH
-  974 D477  45 58 43 48 	DB	'EXCH',1
-  975 D47C  FE 03       	CP	3		; 3 Parameter erforderlich
-  976 D47E  28 19       	JR	Z,EXCH0
-  977 D480  CD D7CB     	CALL	HELP
-  978 D483  45 58 43 48 	DB	'EXCH AADR EADR+1 ADR2',0
-  979                   	;
-  980 D499  CD D34A     EXCH0:	CALL	FORM		; Argumente transformieren
-  981 D49C  1A          EXCH:	LD	A,(DE)
-  982 D49D  ED A0       	LDI
-  983 D49F  2B          	DEC	HL
-  984 D4A0  77          	LD	(HL),A
-  985 D4A1  23          	INC	HL
+  970                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  971                   ;
+  972                   ; Speicherbereiche austauschen
+  973                   ; Aufruf: EXCH Aadr Eadr+1 Adresse2
+  974                   ;
+  975 D475  FDFD        	DEFW	0FDFDH
+  976 D477  45 58 43 48 	DB	'EXCH',1
+  977 D47C  FE 03       	CP	3		; 3 Parameter erforderlich
+  978 D47E  28 19       	JR	Z,EXCH0
+  979 D480  CD D7CB     	CALL	HELP
+  980 D483  45 58 43 48 	DB	'EXCH AADR EADR+1 ADR2',0
+  981                   	;
+  982 D499  CD D34A     EXCH0:	CALL	FORM		; Argumente transformieren
+  983 D49C  1A          EXCH:	LD	A,(DE)
+  984 D49D  ED A0       	LDI
+  985 D49F  2B          	DEC	HL
+  986 D4A0  77          	LD	(HL),A
 KC-Debugger     							    SLR180 1.31 Page  74
 TEMO    Z80
 
-  986 D4A2  EA D49C     	JP	PE,EXCH
-  987 D4A5  C9          	RET
-  988                   ;
-  989                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  987 D4A1  23          	INC	HL
+  988 D4A2  EA D49C     	JP	PE,EXCH
+  989 D4A5  C9          	RET
   990                   ;
-  991                   ; Speicherbereich verschieben (kopieren)
-  992                   ; Aufruf: COPY Aadr Eadr+1 Adresse2
-  993                   ;
-  994 D4A6  FDFD        	DEFW	0FDFDH
-  995 D4A8  43 4F 50 59 	DB	'COPY',1
-  996 D4AD  FE 03       	CP	3		; 3 Parameter erforderlich
-  997 D4AF  28 19       	JR	Z,MOVE0
-  998 D4B1  CD D7CB     	CALL	HELP
-  999 D4B4  43 4F 50 59 	DB	'COPY AADR EADR+1 ADR2',0
- 1000                   	;
- 1001 D4CA  CD D34A     MOVE0:	CALL	FORM		; Argumente transformieren
- 1002 D4CD  ED 52       	SBC	HL,DE		; Kopierrichtung feststellen
- 1003 D4CF  19          	ADD	HL,DE
- 1004 D4D0  38 03       	JR	C,MOVE1
- 1005 D4D2  ED B0       	LDIR			; nach vorn -> LDIR (Quelle > Ziel)
- 1006 D4D4  C9          	RET
- 1007                   ;
- 1008 D4D5  09          MOVE1:	ADD	HL,BC
- 1009 D4D6  EB          	EX	DE,HL
- 1010 D4D7  09          	ADD	HL,BC
- 1011 D4D8  EB          	EX	DE,HL
- 1012 D4D9  2B          	DEC	HL
- 1013 D4DA  1B          	DEC	DE
- 1014 D4DB  ED B8       	LDDR			; nach hinten -> LDDR (Quelle < Ziel)
- 1015 D4DD  C9          	RET
- 1016         0001      IF CALC
- 1017                   ; Taschenrechner aus CALC verwenden
- 1018                   ELSE ; CALC
- 1062                   ENDIF ; CALC
- 1063                   ;-------------------------------------------------------
- 1064                   ; Menuewort FIND		Suche nach Datenbyte(s) ab ADR
- 1065                   ; (Suchbereich immer volle 64K, also auch ueber FFFFh hinaus)
- 1066                   ;
- 1067                   ; Syntax: %FIND ADR Byte1 [Byte2] ... [Byte9]
+  991                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+  992                   ;
+  993                   ; Speicherbereich verschieben (kopieren)
+  994                   ; Aufruf: COPY Aadr Eadr+1 Adresse2
+  995                   ;
+  996 D4A6  FDFD        	DEFW	0FDFDH
+  997 D4A8  43 4F 50 59 	DB	'COPY',1
+  998 D4AD  FE 03       	CP	3		; 3 Parameter erforderlich
+  999 D4AF  28 19       	JR	Z,MOVE0
+ 1000 D4B1  CD D7CB     	CALL	HELP
+ 1001 D4B4  43 4F 50 59 	DB	'COPY AADR EADR+1 ADR2',0
+ 1002                   	;
+ 1003 D4CA  CD D34A     MOVE0:	CALL	FORM		; Argumente transformieren
+ 1004 D4CD  ED 52       	SBC	HL,DE		; Kopierrichtung feststellen
+ 1005 D4CF  19          	ADD	HL,DE
+ 1006 D4D0  38 03       	JR	C,MOVE1
+ 1007 D4D2  ED B0       	LDIR			; nach vorn -> LDIR (Quelle > Ziel)
+ 1008 D4D4  C9          	RET
+ 1009                   ;
+ 1010 D4D5  09          MOVE1:	ADD	HL,BC
+ 1011 D4D6  EB          	EX	DE,HL
+ 1012 D4D7  09          	ADD	HL,BC
+ 1013 D4D8  EB          	EX	DE,HL
+ 1014 D4D9  2B          	DEC	HL
+ 1015 D4DA  1B          	DEC	DE
+ 1016 D4DB  ED B8       	LDDR			; nach hinten -> LDDR (Quelle < Ziel)
+ 1017 D4DD  C9          	RET
+ 1018         0001      IF CALC
+ 1019                   ; Taschenrechner aus CALC verwenden
+ 1020                   ELSE ; CALC
+ 1064                   ENDIF ; CALC
+ 1065                   ;-------------------------------------------------------
+ 1066                   ; Menuewort FIND		Suche nach Datenbyte(s) ab ADR
+ 1067                   ; (Suchbereich immer volle 64K, also auch ueber FFFFh hinaus)
  1068                   ;
- 1069 D4DE  FDFD        	DW	0FDFDH
- 1070 D4E0  46 49 4E 44 	DB	'FIND',1
- 1071 D4E5  FE 02       	CP	2		; mindestens 2 Argumente erforderlich
- 1072 D4E7  30 1C       	JR	NC,FIND0
- 1073 D4E9  CD D7CB     	CALL	HELP
- 1074 D4EC  46 49 4E 44 	DB	'FIND ADR BYTE (BYTE ...)',0
- 1075                   	;
- 1076 D505  01 0000     FIND0:	LD	BC,0		; Laenge Suchbereich
- 1077 D508  11 B784     FI2:	LD	DE,ARG2		; erstes zu suchendes Datenbyte
- 1078 D50B  1A          	LD	A,(DE)
- 1079 D50C  ED B1       	CPIR
- 1080 D50E  E0          	RET	PO		; Byte nicht gefunden
- 1081 D50F  C5          	PUSH	BC
- 1082 D510  E5          	PUSH	HL		; merken wie weit wir sind...
- 1083 D511  ED 4B B780  	LD	BC,(ARGN-1)	; (ARGN) = Anzahl Datenbytes + 1
- 1084 D515  10 07       	DJNZ	FI4		; B=Anzahl Datenbytes
- 1085                   	;
- 1086 D517  13          FI3:	INC	DE		; naechstes Byte (naechstes ARG)
+ 1069                   ; Syntax: %FIND ADR Byte1 [Byte2] ... [Byte9]
+ 1070                   ;
+ 1071 D4DE  FDFD        	DW	0FDFDH
+ 1072 D4E0  46 49 4E 44 	DB	'FIND',1
+ 1073 D4E5  FE 02       	CP	2		; mindestens 2 Argumente erforderlich
+ 1074 D4E7  30 1C       	JR	NC,FIND0
+ 1075 D4E9  CD D7CB     	CALL	HELP
+ 1076 D4EC  46 49 4E 44 	DB	'FIND ADR BYTE (BYTE ...)',0
+ 1077                   	;
+ 1078 D505  01 0000     FIND0:	LD	BC,0		; Laenge Suchbereich
+ 1079 D508  11 B784     FI2:	LD	DE,ARG2		; erstes zu suchendes Datenbyte
+ 1080 D50B  1A          	LD	A,(DE)
+ 1081 D50C  ED B1       	CPIR
+ 1082 D50E  E0          	RET	PO		; Byte nicht gefunden
+ 1083 D50F  C5          	PUSH	BC
+ 1084 D510  E5          	PUSH	HL		; merken wie weit wir sind...
+ 1085 D511  ED 4B B780  	LD	BC,(ARGN-1)	; (ARGN) = Anzahl Datenbytes + 1
+ 1086 D515  10 07       	DJNZ	FI4		; B=Anzahl Datenbytes
+ 1087                   	;
 KC-Debugger     							    SLR180 1.31 Page  75
 TEMO    Z80
 
- 1087 D518  13          	INC	DE
- 1088 D519  1A          	LD	A,(DE)		; holen
- 1089 D51A  BE          	CP	(HL)		; und vergleichen
- 1090 D51B  23          	INC	HL		; naechstes Byte (Speicher)
- 1091 D51C  20 0E       	JR	NZ,FI6		; unterschiedlich
- 1092 D51E  10 F7       FI4:	DJNZ	FI3		; weitere Datenbytes?
- 1093 D520  E1          	POP	HL
- 1094 D521  E5          	PUSH	HL		; gesuchte Byte(s) gefunden
- 1095 D522  2B          	DEC	HL
- 1096 D523  CD D3D2     	CALL	HLCR		; Adresse anzeigen und neue Zeile
- 1097 D526  CD F003     FI5:	CALL	PV1		; Tastatureingabe abwarten
- 1098 D529  04          	DB	KBD
- 1099 D52A  FE 03       	CP	3		; BRK bricht ab, alle anderen Tasten: weiter
- 1100 D52C  E1          FI6:	POP	HL
- 1101 D52D  C1          	POP	BC
- 1102 D52E  20 D8       	JR	NZ,FI2		; nicht BRK, also weiter suchen
- 1103 D530  C9          	RET
- 1104                   ;
- 1105                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1088 D517  13          FI3:	INC	DE		; naechstes Byte (naechstes ARG)
+ 1089 D518  13          	INC	DE
+ 1090 D519  1A          	LD	A,(DE)		; holen
+ 1091 D51A  BE          	CP	(HL)		; und vergleichen
+ 1092 D51B  23          	INC	HL		; naechstes Byte (Speicher)
+ 1093 D51C  20 0E       	JR	NZ,FI6		; unterschiedlich
+ 1094 D51E  10 F7       FI4:	DJNZ	FI3		; weitere Datenbytes?
+ 1095 D520  E1          	POP	HL
+ 1096 D521  E5          	PUSH	HL		; gesuchte Byte(s) gefunden
+ 1097 D522  2B          	DEC	HL
+ 1098 D523  CD D3D2     	CALL	HLCR		; Adresse anzeigen und neue Zeile
+ 1099 D526  CD F003     FI5:	CALL	PV1		; Tastatureingabe abwarten
+ 1100 D529  04          	DB	KBD
+ 1101 D52A  FE 03       	CP	3		; BRK bricht ab, alle anderen Tasten: weiter
+ 1102 D52C  E1          FI6:	POP	HL
+ 1103 D52D  C1          	POP	BC
+ 1104 D52E  20 D8       	JR	NZ,FI2		; nicht BRK, also weiter suchen
+ 1105 D530  C9          	RET
  1106                   ;
- 1107                   ; COMPARE - Vergleich zweier Speicherbereiche ab Adresse1 und Adresse2
- 1108                   ; Aufruf: CMP ADR1 ADR2
- 1109                   ;    Nach jedem unterschiedlichen Byte wird auf eine Taste gewarten.
- 1110                   ;    Es wird solange verglichen, bis man BRK drueckt.
- 1111                   ;
- 1112 D531  FDFD        	DW	0FDFDH
- 1113 D533  43 4D 50 01 	DB	'CMP',1
- 1114 D537  FE 02       	CP	2		; 2 Argumente erforderlich
- 1115 D539  28 11       	JR	Z,CPA1
- 1116 D53B  CD D7CB     	CALL	HELP
- 1117 D53E  43 4D 50 20 	DB	'CMP ADR1 ADR2',0
- 1118                   	;
- 1119 D54C  1A          CPA1:	LD	A,(DE)
- 1120 D54D  BE          	CP	(HL)		; Bytes vergleichen
- 1121 D54E  28 23       	JR	Z,CPA5		; identisch, weiter zur naechsten Adresse
- 1122 D550  06 02       	LD	B,2		; wenn unterschiedlich:
- 1123 D552  18 09       	JR	CPA3		; 2 Adresse/Inhalt-Paare anzeigen
- 1124                   	;
- 1125 D554  CD F003     CPA2:	CALL	PV1		; dazwischen <>
- 1126 D557  23          	DB	OSTR
- 1127 D558  20 3C 3E 20 	DB	' <> ',0
- 1128 D55D  CD F003     CPA3:	CALL	PV1
- 1129 D560  1A          	DB	HLHX		; Anzeige Adresse
- 1130 D561  7E          	LD	A,(HL)
- 1131 D562  CD F003     	CALL	PV1
- 1132 D565  1C          	DB	AHEX		; und deren Inhalt
- 1133 D566  EB          	EX	DE,HL
- 1134 D567  10 EB       	DJNZ	CPA2
- 1135 D569  CD D3D5     	CALL	NL		; neue Zeile
- 1136 D56C  CD F003     	CALL	PV1		; Tastatureingabe abwarten
- 1137 D56F  04          	DB	KBD
- 1138 D570  FE 03       	CP	3
- 1139 D572  C8          	RET	Z		; BRK bricht ab, alle anderen Tasten: weiter
- 1140 D573  13          CPA5:	INC	DE		; Adressen+1
- 1141 D574  23          	INC	HL
- 1142 D575  18 D5       	JR	CPA1
- 1143                   ;
- 1144                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1107                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1108                   ;
+ 1109                   ; COMPARE - Vergleich zweier Speicherbereiche ab Adresse1 und Adresse2
+ 1110                   ; Aufruf: CMP ADR1 ADR2
+ 1111                   ;    Nach jedem unterschiedlichen Byte wird auf eine Taste gewarten.
+ 1112                   ;    Es wird solange verglichen, bis man BRK drueckt.
+ 1113                   ;
+ 1114 D531  FDFD        	DW	0FDFDH
+ 1115 D533  43 4D 50 01 	DB	'CMP',1
+ 1116 D537  FE 02       	CP	2		; 2 Argumente erforderlich
+ 1117 D539  28 11       	JR	Z,CPA1
+ 1118 D53B  CD D7CB     	CALL	HELP
+ 1119 D53E  43 4D 50 20 	DB	'CMP ADR1 ADR2',0
+ 1120                   	;
+ 1121 D54C  1A          CPA1:	LD	A,(DE)
+ 1122 D54D  BE          	CP	(HL)		; Bytes vergleichen
+ 1123 D54E  28 23       	JR	Z,CPA5		; identisch, weiter zur naechsten Adresse
+ 1124 D550  06 02       	LD	B,2		; wenn unterschiedlich:
+ 1125 D552  18 09       	JR	CPA3		; 2 Adresse/Inhalt-Paare anzeigen
+ 1126                   	;
+ 1127 D554  CD F003     CPA2:	CALL	PV1		; dazwischen <>
+ 1128 D557  23          	DB	OSTR
+ 1129 D558  20 3C 3E 20 	DB	' <> ',0
+ 1130 D55D  CD F003     CPA3:	CALL	PV1
+ 1131 D560  1A          	DB	HLHX		; Anzeige Adresse
+ 1132 D561  7E          	LD	A,(HL)
+ 1133 D562  CD F003     	CALL	PV1
+ 1134 D565  1C          	DB	AHEX		; und deren Inhalt
+ 1135 D566  EB          	EX	DE,HL
+ 1136 D567  10 EB       	DJNZ	CPA2
+ 1137 D569  CD D3D5     	CALL	NL		; neue Zeile
+ 1138 D56C  CD F003     	CALL	PV1		; Tastatureingabe abwarten
+ 1139 D56F  04          	DB	KBD
+ 1140 D570  FE 03       	CP	3
+ 1141 D572  C8          	RET	Z		; BRK bricht ab, alle anderen Tasten: weiter
+ 1142 D573  13          CPA5:	INC	DE		; Adressen+1
+ 1143 D574  23          	INC	HL
+ 1144 D575  18 D5       	JR	CPA1
+ 1145                   ;
 KC-Debugger     							    SLR180 1.31 Page  76
 TEMO    Z80
 
- 1145                   ;
- 1146                   ; Setzen oder Anzeigen eines Unterbrechungspunktes
- 1147                   ; Aufruf: BREAK [Adresse]
- 1148                   ;
- 1149 D577  FDFD        	DEFW	0FDFDH
- 1150 D579  42 52 45 41 	DB	'BREAK',1
- 1151 D57F  11 D3D5     	LD	DE,NL		; CR,LF
- 1152 D582  D5          	PUSH	DE		; Auf Stack als RET-Adresse ablegen
- 1153                   ;
- 1154                   ; Breakpoint setzen/laden
- 1155                   ; PE:	A=0	nur anzeigen
- 1156                   ;	A>0	Breakpoint setzen
- 1157                   ;	HL	Adresse
- 1158                   ;
- 1159 D583  B7          BREAK1:	OR	A		; Argument?
- 1160 D584  28 03       	JR	Z,BREAK0	; A=0, nur anzeigen
- 1161 D586  22 00A6     	LD	(BREAK),HL	; Breakpoint setzen
- 1162 D589  CD F003     BREAK0:	CALL	PV1
- 1163 D58C  23          	DB	OSTR
- 1164 D58D  42 52 45 41 	DB	'BREAK=',0
- 1165 D594  2A 00A6     	LD	HL,(BREAK)	; aktueller Unterbrechungspunkt
- 1166 D597  CD F003     HLHEX:	CALL	PV1
- 1167 D59A  1A          	DB	HLHX		; anzeigen
- 1168 D59B  C9          	RET
- 1169                   ;
- 1170                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1146                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1147                   ;
+ 1148                   ; Setzen oder Anzeigen eines Unterbrechungspunktes
+ 1149                   ; Aufruf: BREAK [Adresse]
+ 1150                   ;
+ 1151 D577  FDFD        	DEFW	0FDFDH
+ 1152 D579  42 52 45 41 	DB	'BREAK',1
+ 1153 D57F  11 D3D5     	LD	DE,NL		; CR,LF
+ 1154 D582  D5          	PUSH	DE		; Auf Stack als RET-Adresse ablegen
+ 1155                   ;
+ 1156                   ; Breakpoint setzen/laden
+ 1157                   ; PE:	A=0	nur anzeigen
+ 1158                   ;	A>0	Breakpoint setzen
+ 1159                   ;	HL	Adresse
+ 1160                   ;
+ 1161 D583  B7          BREAK1:	OR	A		; Argument?
+ 1162 D584  28 03       	JR	Z,BREAK0	; A=0, nur anzeigen
+ 1163 D586  22 00A6     	LD	(BREAK),HL	; Breakpoint setzen
+ 1164 D589  CD F003     BREAK0:	CALL	PV1
+ 1165 D58C  23          	DB	OSTR
+ 1166 D58D  42 52 45 41 	DB	'BREAK=',0
+ 1167 D594  2A 00A6     	LD	HL,(BREAK)	; aktueller Unterbrechungspunkt
+ 1168 D597  CD F003     HLHEX:	CALL	PV1
+ 1169 D59A  1A          	DB	HLHX		; anzeigen
+ 1170 D59B  C9          	RET
  1171                   ;
- 1172                   ; RST 38-Routine fuer Unterbrechungspunkt im RAM
+ 1172                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
  1173                   ;
- 1174 D59C  F5          RSTROM:	PUSH	AF
- 1175 D59D  E5          	 PUSH	HL
- 1176 D59E  2A 00A6     	  LD	HL,(BREAK)	; Adresse Unterbrechungspunkt
- 1177 D5A1  3A 00A8     	  LD	A,(BRKI)	; urspruenglicher Wert
- 1178 D5A4  77          	  LD	(HL),A		; wieder eintragen
- 1179 D5A5  3E 03       	  LD	A,3
- 1180 D5A7  32 00A9     	  LD	(MODE),A	; weiter MODE 3: Schrittbetrieb mit Steuerung
- 1181 D5AA  E1          	 POP	HL
- 1182 D5AB  18 08       	JR	ICTC1		; weiter wie bei CTC-Breakpoint im ROM
- 1183                   ;
- 1184                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1174                   ; RST 38-Routine fuer Unterbrechungspunkt im RAM
+ 1175                   ;
+ 1176 D59C  F5          RSTROM:	PUSH	AF
+ 1177 D59D  E5          	 PUSH	HL
+ 1178 D59E  2A 00A6     	  LD	HL,(BREAK)	; Adresse Unterbrechungspunkt
+ 1179 D5A1  3A 00A8     	  LD	A,(BRKI)	; urspruenglicher Wert
+ 1180 D5A4  77          	  LD	(HL),A		; wieder eintragen
+ 1181 D5A5  3E 03       	  LD	A,3
+ 1182 D5A7  32 00A9     	  LD	(MODE),A	; weiter MODE 3: Schrittbetrieb mit Steuerung
+ 1183 D5AA  E1          	 POP	HL
+ 1184 D5AB  18 08       	JR	ICTC1		; weiter wie bei CTC-Breakpoint im ROM
  1185                   ;
- 1186                   ; CTC-Interruptroutine fuer Unterbrechungspunkt im ROM
+ 1186                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
  1187                   ;
- 1188 D5AD  F5          INTROM:	PUSH	AF
- 1189 D5AE  3E 03       	 LD	A,3
- 1190 D5B0  D3 8C       	 OUT	(CTC0),A	; CTC abschalten
- 1191 D5B2  CD D60C     	 CALL	EIRETI		; Interrupt freigeben
- 1192 D5B5  F1          ICTC1:	POP	AF
- 1193 D5B6  ED 73 0024  	LD	(RSP),SP	; Register SP erst einmal merken
- 1194 D5BA  F3          	DI
- 1195 D5BB  31 0024     	LD	SP,RSP		; Register hier rueckwaerts ablegen...
- 1196 D5BE  D9          	EXX
- 1197 D5BF  E5          	PUSH	HL		; Register HL'
- 1198 D5C0  D5          	PUSH	DE		; Register DE'
- 1199 D5C1  C5          	PUSH	BC		; Register BC'
- 1200 D5C2  D9          	EXX
- 1201 D5C3  08          	EX	AF,AF'
- 1202 D5C4  F5          	PUSH	AF		; Register AF'
+ 1188                   ; CTC-Interruptroutine fuer Unterbrechungspunkt im ROM
+ 1189                   ;
+ 1190 D5AD  F5          INTROM:	PUSH	AF
+ 1191 D5AE  3E 03       	 LD	A,3
+ 1192 D5B0  D3 8C       	 OUT	(CTC0),A	; CTC abschalten
+ 1193 D5B2  CD D60C     	 CALL	EIRETI		; Interrupt freigeben
+ 1194 D5B5  F1          ICTC1:	POP	AF
+ 1195 D5B6  ED 73 0024  	LD	(RSP),SP	; Register SP erst einmal merken
+ 1196 D5BA  F3          	DI
+ 1197 D5BB  31 0024     	LD	SP,RSP		; Register hier rueckwaerts ablegen...
+ 1198 D5BE  D9          	EXX
+ 1199 D5BF  E5          	PUSH	HL		; Register HL'
+ 1200 D5C0  D5          	PUSH	DE		; Register DE'
+ 1201 D5C1  C5          	PUSH	BC		; Register BC'
+ 1202 D5C2  D9          	EXX
+ 1203 D5C3  08          	EX	AF,AF'
 KC-Debugger     							    SLR180 1.31 Page  77
 TEMO    Z80
 
- 1203 D5C5  08          	EX	AF,AF'
- 1204 D5C6  FD E5       	PUSH	IY		; Register IY
- 1205 D5C8  DD E5       	PUSH	IX		; Register IX
- 1206 D5CA  E5          	PUSH	HL		; Register HL
- 1207 D5CB  D5          	PUSH	DE		; Register DE
- 1208 D5CC  C5          	PUSH	BC		; Register BC
- 1209 D5CD  F5          	PUSH	AF		; Register AF
- 1210 D5CE  ED 7B 0024  	LD	SP,(RSP)	; Nach Stackablage SP wieder wie zuvor
- 1211 D5D2  2A 002A     	LD	HL,(PCN)	; aktuellen Wert von PC neu
- 1212 D5D5  22 0028     	LD	(PCO),HL	; nach PC alt umladen (fuer Reassembler)
- 1213 D5D8  E1          	POP	HL		; PC (RET-Adresse zu Anwenderprogramm)
- 1214 D5D9  ED 73 0024  	LD	(RSP),SP	; Register SP jetzt endgueltig
- 1215 D5DD  22 002A     	LD	(PCN),HL	; Adresse fuer Fortsetzung Anwenderprogramm
- 1216 D5E0  EB          	EX	DE,HL		; Zum Vergleich in DE bereithalten
- 1217 D5E1  E1          	POP	HL		; noch einen Wert vom Stack holen
- 1218 D5E2  22 0026     	LD	(RTS),HL	; naechster Wert von Stack
- 1219 D5E5  E5          	PUSH	HL		; Stack wieder auf richtigen Wert
- 1220 D5E6  FB          	EI
- 1221                   
- 1222 D5E7  CD F003     	CALL	PV1
- 1223 D5EA  0E          	DB	KBDZ		; Taste gedrueckt? (Quittieren)
- 1224 D5EB  30 04       	JR	NC,ICTC3	; nein
- 1225 D5ED  FE 13       	CP	13H		; Taste Stop?
- 1226 D5EF  28 10       	JR	Z,ICTC2		; ja, dann Wechsel zu MODE 3
- 1227                   
- 1228 D5F1  2A 00A6     ICTC3:	LD	HL,(BREAK)
- 1229 D5F4  ED 52       	SBC	HL,DE		; BREAK-Adresse erreicht?
- 1230 D5F6  28 09       	JR	Z,ICTC2		; ja, dann Wechsel zu MODE 3
- 1231                   
- 1232 D5F8  3A 00A9     	LD	A,(MODE)
- 1233 D5FB  3D          	DEC	A		; MODE 1?
- 1234 D5FC  CA D657     	JP	Z,GO4		; ja, Programm weiter abarbeiten
- 1235 D5FF  18 05       	JR	ANZ0
- 1236                   
- 1237 D601  3E 03       ICTC2:	LD	A,3		; Uebergang zu MODE 3 (Eingabemodus)
- 1238 D603  32 00A9     	LD	(MODE),A
- 1239 D606  CD D0EB     ANZ0:	CALL	BILD2		; Daten fuer TEMO-Fenster laden/aktivieren
- 1240 D609  C3 D698     	JP	ANZ		; dann zur Registeranzeige
- 1241                   	;
- 1242 D60C  FB          EIRETI:	EI
- 1243 D60D  ED 4D       	RETI
- 1244                   ;
- 1245                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1204 D5C4  F5          	PUSH	AF		; Register AF'
+ 1205 D5C5  08          	EX	AF,AF'
+ 1206 D5C6  FD E5       	PUSH	IY		; Register IY
+ 1207 D5C8  DD E5       	PUSH	IX		; Register IX
+ 1208 D5CA  E5          	PUSH	HL		; Register HL
+ 1209 D5CB  D5          	PUSH	DE		; Register DE
+ 1210 D5CC  C5          	PUSH	BC		; Register BC
+ 1211 D5CD  F5          	PUSH	AF		; Register AF
+ 1212 D5CE  ED 7B 0024  	LD	SP,(RSP)	; Nach Stackablage SP wieder wie zuvor
+ 1213 D5D2  2A 002A     	LD	HL,(PCN)	; aktuellen Wert von PC neu
+ 1214 D5D5  22 0028     	LD	(PCO),HL	; nach PC alt umladen (fuer Reassembler)
+ 1215 D5D8  E1          	POP	HL		; PC (RET-Adresse zu Anwenderprogramm)
+ 1216 D5D9  ED 73 0024  	LD	(RSP),SP	; Register SP jetzt endgueltig
+ 1217 D5DD  22 002A     	LD	(PCN),HL	; Adresse fuer Fortsetzung Anwenderprogramm
+ 1218 D5E0  EB          	EX	DE,HL		; Zum Vergleich in DE bereithalten
+ 1219 D5E1  E1          	POP	HL		; noch einen Wert vom Stack holen
+ 1220 D5E2  22 0026     	LD	(RTS),HL	; naechster Wert von Stack
+ 1221 D5E5  E5          	PUSH	HL		; Stack wieder auf richtigen Wert
+ 1222 D5E6  FB          	EI
+ 1223                   
+ 1224 D5E7  CD F003     	CALL	PV1
+ 1225 D5EA  0E          	DB	KBDZ		; Taste gedrueckt? (Quittieren)
+ 1226 D5EB  30 04       	JR	NC,ICTC3	; nein
+ 1227 D5ED  FE 13       	CP	13H		; Taste Stop?
+ 1228 D5EF  28 10       	JR	Z,ICTC2		; ja, dann Wechsel zu MODE 3
+ 1229                   
+ 1230 D5F1  2A 00A6     ICTC3:	LD	HL,(BREAK)
+ 1231 D5F4  ED 52       	SBC	HL,DE		; BREAK-Adresse erreicht?
+ 1232 D5F6  28 09       	JR	Z,ICTC2		; ja, dann Wechsel zu MODE 3
+ 1233                   
+ 1234 D5F8  3A 00A9     	LD	A,(MODE)
+ 1235 D5FB  3D          	DEC	A		; MODE 1?
+ 1236 D5FC  CA D657     	JP	Z,GO4		; ja, Programm weiter abarbeiten
+ 1237 D5FF  18 05       	JR	ANZ0
+ 1238                   
+ 1239 D601  3E 03       ICTC2:	LD	A,3		; Uebergang zu MODE 3 (Eingabemodus)
+ 1240 D603  32 00A9     	LD	(MODE),A
+ 1241 D606  CD D0EB     ANZ0:	CALL	BILD2		; Daten fuer TEMO-Fenster laden/aktivieren
+ 1242 D609  C3 D698     	JP	ANZ		; dann zur Registeranzeige
+ 1243                   	;
+ 1244 D60C  FB          EIRETI:	EI
+ 1245 D60D  ED 4D       	RETI
  1246                   ;
- 1247                   ; Sprung in ein Anwenderprogramm mit Initialisierung des Unterbrechungspunktes
- 1248                   ; (mit RST 38 - wenn im RAM)
- 1249                   ; (mit CTC-Steuerung - wenn im ROM)
- 1250                   ; Aufruf: GO [Adresse]
- 1251                   ;
- 1252 D60F  FDFD        	DEFW	0FDFDH
- 1253 D611  47 4F 01    	DB	'GO',1
- 1254 D614  A7          	AND	A		; wenn keine Adresse, dann
- 1255 D615  28 0B       	JR	Z,GO0		; weiter an abgespeicherter PC-Adresse
- 1256 D617  22 002A     	LD	(PCN),HL	; neue PC-Adresse setzen
- 1257 D61A  11 002C     	ld	de,mem1
- 1258 D61D  01 0004     	ld	bc,4		; maximal 4 Byte
- 1259 D620  ED B0       	ldir			; Kopie des aktuellen Befehls anlegen
- 1260 D622  DB 89       GO0:	IN	A,(89h)
+ 1247                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1248                   ;
+ 1249                   ; Sprung in ein Anwenderprogramm mit Initialisierung des Unterbrechungspunktes
+ 1250                   ; (mit RST 38 - wenn im RAM)
+ 1251                   ; (mit CTC-Steuerung - wenn im ROM)
+ 1252                   ; Aufruf: GO [Adresse]
+ 1253                   ;
+ 1254 D60F  FDFD        	DEFW	0FDFDH
+ 1255 D611  47 4F 01    	DB	'GO',1
+ 1256 D614  A7          	AND	A		; wenn keine Adresse, dann
+ 1257 D615  28 0B       	JR	Z,GO0		; weiter an abgespeicherter PC-Adresse
+ 1258 D617  22 002A     	LD	(PCN),HL	; neue PC-Adresse setzen
+ 1259 D61A  11 002C     	ld	de,mem1
+ 1260 D61D  01 0004     	ld	bc,4		; maximal 4 Byte
+ 1261 D620  ED B0       	ldir			; Kopie des aktuellen Befehls anlegen
 KC-Debugger     							    SLR180 1.31 Page  78
 TEMO    Z80
 
- 1261 D624  F6 1F       	OR	1Fh		; Lautstaerke = 0
- 1262 D626  D3 89       	OUT	(89h),A
- 1263 D628  2A 00A6     GO1:	LD	HL,(BREAK)	; Unterbrechungspunkt
- 1264 D62B  7E          	LD	A,(HL)
- 1265 D62C  32 00A8     	LD	(BRKI),A	; Inhalt hier merken
- 1266 D62F  36 FF       	LD	(HL),0FFH	; RST 38H eintragen
- 1267 D631  7E          	LD	A,(HL)		; Wert zur Kontrolle zuruecklesen
- 1268 D632  3C          	INC	A		; wenn RAM, dann ist das FFH
- 1269 D633  28 02       	JR	Z,GO2		; RAM: Mode 0 (Echtzeitbetrieb)
- 1270 D635  3E 01       	LD	A,1		; ROM: Mode 1 (Schrittbetrieb ohne Anzeige)
- 1271 D637  32 00A9     GO2:	LD	(MODE),A	; MODE eintragen
- 1272 D63A  CD D0E1     GO3:	CALL	BILD1		; Daten fuer USER-Fenster laden/aktivieren
- 1273 D63D  2A 0022     	LD	HL,(ZHL)	; HL'
- 1274 D640  ED 5B 0020  	LD	DE,(ZDE)	; DE'
- 1275 D644  ED 4B 001E  	LD	BC,(ZBC)	; BC'
- 1276 D648  D9          	EXX			; alle Zweitregister sind geladen
- 1277 D649  2A 001C     	LD	HL,(ZAF)	; AF'
- 1278 D64C  E5          	PUSH	HL
- 1279 D64D  F1          	POP	AF
- 1280 D64E  08          	EX	AF,AF'		; jetzt auch AF'
- 1281 D64F  ED 4B 0012  	LD	BC,(RBC)	; BC
- 1282 D653  ED 7B 0024  	LD	SP,(RSP)	; ab hier wird der USER-Stack benutzt
- 1283 D657  2A 002A     GO4:	LD	HL,(PCN)
- 1284 D65A  E5          	PUSH	HL		; PC auf Stack
- 1285 D65B  2A 0010     	LD	HL,(RAF)
- 1286 D65E  E5          	PUSH	HL		; AF auf Stack
- 1287                   ;	LD	IX,(RIX)	; IX darf sich nicht aendern!
- 1288 D65F  FD 2A 001A  	LD	IY,(RIY)	; Wert in IY laden
- 1289 D663  2A 0016     	LD	HL,(RHL)	; Wert in HL laden
- 1290 D666  ED 5B 0014  	LD	DE,(RDE)	; Wert in DE laden
- 1291 D66A  C3 0087     	JP	GORAM-RST38+0038H	; den Rest im RAM0 abarbeiten...
- 1292                   ;
- 1293                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1262 D622  DB 89       GO0:	IN	A,(89h)
+ 1263 D624  F6 1F       	OR	1Fh		; Lautstaerke = 0
+ 1264 D626  D3 89       	OUT	(89h),A
+ 1265 D628  2A 00A6     GO1:	LD	HL,(BREAK)	; Unterbrechungspunkt
+ 1266 D62B  7E          	LD	A,(HL)
+ 1267 D62C  32 00A8     	LD	(BRKI),A	; Inhalt hier merken
+ 1268 D62F  36 FF       	LD	(HL),0FFH	; RST 38H eintragen
+ 1269 D631  7E          	LD	A,(HL)		; Wert zur Kontrolle zuruecklesen
+ 1270 D632  3C          	INC	A		; wenn RAM, dann ist das FFH
+ 1271 D633  28 02       	JR	Z,GO2		; RAM: Mode 0 (Echtzeitbetrieb)
+ 1272 D635  3E 01       	LD	A,1		; ROM: Mode 1 (Schrittbetrieb ohne Anzeige)
+ 1273 D637  32 00A9     GO2:	LD	(MODE),A	; MODE eintragen
+ 1274 D63A  CD D0E1     GO3:	CALL	BILD1		; Daten fuer USER-Fenster laden/aktivieren
+ 1275 D63D  2A 0022     	LD	HL,(ZHL)	; HL'
+ 1276 D640  ED 5B 0020  	LD	DE,(ZDE)	; DE'
+ 1277 D644  ED 4B 001E  	LD	BC,(ZBC)	; BC'
+ 1278 D648  D9          	EXX			; alle Zweitregister sind geladen
+ 1279 D649  2A 001C     	LD	HL,(ZAF)	; AF'
+ 1280 D64C  E5          	PUSH	HL
+ 1281 D64D  F1          	POP	AF
+ 1282 D64E  08          	EX	AF,AF'		; jetzt auch AF'
+ 1283 D64F  ED 4B 0012  	LD	BC,(RBC)	; BC
+ 1284 D653  ED 7B 0024  	LD	SP,(RSP)	; ab hier wird der USER-Stack benutzt
+ 1285 D657  2A 002A     GO4:	LD	HL,(PCN)
+ 1286 D65A  E5          	PUSH	HL		; PC auf Stack
+ 1287 D65B  2A 0010     	LD	HL,(RAF)
+ 1288 D65E  E5          	PUSH	HL		; AF auf Stack
+ 1289                   ;	LD	IX,(RIX)	; IX darf sich nicht aendern!
+ 1290 D65F  FD 2A 001A  	LD	IY,(RIY)	; Wert in IY laden
+ 1291 D663  2A 0016     	LD	HL,(RHL)	; Wert in HL laden
+ 1292 D666  ED 5B 0014  	LD	DE,(RDE)	; Wert in DE laden
+ 1293 D66A  C3 0087     	JP	GORAM-RST38+0038H	; den Rest im RAM0 abarbeiten...
  1294                   ;
- 1295                   ; Programm im Schrittbetrieb abarbeiten
- 1296                   ; Aufruf: STEP [Adresse]
- 1297                   ;
- 1298 D66D  FDFD        	DEFW	0FDFDH
- 1299 D66F  53 54 45 50 	DB	'STEP',1
- 1300 D674  ED 5B B7A0  	LD	DE,(CURSO)	; Cursorposition
- 1301 D678  ED 53 AAED  	LD	(WINDOW2+5),DE	; in Fensterdaten abspeichern
- 1302 D67C  A7          	AND	A		; Adresse angegeben?
- 1303 D67D  28 03       	JR	Z,ANZ2		; nein, weiter wo wir waren
- 1304 D67F  22 002A     ANZ1:	LD	(PCN),HL	; neue PC-Adresse fuer Schrittbetrieb einstellen
- 1305 D682  DB 89       ANZ2:	IN	A,(89h)
- 1306 D684  F6 1F       	OR	1Fh		; Lautstaerke = 0
- 1307 D686  D3 89       	OUT	(89h),A
- 1308 D688  3E 03       	LD	A,3		; STEP mit MODE3 starten
- 1309 D68A  32 00A9     	LD	(MODE),A
- 1310 D68D  2A 002A     	ld	hl,(PCN)	; HL = Adresse naechster Befehl
- 1311 D690  11 002C     	ld	de,mem1
- 1312 D693  01 000A     	ld	bc,10
- 1313 D696  ED B0       	ldir			; Kopie des aktuellen Befehls anlegen
- 1314                   ;
- 1315                   ; Einsprung von Unterbrechungspunkt (RST38 oder CTC-Interrupt)
+ 1295                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1296                   ;
+ 1297                   ; Programm im Schrittbetrieb abarbeiten
+ 1298                   ; Aufruf: STEP [Adresse]
+ 1299                   ;
+ 1300 D66D  FDFD        	DEFW	0FDFDH
+ 1301 D66F  53 54 45 50 	DB	'STEP',1
+ 1302 D674  ED 5B B7A0  	LD	DE,(CURSO)	; Cursorposition
+ 1303 D678  ED 53 AAED  	LD	(WINDOW2+5),DE	; in Fensterdaten abspeichern
+ 1304 D67C  A7          	AND	A		; Adresse angegeben?
+ 1305 D67D  28 03       	JR	Z,ANZ2		; nein, weiter wo wir waren
+ 1306 D67F  22 002A     ANZ1:	LD	(PCN),HL	; neue PC-Adresse fuer Schrittbetrieb einstellen
+ 1307 D682  DB 89       ANZ2:	IN	A,(89h)
+ 1308 D684  F6 1F       	OR	1Fh		; Lautstaerke = 0
+ 1309 D686  D3 89       	OUT	(89h),A
+ 1310 D688  3E 03       	LD	A,3		; STEP mit MODE3 starten
+ 1311 D68A  32 00A9     	LD	(MODE),A
+ 1312 D68D  2A 002A     	ld	hl,(PCN)	; HL = Adresse naechster Befehl
+ 1313 D690  11 002C     	ld	de,mem1
+ 1314 D693  01 000A     	ld	bc,10
+ 1315 D696  ED B0       	ldir			; Kopie des aktuellen Befehls anlegen
  1316                   ;
- 1317 D698  ED 7B B7AE  ANZ:	LD	SP,(SYSP)	; jetzt TEMO-Stack verwenden!
- 1318 D69C  CD F003     	CALL	PV1
+ 1317                   ; Einsprung von Unterbrechungspunkt (RST38 oder CTC-Interrupt)
+ 1318                   ;
+ 1319 D698  ED 7B B7AE  ANZ:	LD	SP,(SYSP)	; jetzt TEMO-Stack verwenden!
 KC-Debugger     							    SLR180 1.31 Page  79
 TEMO    Z80
 
- 1319 D69F  2D          	DB	HOME		; Cursor in Home-Position setzen fuer
- 1320 D6A0  CD D241     	CALL	REG		; Registeranzeige
- 1321 D6A3  AF          	XOR	A	; CY=0
- 1322 D6A4  32 A880     	LD	(MS),A		; Markenschalter setzen
- 1323 D6A7  67          	LD	H,A
- 1324 D6A8  6F          	LD	L,A
- 1325 D6A9  22 A881     	LD	(CMODE),HL	; CMODE=0 und DMODE=0 fuer Reassembler
- 1326 D6AC  2A 0028     	ld	hl,(PCO)	; HL = Adresse letzter Befehl
- 1327 D6AF  11 0028     	ld	de,mem2		; DE = Adresse der Kopie im RAM0
- 1328 D6B2  ED 52       	sbc	hl,de		; = Offset fuer Reassembler
- 1329 D6B4  22 A883     	LD	(ROFFS),HL	; Ausgabe-Offset fuer Reassembler
- 1330 D6B7  CD C38C     	CALL	DISASS		; 1. List-Zeile (letzter Befehl)
- 1331 D6BA  3E 1D       	LD	A,1DH
- 1332 D6BC  32 B7A0     	LD	(CURSO),A	; Cursorspalte setzen
- 1333 D6BF  AF          	XOR	A
- 1334 D6C0  32 A882     	LD	(DMODE),A	; Specialmode zuruecksetzen da neue Adresse
- 1335 D6C3  CD D589     	CALL	BREAK0		; Breakpoint anzeigen (A=0)
- 1336 D6C6  2A 002A     	ld	hl,(PCN)	; HL = Adresse naechster Befehl
- 1337 D6C9  11 002C     	ld	de,mem1		; Adresse der Kopie im RAM0
- 1338 D6CC  A7          	and	a	; CY=0
- 1339 D6CD  ED 52       	sbc	hl,de		; = Offset fuer Reassembler
- 1340 D6CF  22 A883     	LD	(ROFFS),HL	; Ausgabe-Offset fuer Reassembler
- 1341 D6D2  06 02       	LD	B,2		; 2 weitere List-Zeilen
- 1342 D6D4  3E 11       	LD	A,11h		; aktuelle Zeile rot/blau
- 1343 D6D6  32 B7A3     ANZ3:	LD	(COLOR),A	; Textfarbe einstellen
- 1344 D6D9  C5          	PUSH	BC
- 1345 D6DA  CD C38C     	CALL	DISASS		; List-Zeile (aktueller+naechster Befehl)
- 1346 D6DD  CD D3D5     	CALL	NL		; CR,LF
- 1347 D6E0  C1          	POP	BC
- 1348 D6E1  3E 39       	ld	a,39h		; dann wieder weiss/blau
- 1349 D6E3  10 F1       	DJNZ	ANZ3		; wiederholen
- 1350 D6E5  3A 00A9     	LD	A,(MODE)
- 1351 D6E8  FE 02       	CP	2		; mit Tastaturabfrage?
- 1352 D6EA  CA D63A     	JP	Z,GO3		; nein, weiter abarbeiten
- 1353 D6ED  CD F003     	CALL	PV1
- 1354 D6F0  23          	DB	OSTR
- 1355 D6F1  02          	DB	2		; Zeile loeschen
- 1356 D6F2  20 57 45 49 	DB	' WEITER MIT: CR, LF, BRK, G, U, I, S?',0
- 1357 D718  CD F003     ANZ4:	CALL	PV1		; Zeicheneingabe (Tastatur)
- 1358 D71B  16          	DB	INTB
- 1359 D71C  E6 DF       	AND	0DFH		; Upcase fuer Kleinbuchstaben
- 1360 D71E  FE 55       	CP	'U'
- 1361 D720  28 3D       	JR	Z,USER		; U = Anzeige USER-Bildschirm		OK.
- 1362 D722  FE 03       	CP	3
- 1363 D724  28 1B       	JR	Z,BBRK		; BRK = -> Monitor-Loop			OK.
- 1364 D726  FE 0D       	CP	CR
- 1365 D728  CA D63A     	JP	Z,GO3		; CR = einen Befehl im Schrittbetrieb abarbeiten
- 1366 D72B  FE 0A       	CP	LF
- 1367 D72D  28 1B       	JR	Z,TGO		; LF = Go und Breakpoint auf naechsten Befehl
- 1368 D72F  FE 49       	CP	'I'
- 1369 D731  28 20       	JR	Z,IGNOR		; I = Ignore: naechsten Befehl ueberspringen
- 1370 D733  FE 47       	CP	'G'
- 1371 D735  CA D628     	JP	Z,GO1		; G = Go: Programm weiter abarbeiten (MODE 0/1)
- 1372 D738  FE 53       	CP	'S'
- 1373 D73A  20 DC       	JR	NZ,ANZ4		; S = Stepbetrieb mit laufender Anzeige
- 1374 D73C  3E 02       	LD	A,2
- 1375 D73E  C3 D637     	JP	GO2		; MODE 2: Stepbetrieb mit Anzeige (Step)
- 1376                   
+ 1320 D69C  CD F003     	CALL	PV1
+ 1321 D69F  2D          	DB	HOME		; Cursor in Home-Position setzen fuer
+ 1322 D6A0  CD D241     	CALL	REG		; Registeranzeige
+ 1323 D6A3  AF          	XOR	A	; CY=0
+ 1324 D6A4  32 A880     	LD	(MS),A		; Markenschalter setzen
+ 1325 D6A7  67          	LD	H,A
+ 1326 D6A8  6F          	LD	L,A
+ 1327 D6A9  22 A881     	LD	(CMODE),HL	; CMODE=0 und DMODE=0 fuer Reassembler
+ 1328 D6AC  2A 0028     	ld	hl,(PCO)	; HL = Adresse letzter Befehl
+ 1329 D6AF  11 0028     	ld	de,mem2		; DE = Adresse der Kopie im RAM0
+ 1330 D6B2  ED 52       	sbc	hl,de		; = Offset fuer Reassembler
+ 1331 D6B4  22 A883     	LD	(ROFFS),HL	; Ausgabe-Offset fuer Reassembler
+ 1332 D6B7  CD C38C     	CALL	DISASS		; 1. List-Zeile (letzter Befehl)
+ 1333 D6BA  3E 1D       	LD	A,1DH
+ 1334 D6BC  32 B7A0     	LD	(CURSO),A	; Cursorspalte setzen
+ 1335 D6BF  AF          	XOR	A
+ 1336 D6C0  32 A882     	LD	(DMODE),A	; Specialmode zuruecksetzen da neue Adresse
+ 1337 D6C3  CD D589     	CALL	BREAK0		; Breakpoint anzeigen (A=0)
+ 1338 D6C6  2A 002A     	ld	hl,(PCN)	; HL = Adresse naechster Befehl
+ 1339 D6C9  11 002C     	ld	de,mem1		; Adresse der Kopie im RAM0
+ 1340 D6CC  A7          	and	a	; CY=0
+ 1341 D6CD  ED 52       	sbc	hl,de		; = Offset fuer Reassembler
+ 1342 D6CF  22 A883     	LD	(ROFFS),HL	; Ausgabe-Offset fuer Reassembler
+ 1343 D6D2  06 02       	LD	B,2		; 2 weitere List-Zeilen
+ 1344 D6D4  3E 11       	LD	A,11h		; aktuelle Zeile rot/blau
+ 1345 D6D6  32 B7A3     ANZ3:	LD	(COLOR),A	; Textfarbe einstellen
+ 1346 D6D9  C5          	PUSH	BC
+ 1347 D6DA  CD C38C     	CALL	DISASS		; List-Zeile (aktueller+naechster Befehl)
+ 1348 D6DD  CD D3D5     	CALL	NL		; CR,LF
+ 1349 D6E0  C1          	POP	BC
+ 1350 D6E1  3E 39       	ld	a,39h		; dann wieder weiss/blau
+ 1351 D6E3  10 F1       	DJNZ	ANZ3		; wiederholen
+ 1352 D6E5  3A 00A9     	LD	A,(MODE)
+ 1353 D6E8  FE 02       	CP	2		; mit Tastaturabfrage?
+ 1354 D6EA  CA D63A     	JP	Z,GO3		; nein, weiter abarbeiten
+ 1355 D6ED  CD F003     	CALL	PV1
+ 1356 D6F0  23          	DB	OSTR
+ 1357 D6F1  02          	DB	2		; Zeile loeschen
+ 1358 D6F2  20 57 45 49 	DB	' WEITER MIT: CR, LF, BRK, G, U, I, S?',0
+ 1359 D718  CD F003     ANZ4:	CALL	PV1		; Zeicheneingabe (Tastatur)
+ 1360 D71B  16          	DB	INTB
+ 1361 D71C  E6 DF       	AND	0DFH		; Upcase fuer Kleinbuchstaben
+ 1362 D71E  FE 55       	CP	'U'
+ 1363 D720  28 3D       	JR	Z,USER		; U = Anzeige USER-Bildschirm		OK.
+ 1364 D722  FE 03       	CP	3
+ 1365 D724  28 1B       	JR	Z,BBRK		; BRK = -> Monitor-Loop			OK.
+ 1366 D726  FE 0D       	CP	CR
+ 1367 D728  CA D63A     	JP	Z,GO3		; CR = einen Befehl im Schrittbetrieb abarbeiten
+ 1368 D72B  FE 0A       	CP	LF
+ 1369 D72D  28 1B       	JR	Z,TGO		; LF = Go und Breakpoint auf naechsten Befehl
+ 1370 D72F  FE 49       	CP	'I'
+ 1371 D731  28 20       	JR	Z,IGNOR		; I = Ignore: naechsten Befehl ueberspringen
+ 1372 D733  FE 47       	CP	'G'
+ 1373 D735  CA D628     	JP	Z,GO1		; G = Go: Programm weiter abarbeiten (MODE 0/1)
+ 1374 D738  FE 53       	CP	'S'
+ 1375 D73A  20 DC       	JR	NZ,ANZ4		; S = Stepbetrieb mit laufender Anzeige
+ 1376 D73C  3E 02       	LD	A,2
+ 1377 D73E  C3 D637     	JP	GO2		; MODE 2: Stepbetrieb mit Anzeige (Step)
 KC-Debugger     							    SLR180 1.31 Page  80
 TEMO    Z80
 
- 1377 D741  2A AAED     BBRK:	LD	HL,(WINDOW2+5)	; abgespeicherte Cursorposition
- 1378 D744  22 B7A0     	LD	(CURSO),HL	; Cursor-Position regenerieren
- 1379 D747  C3 D195     	JP	PRSE		; LOOP
- 1380                   ;
- 1381                   ; LF = neuer Unterbrechungspunkt auf naechsten Befehl setzen
+ 1378                   
+ 1379 D741  2A AAED     BBRK:	LD	HL,(WINDOW2+5)	; abgespeicherte Cursorposition
+ 1380 D744  22 B7A0     	LD	(CURSO),HL	; Cursor-Position regenerieren
+ 1381 D747  C3 D195     	JP	PRSE		; LOOP
  1382                   ;
- 1383 D74A  CD D78E     TGO:	CALL	NXTST		; Berechnung Befehlslaenge
- 1384 D74D  22 00A6     	LD	(BREAK),HL	; neuer Unterbrechungspunkt
- 1385 D750  C3 D628     	JP	GO1
- 1386                   ;
- 1387                   ; I = naechsten Befehl ignorieren/ueberspringen
+ 1383                   ; LF = neuer Unterbrechungspunkt auf naechsten Befehl setzen
+ 1384                   ;
+ 1385 D74A  CD D78E     TGO:	CALL	NXTST		; Berechnung Befehlslaenge
+ 1386 D74D  22 00A6     	LD	(BREAK),HL	; neuer Unterbrechungspunkt
+ 1387 D750  C3 D628     	JP	GO1
  1388                   ;
- 1389 D753  2A 002A     IGNOR:	LD	HL,(PCN)	; aktuelle PC-Adresse
- 1390 D756  22 0028     	LD	(PCO),HL	; nach PC alt kopieren
- 1391 D759  CD D78E     	CALL	NXTST		; Berechnung der naechsten Adresse
- 1392 D75C  C3 D67F     	JP	ANZ1		; PC_neu eintragen
- 1393                   ;
- 1394                   ; U = USER-Bildschirm anzeigen und Tastatureingabe abwarten
+ 1389                   ; I = naechsten Befehl ignorieren/ueberspringen
+ 1390                   ;
+ 1391 D753  2A 002A     IGNOR:	LD	HL,(PCN)	; aktuelle PC-Adresse
+ 1392 D756  22 0028     	LD	(PCO),HL	; nach PC alt kopieren
+ 1393 D759  CD D78E     	CALL	NXTST		; Berechnung der naechsten Adresse
+ 1394 D75C  C3 D67F     	JP	ANZ1		; PC_neu eintragen
  1395                   ;
- 1396 D75F  2A B7A0     USER:	ld	hl,(curso)
- 1397 D762  E5          	push	hl
- 1398 D763  CD D0E1     	CALL	BILD1		; USER-Bild/Fenster laden/aktivieren
- 1399 D766  CD F003     	CALL	PV1
- 1400 D769  04          	DB	KBD
- 1401 D76A  CD D0EB     	CALL	BILD2		; TEMO-Bild/Fenster laden/aktivieren
- 1402 D76D  E1          	pop	hl
- 1403 D76E  22 B7A0     	ld	(curso),hl
- 1404 D771  C3 D718     	JP	ANZ4
- 1405                   ;
- 1406                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1396                   ; U = USER-Bildschirm anzeigen und Tastatureingabe abwarten
+ 1397                   ;
+ 1398 D75F  2A B7A0     USER:	ld	hl,(curso)
+ 1399 D762  E5          	push	hl
+ 1400 D763  CD D0E1     	CALL	BILD1		; USER-Bild/Fenster laden/aktivieren
+ 1401 D766  CD F003     	CALL	PV1
+ 1402 D769  04          	DB	KBD
+ 1403 D76A  CD D0EB     	CALL	BILD2		; TEMO-Bild/Fenster laden/aktivieren
+ 1404 D76D  E1          	pop	hl
+ 1405 D76E  22 B7A0     	ld	(curso),hl
+ 1406 D771  C3 D718     	JP	ANZ4
  1407                   ;
- 1408                   ; Unterprogramm: TEMO initialisieren:
+ 1408                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
  1409                   ;
- 1410 D774  CD D0EB     INIT:	CALL	BILD2		; Daten fuer TEMO-Fenster laden/aktivieren
- 1411 D777  11 0038     INIT2:	LD	DE,0038H	; Adresse von RST38
- 1412 D77A  21 CF94     	LD	HL,RST38	; Hilfsprogramm vom ROM
- 1413 D77D  01 006E     	LD	BC,RSTEND-RST38
- 1414 D780  ED B0       	LDIR			; in den RAM0 kopieren
- 1415                   ;
- 1416                   ; die folgenden 4 Befehle koennen entfallen, da Werte bekant sind:
- 1417                   ;	IN	A,(88H)
- 1418                   ;	LD	(nn1-RST38+38H+1),A	; Sollzustand PIO-A
- 1419                   ;	LD	A,(IX+4)
- 1420                   ;	LD	(nn2-RST38+38H+1),A	; Sollzustand Port 86H
- 1421                   ;
- 1422 D782  ED 57       	LD	A,I		; Init CTC-Interrupt
- 1423 D784  67          	LD	H,A
- 1424 D785  2E E8       	LD	L,0E8H		; Interrupt-Vektor CTC0
- 1425 D787  11 004A     	LD	DE,ICTC-RST38+38H	; Interuptroutine im RAM0
- 1426 D78A  73          	LD	(HL),E
- 1427 D78B  23          	INC	HL
- 1428 D78C  72          	LD	(HL),D
- 1429 D78D  C9          	ret
- 1430                   ;---------------------------------------
- 1431                   ;
- 1432                   ; Unterprogramm zum Berechnen der Adresse des naechsten Befehls
- 1433                   ; PE:	PCN	Adresse aktueller Befehl
- 1434                   ; PA:	HL	Adresse naechster Befehl
+ 1410                   ; Unterprogramm: TEMO initialisieren:
+ 1411                   ;
+ 1412 D774  CD D0EB     INIT:	CALL	BILD2		; Daten fuer TEMO-Fenster laden/aktivieren
+ 1413 D777  11 0038     INIT2:	LD	DE,0038H	; Adresse von RST38
+ 1414 D77A  21 CF94     	LD	HL,RST38	; Hilfsprogramm vom ROM
+ 1415 D77D  01 006E     	LD	BC,RSTEND-RST38
+ 1416 D780  ED B0       	LDIR			; in den RAM0 kopieren
+ 1417                   ;
+ 1418                   ; die folgenden 4 Befehle koennen entfallen, da Werte bekant sind:
+ 1419                   ;	IN	A,(88H)
+ 1420                   ;	LD	(nn1-RST38+38H+1),A	; Sollzustand PIO-A
+ 1421                   ;	LD	A,(IX+4)
+ 1422                   ;	LD	(nn2-RST38+38H+1),A	; Sollzustand Port 86H
+ 1423                   ;
+ 1424 D782  ED 57       	LD	A,I		; Init CTC-Interrupt
+ 1425 D784  67          	LD	H,A
+ 1426 D785  2E E8       	LD	L,0E8H		; Interrupt-Vektor CTC0
+ 1427 D787  11 004A     	LD	DE,ICTC-RST38+38H	; Interuptroutine im RAM0
+ 1428 D78A  73          	LD	(HL),E
+ 1429 D78B  23          	INC	HL
+ 1430 D78C  72          	LD	(HL),D
+ 1431 D78D  C9          	ret
+ 1432                   ;---------------------------------------
+ 1433                   ;
+ 1434                   ; Unterprogramm zum Berechnen der Adresse des naechsten Befehls
+ 1435                   ; PE:	PCN	Adresse aktueller Befehl
 KC-Debugger     							    SLR180 1.31 Page  81
 TEMO    Z80
 
- 1435                   ;
- 1436 D78E  21 002C     NXTST:	ld	hl,mem1		; Kopie des aktuellen Befehls im RAM0
- 1437 D791  CD CDDA     	CALL	LENG		; Befehlslaenge bestimmen in Reassembler...
- 1438 D794  3A A880     	LD	A,(MS)
- 1439 D797  CB 57       	BIT	2,A		; folgt Adresse nach UREL?
- 1440 D799  28 02       	JR	Z,NEWPC
- 1441 D79B  03          	INC	BC		; dann noch zwei Bytes mehr!
- 1442 D79C  03          	INC	BC
- 1443 D79D  2A 002A     NEWPC:	ld	hl,(PCN)	; aktuelle PC-Adresse
- 1444 D7A0  09          	ADD	HL,BC		; Laenge addieren
- 1445 D7A1  C9          	RET
- 1446                   ;
- 1447                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
+ 1436                   ; PA:	HL	Adresse naechster Befehl
+ 1437                   ;
+ 1438 D78E  21 002C     NXTST:	ld	hl,mem1		; Kopie des aktuellen Befehls im RAM0
+ 1439 D791  CD CDDA     	CALL	LENG		; Befehlslaenge bestimmen in Reassembler...
+ 1440 D794  3A A880     	LD	A,(MS)
+ 1441 D797  CB 57       	BIT	2,A		; folgt Adresse nach UREL?
+ 1442 D799  28 02       	JR	Z,NEWPC
+ 1443 D79B  03          	INC	BC		; dann noch zwei Bytes mehr!
+ 1444 D79C  03          	INC	BC
+ 1445 D79D  2A 002A     NEWPC:	ld	hl,(PCN)	; aktuelle PC-Adresse
+ 1446 D7A0  09          	ADD	HL,BC		; Laenge addieren
+ 1447 D7A1  C9          	RET
  1448                   ;
- 1449                   ; Stackpointer anzeigen (zum Test...)
+ 1449                   ;*__*__*__*__*__*__*__*__*__*__*__*__*__
  1450                   ;
- 1451         0001      if stack
- 1452 D7A2  7F7F        	DEFW	7F7FH		; verstecktes Menuewort fuer CAOS
- 1453 D7A4  53 54 41 43 	DB	'STACK ',1
- 1454 D7AB  21 0002     	LD	HL,2
- 1455 D7AE  CD D7C0     	CALL	STACK1
- 1456 D7B1  C3 DBF8     	JP	CEXIT		; USER-ROM abschalten (Code von JEDIT/CALC benutzen)
- 1457                   ;
- 1458 D7B4  FDFD        	DEFW	0FDFDH		; verstecktes Menuewort fuer TEMO
- 1459 D7B6  53 54 41 43 	DB	'STACK ',1
- 1460 D7BD  21 0000     	LD	HL,0
- 1461 D7C0  39          STACK1:	ADD	HL,SP
- 1462 D7C1  CD D597     	CALL	HLHEX		; Stackpointer anzeigen
- 1463                   
- 1464 D7C4  7E          	ld	a,(hl)
- 1465 D7C5  23          	inc	hl
- 1466 D7C6  66          	ld	h,(hl)
- 1467 D7C7  6F          	ld	l,a
- 1468 D7C8  C3 D3D2     	JP	HLCR		; und Stackinhalt, danach CR,LF
- 1469                   endif
- 1470                   ;
- 1471                   ; Hilfe-Funktion, Aufruf per CALL gefolgt von Hilfetext
+ 1451                   ; Stackpointer anzeigen (zum Test...)
+ 1452                   ;
+ 1453         0001      if stack
+ 1454 D7A2  7F7F        	DEFW	7F7FH		; verstecktes Menuewort fuer CAOS
+ 1455 D7A4  53 54 41 43 	DB	'STACK ',1
+ 1456 D7AB  21 0002     	LD	HL,2
+ 1457 D7AE  CD D7C0     	CALL	STACK1
+ 1458 D7B1  C3 DBF8     	JP	CEXIT		; USER-ROM abschalten (Code von JEDIT/CALC benutzen)
+ 1459                   ;
+ 1460 D7B4  FDFD        	DEFW	0FDFDH		; verstecktes Menuewort fuer TEMO
+ 1461 D7B6  53 54 41 43 	DB	'STACK ',1
+ 1462 D7BD  21 0000     	LD	HL,0
+ 1463 D7C0  39          STACK1:	ADD	HL,SP
+ 1464 D7C1  CD D597     	CALL	HLHEX		; Stackpointer anzeigen
+ 1465                   
+ 1466 D7C4  7E          	ld	a,(hl)
+ 1467 D7C5  23          	inc	hl
+ 1468 D7C6  66          	ld	h,(hl)
+ 1469 D7C7  6F          	ld	l,a
+ 1470 D7C8  C3 D3D2     	JP	HLCR		; und Stackinhalt, danach CR,LF
+ 1471                   endif
  1472                   ;
- 1473 D7CB  CD F003     HELP:	CALL	PV1
- 1474 D7CE  23 0B 09 00 	DB	OSTR,0BH,9,0	; Cursor hoch und 1x nach rechts
- 1475 D7D2  E1          	POP	HL		; Zeichenkette von Stack holen
- 1476 D7D3  CD F003     	CALL	PV1
- 1477 D7D6  45          	DB	ZKOUT		; anzeigen
- 1478 D7D7  C3 D3D5     	JP	NL		; und neue Zeile
- 1479 D7DA              TEND:	; TEMO-Ende
+ 1473                   ; Hilfe-Funktion, Aufruf per CALL gefolgt von Hilfetext
+ 1474                   ;
+ 1475 D7CB  CD F003     HELP:	CALL	PV1
+ 1476 D7CE  23 0B 09 00 	DB	OSTR,0BH,9,0	; Cursor hoch und 1x nach rechts
+ 1477 D7D2  E1          	POP	HL		; Zeichenkette von Stack holen
+ 1478 D7D3  CD F003     	CALL	PV1
+ 1479 D7D6  45          	DB	ZKOUT		; anzeigen
+ 1480 D7D7  C3 D3D5     	JP	NL		; und neue Zeile
+ 1481 D7DA              TEND:	; TEMO-Ende
    50                   	INCLUDE	JEDIT.Z80	; Joystickeditor von Frank Ludwig
     1                   ;----------------------------------------------
     2                   ; JOYSTICK-EDITOR fuer KC-CAOS 4.8
@@ -4938,10 +4939,10 @@ TEMO    Z80
     9                   ; 27.07.2013, ML:
    10                   ;		- Code von EDAS zu CP/M konvertiert (M -> HL, Marken mit :,
    11                   ;		  Umlaute ...)
-   12                   ; 29.07.2013, ML:
 KC-Debugger     							    SLR180 1.31 Page  82
 JEDIT   Z80
 
+   12                   ; 29.07.2013, ML:
    13                   ;		- verschieblichen Code fuer ROM-Version entfernt
    14                   ;		- Prologbyte muss nicht gemerkt werden, da Aufruf nur von
    15                   ;		  7Fh aus moeglich ist und damit Rueckkehr direkt zu 7Fh.
@@ -4999,10 +5000,10 @@ JEDIT   Z80
    67                   ; 21.03.2017, ML:
    68                   ;		- Dateiname bei SAVE uebergeben in HL
    69                   ;
-   70                   ; 12.05.2017, ML:
 KC-Debugger     							    SLR180 1.31 Page  83
 JEDIT   Z80
 
+   70                   ; 12.05.2017, ML:
    71                   ;		- Abbruch bei SAVE wenn ISRO mit CY=1 zurueck kommt
    72                   ;
    73                   ; 23.03.2018, ML:
@@ -5060,10 +5061,10 @@ JEDIT   Z80
   125                   ; MENU-HACK damit JUMP immer mit J abgekuerzt werden kann
   126                   ;
   127 D7DA  7F7F        PGBEG:	DW	7F7FH
-  128 D7DC  4A 20       	DB	'J '
 KC-Debugger     							    SLR180 1.31 Page  84
 JEDIT   Z80
 
+  128 D7DC  4A 20       	DB	'J '
   129 D7DE  03          	DB	3
   130 D7DF  7D          	LD	A,L
   131 D7E0  1E 27       	LD	E,JUMP		; CAOS-Funktion JUMP
@@ -5121,10 +5122,10 @@ JEDIT   Z80
   183 D832  13          	DB	13H		; mindestens 1Parameter, dezimal
   184 D833  7D          	LD	A,L
   185 D834  11 FFC0     	LD	DE,-64
-  186 D837  19          	ADD	HL,DE
 KC-Debugger     							    SLR180 1.31 Page  85
 JEDIT   Z80
 
+  186 D837  19          	ADD	HL,DE
   187 D838  38 0B       	JR	C,MERRM		; max.63 Zyklen
   188 D83A  32 AAD0     	LD	(JOYKEY),A	; Wartezyklen merken
   189 D83D  CD D81F     	CALL	MAXWD		; Max. Fenster
@@ -5182,10 +5183,10 @@ JEDIT   Z80
   241 D89B  1F          	DB	1FH		; Textparameter zulaessig
   242 D89C  CD DFF3     	CALL	UROM		; Schaltzustand User-ROM merken
   243 D89F  E5          	PUSH	HL		; Ruecksprungadresse auf Stack falls Fehler
-  244                   				; wenn kein Fehler einfach nur SP-2
 KC-Debugger     							    SLR180 1.31 Page  86
 JEDIT   Z80
 
+  244                   				; wenn kein Fehler einfach nur SP-2
   245                     ;Initialisierung
   246 D8A0  2A B7F0     	LD	HL,(JOYTAB)	; Adresse der Joytabelle
   247 D8A3  22 AACC     	LD	(JOYADR),HL	; als neue Adresse eintragen
@@ -5243,10 +5244,10 @@ JEDIT   Z80
   299 D93D  09          	ADD	HL,BC		; Adresse fuer Taste
   300 D93E  11 0900     	LD	DE,0900H	; D=CUR, E=CAOS-UP CRT
   301 D941  CD DA2D     	CALL	ANZCH1		; > < einblenden
-  302 D944  E5          	PUSH	HL		; HL=Zaehler f.blinken
 KC-Debugger     							    SLR180 1.31 Page  87
 JEDIT   Z80
 
+  302 D944  E5          	PUSH	HL		; HL=Zaehler f.blinken
   303 D945  11 0038     	LD	DE,38H
   304 D948  19          MJE2:	ADD	HL,DE
   305 D949  30 04       	JR	NC,MJE3
@@ -5304,10 +5305,10 @@ JEDIT   Z80
   357                   ;
   358 D999  A1A1        	DW	0A1A1H
   359 D99B  51 55 49 54 	DB	'QUIT'
-  360 D99F  01          	DB	1
 KC-Debugger     							    SLR180 1.31 Page  88
 JEDIT   Z80
 
+  360 D99F  01          	DB	1
   361 D9A0  2A AACE     	LD	HL,(OADR)	; Joyadr zurueck
   362 D9A3  22 B7F0     	LD	(JOYTAB),HL
   363 D9A6  CD D81F     JEXIT1:	CALL	MAXWD
@@ -5365,10 +5366,10 @@ JEDIT   Z80
   415 D9FD  23          	INC	HL
   416 D9FE  13          	INC	DE
   417 D9FF  10 E3       	DJNZ	MGP1		; bis 11 Parameter gelesen
-  418 DA01  78          MGP4:	LD	A,B
 KC-Debugger     							    SLR180 1.31 Page  89
 JEDIT   Z80
 
+  418 DA01  78          MGP4:	LD	A,B
   419 DA02  D6 0A       	SUB	10		; A<0: mehr als 1 Parameter
   420 DA04  2B          	DEC	HL		; bei 1 Par.:HL=JOYKEY+1, A ist 0
   421 DA05  38 04       	JR	C,MGP5
@@ -5426,10 +5427,10 @@ JEDIT   Z80
   473 DA4C  36 13       	LD	(HL),CUPOSX+5
   474 DA4E  79          	LD	A,C
   475 DA4F  CD F003     	CALL	PV1		; dann Hexdarstellung
-  476 DA52  1C          	DB	AHEX
 KC-Debugger     							    SLR180 1.31 Page  90
 JEDIT   Z80
 
+  476 DA52  1C          	DB	AHEX
   477 DA53  36 0E       MAC2:	LD	(HL),CUPOSX
   478 DA55  E1          	POP	HL
   479 DA56  C1          	POP	BC
@@ -5487,10 +5488,10 @@ JEDIT   Z80
   531                   ;
   532 DAD2  2A B7A0     JADR:	LD	HL,(CURSO)	; Cursorposition merken
   533 DAD5  E5          	PUSH	HL
-  534 DAD6  21 011A     	LD	HL,CUPOSA	; Position
 KC-Debugger     							    SLR180 1.31 Page  91
 JEDIT   Z80
 
+  534 DAD6  21 011A     	LD	HL,CUPOSA	; Position
   535 DAD9  22 B7A0     	LD	(CURSO),HL
   536 DADC  2A AACC     	LD	HL,(JOYADR)	; Adresse
   537 DADF  CD D597     	CALL	HLHEX		; anzeigen (UP im TEMO)
@@ -5548,10 +5549,10 @@ JEDIT   Z80
   589                   	;
   590 DB17  21 018D     SVBEG:	LD	HL,JFILE+SVEND-SVBEG	; Autostartroutine kopiert die Tabelle
   591 DB1A  ED 5B B7F0  	LD	DE,(JOYTAB)	; an den vorgegebenen Ort
-  592 DB1E  01 000C     	LD	BC,12
 KC-Debugger     							    SLR180 1.31 Page  92
 JEDIT   Z80
 
+  592 DB1E  01 000C     	LD	BC,12
   593 DB21  ED B0       	LDIR
   594 DB23  C9          	RET
   595 DB24              SVEND:
@@ -5609,10 +5610,10 @@ JEDIT   Z80
   647 DB49  25          JOYTXT:	DB	2*LOW(SLEFT-$)+1
   648 DB4A  2F          	DB	2*LOW(SRIGHT-$)+1
   649 DB4B  3B          	DB	2*LOW(SDOWN-$)+1
-  650 DB4C  45          	DB	2*LOW(SUP-$)+1
 KC-Debugger     							    SLR180 1.31 Page  93
 JEDIT   Z80
 
+  650 DB4C  45          	DB	2*LOW(SUP-$)+1
   651 DB4D  4C 55       	DB	2*LOW(SFIRE-$),  2*LOW(SZWEI-$)+1
   652 DB4F  49          	DB	2*LOW(SFIRE-$)+1
   653 DB50  16 39       	DB	2*LOW(SLEFT-$),  2*LOW(SUP1-$)+1
@@ -5670,10 +5671,10 @@ JEDIT   Z80
   705                   ;--------------------------------------
    51         0001      IF CALC
    52                   	INCLUDE	CALC.Z80	; Taschenrechner von Frank Ludwig
-    1                   ;-------------------------------------------------------------------------------
 KC-Debugger     							    SLR180 1.31 Page  94
 CALC    Z80
 
+    1                   ;-------------------------------------------------------------------------------
     2                   ;	CAOS-Taschenrechner
     3                   ;
     4                   ; (verwendet fuer die Arithmetik den Basic-Interpreter)
@@ -5731,10 +5732,10 @@ CALC    Z80
    56                   ; Frank Ludwig 09.03.2014:
    57                   ; - Die zusaetzliche Eingabeaufforderung, falls CALC ohne Parameter aufgerufen
    58                   ;   wurde, ist unnoetig und wurde entfernt. 
-   59                   ;
 KC-Debugger     							    SLR180 1.31 Page  95
 CALC    Z80
 
+   59                   ;
    60                   ; Frank Ludwig 10.03.2014:
    61                   ; - Hilfe bei Aufruf ohne Ausdruck eingebaut
    62                   ;
@@ -5792,10 +5793,10 @@ CALC    Z80
   114                   ; Hinter OMONI: Sicherung des Inhaltes des CALC-Fensters
   115         056F      OVRAM	EQU	OMONI+128	; VRAM
   116         05E7      OPXRAM	EQU	OVRAM+120	; Pixel-RAM
-  117                   ;
 KC-Debugger     							    SLR180 1.31 Page  96
 CALC    Z80
 
+  117                   ;
   118         09A7      CSTACK  EQU	OPXRAM+960	; CALC-Stack 68 Bytes
   119         09EB      CALCSP	EQU	CSTACK+68
   120         09EB      OP88	EQU	CALCSP		; Port 88H Orig.
@@ -5853,10 +5854,10 @@ CALC    Z80
   172 DBCB  C9          	RET
   173                   ;
   174 DBCC  7F7F        	DW	7F7FH		; Menuewort von CAOS
-  175 DBCE  3F 63 1F    	DB	'?c',1FH	; Ausdruck als Parameter moeglich
 KC-Debugger     							    SLR180 1.31 Page  97
 CALC    Z80
 
+  175 DBCE  3F 63 1F    	DB	'?c',1FH	; Ausdruck als Parameter moeglich
   176 DBD1  CD DB9E     	CALL	CALC1		; Funktion wie in TEMO
   177 DBD4  18 22       	JR	CEXIT		; USER-ROM abschalten!
   178                   ;
@@ -5914,10 +5915,10 @@ CALC    Z80
   230 DC1F  36 12       	LD	(HL),12H	; ESC aktiv, schreiben COLOR-IRM aus
   231 DC21  E6 01       	AND	1		; sichtbares Fenster
   232 DC23  C6 31       	ADD	'1'		; zum Aktiven machen	CY=0
-  233 DC25  CD F003     	CALL	PV1
 KC-Debugger     							    SLR180 1.31 Page  98
 CALC    Z80
 
+  233 DC25  CD F003     	CALL	PV1
   234 DC28  00          	DB	CRT
   235 DC29  21 0328     	LD	HL,328H		; Fenstergroesse (40x3 Zeichen)
   236 DC2C  22 B79E     	LD	(WINLG),HL
@@ -5937,8 +5938,8 @@ CALC    Z80
   250 DC48  CD DD6B     	CALL	PRCALC		; berechnen
   251 DC4B  18 F4       	JR	DTLOOP
   252                   ;
-  253 DC4D  3E 07       DTEX1:	LD	A,7		;bei Fehler in RAMSAV
-  254 DC4F  CD F003     	CALL	PV1		;BEEP
+  253 DC4D  3E 07       DTEX1:	LD	A,7		; bei Fehler in RAMSAV
+  254 DC4F  CD F003     	CALL	PV1		; BEEP
   255 DC52  00          	DB	CRT
   256 DC53  18 38       	JR	DTEX2		;und raus, CY' ist 0
   257                   ;
@@ -5975,10 +5976,10 @@ CALC    Z80
   288 DC7F  EB          	EX	DE,HL		; DE:=OVRAM
   289 DC80  37          	SCF			; Pixel und VRAM zurueck
   290 DC81  CD DD2C     	CALL	CPYWND
-  291 DC84  F1          	POP	AF		; Port 84H zurueck
 KC-Debugger     							    SLR180 1.31 Page  99
 CALC    Z80
 
+  291 DC84  F1          	POP	AF		; Port 84H zurueck
   292 DC85  DD 77 01    	LD	(IX+1),A
   293 DC88  D3 84       	OUT	(84H),A
   294 DC8A  CD DC95     	CALL	RAMRET		; RAM wiederherstellen
@@ -6036,10 +6037,10 @@ CALC    Z80
   346 DCBA  F3          	DI
   347 DCBB  D3 88       	OUT	(88H),A		; PIO-A
   348 DCBD  DD 7E 01    	LD	A,(IX+1)
-  349 DCC0  F5          	PUSH	AF
 KC-Debugger     							    SLR180 1.31 Page 100
 CALC    Z80
 
+  349 DCC0  F5          	PUSH	AF
   350 DCC1  E6 F9       	AND	0F9H		; passende IRM-Ebene einstellen:
   351 DCC3  F6 02       	OR	002H		; Bild 0, COLOR-RAM
   352 DCC5  D3 84       	OUT	(84H),A
@@ -6087,492 +6088,493 @@ CALC    Z80
   394                   ;
   395                   ; RAM 0300H-09EFH in/aus versteckten IRM (Color-RAM, Bild 0) kopieren
   396                   ;-------------------------
-  397 DD05  21 C386     RAMSV5:	LD	HL,0C386H	; Hilfs-MC direkt auf den Stack ablegen
-  398 DD08  E5          	PUSH	HL		; (SP)=RAMSV3
-  399 DD09  21 D3F1     	LD	HL,0D3F1H
-  400 DD0C  E5          	PUSH	HL
-  401 DD0D  21 B0ED     	LD	HL,0B0EDH
-  402 DD10  E5          	PUSH	HL
-  403 DD11  21 86D3     	LD	HL,086D3H
-  404 DD14  E5          	PUSH	HL
-  405 DD15  ED 62       	SBC	HL,HL		; HL:=0 (CY ist 0)
-  406 DD17  39          	ADD	HL,SP		; Startadresse Hilfs-MC
-  407 DD18  DD 7E 04    	LD	A,(IX+4)	; CAOS-ROM C ist aus
+  397                   ; Hilfs-MC direkt auf den Stack ablegen, (SP)=RAMSV3
+  398 DD05  21 C386     RAMSV5:	LD	HL,0C386H	; 86 C3		(86H), JP ...
+  399 DD08  E5          	PUSH	HL
+  400 DD09  21 D3F1     	LD	HL,0D3F1H	; F1 D3		POP AF, OUT ...
+  401 DD0C  E5          	PUSH	HL
+  402 DD0D  21 B0ED     	LD	HL,0B0EDH	; ED B0		LDIR
+  403 DD10  E5          	PUSH	HL
+  404 DD11  21 86D3     	LD	HL,086D3H	; D3 86		OUT (86H),A
+  405 DD14  E5          	PUSH	HL
+  406 DD15  ED 62       	SBC	HL,HL		; HL:=0 (CY ist 0)
 KC-Debugger     							    SLR180 1.31 Page 101
 CALC    Z80
 
-  408 DD1B  F5          	PUSH	AF
-  409 DD1C  F6 80       	OR	80H		; CAOS-ROM C an
-  410 DD1E  E5          	PUSH	HL		; Stack-Adresse Hilfs-MC
-  411 DD1F  21 0300     	LD	HL,WSP		; BASIC
-  412 DD22  11 B800     	LD	DE,0B800H	; versteckte IRM-Ebene ab hier frei
-  413 DD25  10 01       	DJNZ	RAMSV6
-  414 DD27  EB          	EX	DE,HL		; Kopierrichtung tauschen
-  415 DD28  01 06EF     RAMSV6:	LD	BC,PRGEND-WSP	; ca.2k kopieren
-  416 DD2B  C9          	RET	; Sprung ins Hilfs-MC auf den Stack
-  417                   ;
-  418                   ; Hilfs-MC:
-  419                   ; D3 86	OUT	(86H),A	; CAOS-ROM C und versteckter IRM an
-  420                   ; ED B0	LDIR
-  421                   ; F1	POP	AF
-  422                   ; D3 86	OUT	(86H),A	; CAOS-ROM C versteckter IRM aus
-  423                   ; C3	JP	RAMSV3
-  424                   ;
-  425                   ;--------------------------------------
-  426                   ; Pixel und VRAM sichern/wiederherstellen
-  427                   ;----------------------------
-  428                   ; PE:	CY=0:	sichern
-  429                   ;	CY=1:	wiederherstellen
-  430                   ;	DE=Adresse OVRAM
-  431                   ; PA:	BC=0
-  432                   ;
-  433 DD2C  2A B7CB     CPYWND:	LD	HL,(VRAM)	; VRAM-Adr vom aktuellen Bild, =Fensteranfang
-  434 DD2F  01 0078     	LD	BC,3*40		; 3 Zeilen in voller Breite
-  435 DD32  CD DD45     	CALL	CPCPY		; VRAM im Fenster sichern
-  436 DD35  21 A700     	LD	HL,0A700H	; PixelRAM-Adr fuer Fenster (Spalten rueckwaerts)
-  437 DD38  0E 18       CPWN1:	LD	C,3*8		; Pixel fuer 3 Zeichen
-  438 DD3A  CD DD45     	CALL	CPCPY
-  439 DD3D  7E          	LD	A,(HL)		; unter dem Fenster Linie zeichnen/loeschen
-  440 DD3E  2F          	CPL			; durch Negieren der Pixel!
-  441 DD3F  77          	LD	(HL),A
-  442 DD40  68          	LD	L,B		; L:=0 (oberste Zeile)
-  443 DD41  25          	DEC	H		; naechste Spalte
-  444 DD42  F0          	RET	P		; bis HL<8000H
-  445 DD43  18 F3       	JR	CPWN1
-  446                   ;
-  447 DD45  30 01       CPCPY:	JR	NC,CPCP1
-  448 DD47  EB          	EX	DE,HL		; Tauschen = wiederherstellen
-  449 DD48  ED B0       CPCP1:	LDIR
-  450 DD4A  D0          	RET	NC
-  451 DD4B  EB          	EX	DE,HL		; zuruecktauschen
-  452 DD4C  C9          	RET
-  453                   ;
-  454                   ;--------------------------------------
-  455                   ; Eingabe des Ausdrucks
-  456                   ;----------------------------
-  457                   ; Fordert zur Eingabe des Ausdrucks auf
-  458                   ; und sucht das erste Zeichen in der Zeichenkette
-  459                   ;
-  460                   ; INPUT:	Ausdruck immer anfordern
-  461                   ; LTRIM:	sucht das erste Nichtleerzeichen im Ausdruck
-  462                   ;
-  463                   ; PE (LTRIM):	DE=Zeiger auf Ausdruck, mit #0 abgeschlossen
-  464                   ; PA:	CY=1	BRK gedrueckt
-  465                   ;	CY=0 und ZF=0	Ausdruck vorhanden, dann 
+  407 DD17  39          	ADD	HL,SP		; Startadresse Hilfs-MC
+  408 DD18  DD 7E 04    	LD	A,(IX+4)	; CAOS-ROM C ist aus
+  409 DD1B  F5          	PUSH	AF
+  410 DD1C  F6 80       	OR	80H		; CAOS-ROM C an
+  411 DD1E  E5          	PUSH	HL		; Stack-Adresse Hilfs-MC
+  412 DD1F  21 0300     	LD	HL,WSP		; BASIC
+  413 DD22  11 B800     	LD	DE,0B800H	; versteckte IRM-Ebene ab hier frei
+  414 DD25  10 01       	DJNZ	RAMSV6
+  415 DD27  EB          	EX	DE,HL		; Kopierrichtung tauschen
+  416 DD28  01 06EF     RAMSV6:	LD	BC,PRGEND-WSP	; ca.2k kopieren
+  417 DD2B  C9          	RET	; Sprung ins Hilfs-MC auf den Stack
+  418                   ;
+  419                   ; Hilfs-MC:
+  420                   ; D3 86	OUT	(86H),A	; CAOS-ROM C und versteckter IRM an
+  421                   ; ED B0	LDIR
+  422                   ; F1	POP	AF
+  423                   ; D3 86	OUT	(86H),A	; CAOS-ROM C versteckter IRM aus
+  424                   ; C3	JP	RAMSV3
+  425                   ;
+  426                   ;--------------------------------------
+  427                   ; Pixel und VRAM sichern/wiederherstellen
+  428                   ;----------------------------
+  429                   ; PE:	CY=0:	sichern
+  430                   ;	CY=1:	wiederherstellen
+  431                   ;	DE=Adresse OVRAM
+  432                   ; PA:	BC=0
+  433                   ;
+  434 DD2C  2A B7CB     CPYWND:	LD	HL,(VRAM)	; VRAM-Adr vom aktuellen Bild, =Fensteranfang
+  435 DD2F  01 0078     	LD	BC,3*40		; 3 Zeilen in voller Breite
+  436 DD32  CD DD45     	CALL	CPCPY		; VRAM im Fenster sichern
+  437 DD35  21 A700     	LD	HL,0A700H	; PixelRAM-Adr fuer Fenster (Spalten rueckwaerts)
+  438 DD38  0E 18       CPWN1:	LD	C,3*8		; Pixel fuer 3 Zeichen
+  439 DD3A  CD DD45     	CALL	CPCPY
+  440 DD3D  7E          	LD	A,(HL)		; unter dem Fenster Linie zeichnen/loeschen
+  441 DD3E  2F          	CPL			; durch Negieren der Pixel!
+  442 DD3F  77          	LD	(HL),A
+  443 DD40  68          	LD	L,B		; L:=0 (oberste Zeile)
+  444 DD41  25          	DEC	H		; naechste Spalte
+  445 DD42  F0          	RET	P		; bis HL<8000H
+  446 DD43  18 F3       	JR	CPWN1
+  447                   ;
+  448 DD45  30 01       CPCPY:	JR	NC,CPCP1
+  449 DD47  EB          	EX	DE,HL		; Tauschen = wiederherstellen
+  450 DD48  ED B0       CPCP1:	LDIR
+  451 DD4A  D0          	RET	NC
+  452 DD4B  EB          	EX	DE,HL		; zuruecktauschen
+  453 DD4C  C9          	RET
+  454                   ;
+  455                   ;--------------------------------------
+  456                   ; Eingabe des Ausdrucks
+  457                   ;----------------------------
+  458                   ; Fordert zur Eingabe des Ausdrucks auf
+  459                   ; und sucht das erste Zeichen in der Zeichenkette
+  460                   ;
+  461                   ; INPUT:	Ausdruck immer anfordern
+  462                   ; LTRIM:	sucht das erste Nichtleerzeichen im Ausdruck
+  463                   ;
+  464                   ; PE (LTRIM):	DE=Zeiger auf Ausdruck, mit #0 abgeschlossen
 KC-Debugger     							    SLR180 1.31 Page 102
 CALC    Z80
 
-  466                   ;	 DE=ARG9=Zeiger auf erstes Zeichen (>Space) im Ausdruck
-  467                   ;
-  468 DD4D  3E 3F       INPUT:	LD	A,'?'		; nein, jetzt eingeben
-  469 DD4F  CD F003     	CALL	PV1
-  470 DD52  24          	DB	OCHR
-  471 DD53  CD F003     	CALL	PV1
-  472 DD56  17          	DB	INLIN
-  473 DD57  D8          	RET	C		; BRK ?
-  474 DD58  1A          	LD	A,(DE)		; Fragezeichen wurde ueberschrieben ?
-  475 DD59  FE 3F       	CP	'?'
-  476 DD5B  20 01       	JR	NZ,LTRIM
-  477 DD5D  13          INP1:	INC	DE		; suche erstes Zeichen
-  478 DD5E  1A          LTRIM:	LD	A,(DE)
-  479 DD5F  A7          	AND	A		; #0, dann nichts gefunden
-  480 DD60  C8          	RET	Z		; CY=0, ZF=1
-  481 DD61  FE 21       	CP	' '+1
-  482 DD63  38 F8       	JR	C,INP1
-  483 DD65  ED 53 B792  	LD	(ARG9),DE	; gefunden, Adresse merken
-  484 DD69  A7          	AND	A
-  485 DD6A  C9          	RET			; CY=0, ZF=0
-  486                   ;
-  487                   ;--------------------------------------
-  488                   ; Berechnung und Anzeige des Ausdrucks
-  489                   ;----------------------------
-  490                   ; PE:	ARG9=Zeiger auf Ausdruck, mit #0 abgeschlossen
-  491                   ;	veraendert SYSP!
-  492                   ;
-  493 DD6B  ED 73 B7AE  PRCALC:	LD	(SYSP),SP	; Ruecksprungadr vor Ueberschreiben 
-  494                   				; durch PV4 und Co. schuetzen
-  495                   ;
-  496                   ; Bildschirmausgaben abfangen
-  497                   ;
-  498 DD6F  21 04DC     	LD	HL,NOUTAB+MCBEG-UPBEG
-  499 DD72  22 B7B9     	LD	(OUTAB),HL	; Zeiger auf UP-Nummer = 02H
-  500 DD75  23          	INC	HL		; Adresse NUOUT1
-  501 DD76  22 B7BE     	LD	(UOUT1+1),HL	; als Sprungziel eintragen
-  502                   ;
-  503                   ; Initialisierung Basic-Arbeitsbereich
-  504                   ;
-  505 DD79  21 C0BD     	LD	HL,BRAMST	; Notizspeicher-Default-Belegung
-  506 DD7C  01 0062     	LD	BC,62H		; von 0300H bis 0361H initialisieren
-  507 DD7F  11 04A8     	LD	DE,BLDIR+MCBEG-UPBEG ; LDIR mit DE=0300H
-  508 DD82  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG
-  509 DD85  21 0361     	LD	HL,WSP+61H	; Rest von 0362H bis 0400H loeschen
-  510 DD88  0E 9F       	LD	C,400H-0361H
-  511 DD8A  ED B0       	LDIR
-  512 DD8C  21 04A7     	LD	HL,BASEND
-  513 DD8F  22 03B0     	LD	(MEMSIZ),HL	; Speicherende vorgeben
-  514 DD92  2E 7F       	LD	L,LOW(BASSP)
-  515 DD94  22 0356     	LD	(STDPTR),HL	; Stackende davor
-  516 DD97  11 C641     	LD	DE,NEW1         ; NEW
-  517 DD9A  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG ; PA:A=0, SP=BASIC-Stack
-  518                   ;	LD	(ARGC),A	; ARGC:=CRT
-  519 DD9D  3D          	DEC	A		; A=0FFh
-  520 DD9E  32 03FC     	LD	(EXTFLG),A	; Basic-Erweiterungen vorhanden
-  521 DDA1  32 0358     	LD	(CULINO),A	; aktuelle Zeilennummer = 0FFFFH
-  522                   				; H-Teil ist bereits FF von Defaultwert...
-  523                   ;
+  465                   ; PA:	CY=1	BRK gedrueckt
+  466                   ;	CY=0 und ZF=0	Ausdruck vorhanden, dann 
+  467                   ;	 DE=ARG9=Zeiger auf erstes Zeichen (>Space) im Ausdruck
+  468                   ;
+  469 DD4D  3E 3F       INPUT:	LD	A,'?'		; nein, jetzt eingeben
+  470 DD4F  CD F003     	CALL	PV1
+  471 DD52  24          	DB	OCHR
+  472 DD53  CD F003     	CALL	PV1
+  473 DD56  17          	DB	INLIN
+  474 DD57  D8          	RET	C		; BRK ?
+  475 DD58  1A          	LD	A,(DE)		; Fragezeichen wurde ueberschrieben ?
+  476 DD59  FE 3F       	CP	'?'
+  477 DD5B  20 01       	JR	NZ,LTRIM
+  478 DD5D  13          INP1:	INC	DE		; suche erstes Zeichen
+  479 DD5E  1A          LTRIM:	LD	A,(DE)
+  480 DD5F  A7          	AND	A		; #0, dann nichts gefunden
+  481 DD60  C8          	RET	Z		; CY=0, ZF=1
+  482 DD61  FE 21       	CP	' '+1
+  483 DD63  38 F8       	JR	C,INP1
+  484 DD65  ED 53 B792  	LD	(ARG9),DE	; gefunden, Adresse merken
+  485 DD69  A7          	AND	A
+  486 DD6A  C9          	RET			; CY=0, ZF=0
+  487                   ;
+  488                   ;--------------------------------------
+  489                   ; Berechnung und Anzeige des Ausdrucks
+  490                   ;----------------------------
+  491                   ; PE:	ARG9=Zeiger auf Ausdruck, mit #0 abgeschlossen
+  492                   ;	veraendert SYSP!
+  493                   ;
+  494 DD6B  ED 73 B7AE  PRCALC:	LD	(SYSP),SP	; Ruecksprungadr vor Ueberschreiben 
+  495                   				; durch PV4 und Co. schuetzen
+  496                   ;
+  497                   ; Bildschirmausgaben abfangen
+  498                   ;
+  499 DD6F  21 04DC     	LD	HL,NOUTAB+MCBEG-UPBEG
+  500 DD72  22 B7B9     	LD	(OUTAB),HL	; Zeiger auf UP-Nummer = 02H
+  501 DD75  23          	INC	HL		; Adresse NUOUT1
+  502 DD76  22 B7BE     	LD	(UOUT1+1),HL	; als Sprungziel eintragen
+  503                   ;
+  504                   ; Initialisierung Basic-Arbeitsbereich
+  505                   ;
+  506 DD79  21 C0BD     	LD	HL,BRAMST	; Notizspeicher-Default-Belegung
+  507 DD7C  01 0062     	LD	BC,62H		; von 0300H bis 0361H initialisieren
+  508 DD7F  11 04A8     	LD	DE,BLDIR+MCBEG-UPBEG ; LDIR mit DE=0300H
+  509 DD82  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG
+  510 DD85  21 0361     	LD	HL,WSP+61H	; Rest von 0362H bis 0400H loeschen
+  511 DD88  0E 9F       	LD	C,400H-0361H
+  512 DD8A  ED B0       	LDIR
+  513 DD8C  21 04A7     	LD	HL,BASEND
+  514 DD8F  22 03B0     	LD	(MEMSIZ),HL	; Speicherende vorgeben
+  515 DD92  2E 7F       	LD	L,LOW(BASSP)
+  516 DD94  22 0356     	LD	(STDPTR),HL	; Stackende davor
+  517 DD97  11 C641     	LD	DE,NEW1         ; NEW
+  518 DD9A  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG ; PA:A=0, SP=BASIC-Stack
+  519                   ;	LD	(ARGC),A	; ARGC:=CRT
+  520 DD9D  3D          	DEC	A		; A=0FFh
+  521 DD9E  32 03FC     	LD	(EXTFLG),A	; Basic-Erweiterungen vorhanden
+  522 DDA1  32 0358     	LD	(CULINO),A	; aktuelle Zeilennummer = 0FFFFH
 KC-Debugger     							    SLR180 1.31 Page 103
 CALC    Z80
 
-  524                   ; Ausdruck holen und verdichten
-  525                   ;
-  526 DDA4  2A B792     	LD	HL,(ARG9)	; Zeiger auf Ausdruck
-  527 DDA7  11 0362     	LD	DE,INPBUF	; BASIC-Eingabepuffer
-  528 DDAA  D5          	PUSH	DE
-  529 DDAB  CD DE38     	CALL	SCANN
-  530 DDAE  E1          	POP	HL
-  531                   ;
-  532                   ; Ausdruck berechnen
-  533                   ;
-  534 DDAF  11 CD3A     	LD	DE,SNALY
-  535 DDB2  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG ; PE: HL=Ausdruck
-  536                   ;	Hier gehts nur weiter wenn kein Fehler aufgetreten ist,
-  537                   ;	sonst bei PREND.
-  538 DDB5  CD DE05     	CALL	OURET		; Bildschirmausgaben wieder normal
-  539 DDB8  11 D1CC             LD      DE,TEXTO1       ; Voreinstellung: Anzeige Zeichenkette
-  540 DDBB  3A 03AE     	LD	A,(DATYPE)	; Zeichenkette ?
-  541 DDBE  A7          	AND	A
-  542 DDBF  20 2F       	JR	NZ,PRTXT
-  543                   ;
-  544                   ; Zahl in Zeichenkette umwandeln
-  545                   ;
-  546 DDC1  2A 03E7     	LD	HL,(WRA1+2)	; Exponent und HWT
-  547 DDC4  7C          	LD	A,H
-  548 DDC5  D6 81       	SUB	81H		; Zahl<1 ?
-  549 DDC7  FE 14       	CP	95H-81H		; Zahl>=2^20 ?
-  550 DDC9  30 1F       	JR	NC,PRDEZ	; dann nur Dezimal
-  551 DDCB  11 D74B     	LD	DE,INTMV1
-  552 DDCE  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG ; Ganzzahliger Teil nach CDE
-  553 DDD1  22 03E7     	LD	(WRA1+2),HL	; Vorzeichen wiederherstellen
-  554 DDD4  EB          	EX	DE,HL
-  555 DDD5  CD F003     	CALL	PV1		; Hex-Ausgabe:
-  556 DDD8  2B          	DB	SPACE
-  557 DDD9  79          	LD	A,C		; oberste 2 Stellen
-  558 DDDA  B7          	OR	A		; Test, ob diese leer sind
-  559 DDDB  C4 F003     	CALL	NZ,PV1		; oberste 2 Stellen (nur wenn ungleich 0)
-  560 DDDE  1C          	DB	AHEX	; 1CH = INC E falls PV1 nicht aufgerufen wird
-  561 DDDF  CD D597     	CALL	HLHEX		; uebrige Stellen
-  562 DDE2  CD F003     	CALL	PV1
-  563 DDE5  23          	DB	OSTR
-  564 DDE6  08 48 20 00 	DB	8,'H ',0
-  565 DDEA  CD 04BC     PRDEZ:	CALL	BNUMKN+MCBEG-UPBEG ; Dezimal-Ausgabe, PA:HL=PRINT-Puffer
-  566 DDED  11 D1C9     	LD	DE,TEXTO        ; ASCIIZ-Zeichenkette
-  567                   ;
-  568                   ; Zeichenkette anzeigen
-  569                   ;
-  570 DDF0  CD 04BF     PRTXT:	CALL	CBASDE+MCBEG-UPBEG
-  571                   ;
-  572 DDF3  ED 7B B7AE  PREND:	LD	SP,(SYSP)
-  573 DDF7  3A B7A0     	LD	A,(CURSO)
-  574 DDFA  A7          	AND	A		; Zeilenanfang ?
-  575 DDFB  C8          	RET	Z
-  576 DDFC  CD F003     	CALL	PV1
-  577 DDFF  23          	DB	OSTR
-  578 DE00  20 0D 0A 00 	DB	' ',CR,LF,0
-  579 DE04  C9          	RET
-  580                   ;
-  581                   ;Ruecksetzen Ausgabeumleitung
+  523                   				; H-Teil ist bereits FF von Defaultwert...
+  524                   ;
+  525                   ; Ausdruck holen und verdichten
+  526                   ;
+  527 DDA4  2A B792     	LD	HL,(ARG9)	; Zeiger auf Ausdruck
+  528 DDA7  11 0362     	LD	DE,INPBUF	; BASIC-Eingabepuffer
+  529 DDAA  D5          	PUSH	DE
+  530 DDAB  CD DE38     	CALL	SCANN
+  531 DDAE  E1          	POP	HL
+  532                   ;
+  533                   ; Ausdruck berechnen
+  534                   ;
+  535 DDAF  11 CD3A     	LD	DE,SNALY
+  536 DDB2  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG ; PE: HL=Ausdruck
+  537                   ;	Hier gehts nur weiter wenn kein Fehler aufgetreten ist,
+  538                   ;	sonst bei PREND.
+  539 DDB5  CD DE05     	CALL	OURET		; Bildschirmausgaben wieder normal
+  540 DDB8  11 D1CC             LD      DE,TEXTO1       ; Voreinstellung: Anzeige Zeichenkette
+  541 DDBB  3A 03AE     	LD	A,(DATYPE)	; Zeichenkette ?
+  542 DDBE  A7          	AND	A
+  543 DDBF  20 2F       	JR	NZ,PRTXT
+  544                   ;
+  545                   ; Zahl in Zeichenkette umwandeln
+  546                   ;
+  547 DDC1  2A 03E7     	LD	HL,(WRA1+2)	; Exponent und HWT
+  548 DDC4  7C          	LD	A,H
+  549 DDC5  D6 81       	SUB	81H		; Zahl<1 ?
+  550 DDC7  FE 14       	CP	95H-81H		; Zahl>=2^20 ?
+  551 DDC9  30 1F       	JR	NC,PRDEZ	; dann nur Dezimal
+  552 DDCB  11 D74B     	LD	DE,INTMV1
+  553 DDCE  CD 04BF     	CALL	CBASDE+MCBEG-UPBEG ; Ganzzahliger Teil nach CDE
+  554 DDD1  22 03E7     	LD	(WRA1+2),HL	; Vorzeichen wiederherstellen
+  555 DDD4  EB          	EX	DE,HL
+  556 DDD5  CD F003     	CALL	PV1		; Hex-Ausgabe:
+  557 DDD8  2B          	DB	SPACE
+  558 DDD9  79          	LD	A,C		; oberste 2 Stellen
+  559 DDDA  B7          	OR	A		; Test, ob diese leer sind
+  560 DDDB  C4 F003     	CALL	NZ,PV1		; oberste 2 Stellen (nur wenn ungleich 0)
+  561 DDDE  1C          	DB	AHEX	; 1CH = INC E falls PV1 nicht aufgerufen wird
+  562 DDDF  CD D597     	CALL	HLHEX		; uebrige Stellen
+  563 DDE2  CD F003     	CALL	PV1
+  564 DDE5  23          	DB	OSTR
+  565 DDE6  08 48 20 00 	DB	8,'H ',0
+  566 DDEA  CD 04BC     PRDEZ:	CALL	BNUMKN+MCBEG-UPBEG ; Dezimal-Ausgabe, PA:HL=PRINT-Puffer
+  567 DDED  11 D1C9     	LD	DE,TEXTO        ; ASCIIZ-Zeichenkette
+  568                   ;
+  569                   ; Zeichenkette anzeigen
+  570                   ;
+  571 DDF0  CD 04BF     PRTXT:	CALL	CBASDE+MCBEG-UPBEG
+  572                   ;
+  573 DDF3  ED 7B B7AE  PREND:	LD	SP,(SYSP)
+  574 DDF7  3A B7A0     	LD	A,(CURSO)
+  575 DDFA  A7          	AND	A		; Zeilenanfang ?
+  576 DDFB  C8          	RET	Z
+  577 DDFC  CD F003     	CALL	PV1
+  578 DDFF  23          	DB	OSTR
+  579 DE00  20 0D 0A 00 	DB	' ',CR,LF,0
+  580 DE04  C9          	RET
 KC-Debugger     							    SLR180 1.31 Page 104
 CALC    Z80
 
-  582                   ;----------------------------
-  583                   ;
-  584 DE05  E5          OURET:	PUSH	HL
-  585 DE06  2A 0528     	LD	HL,(OOUTB)
-  586 DE09  22 B7B9     	LD	(OUTAB),HL
-  587 DE0C  2A 052D     	LD	HL,(OUOUT)
-  588 DE0F  22 B7BE     	LD	(UOUT1+1),HL
-  589 DE12  E1          	POP	HL
-  590 DE13  C9          	RET
-  591                   ;
-  592                   ;--------------------------------------
-  593                   ; UP zur Umwandlung des Ausdrucks in die BASIC-Token-Form
-  594                   ;----------------
-  595                   ; PE:	HL=Ausdruck
-  596                   ;	DE=Basic-Eingabepuffer
-  597                   ;
-  598                   ; Verwendung Register BC:
-  599                   ;	B<>0	kopiere Dezimalzahl
-  600                   ;	C(0)=1	kopiere String
-  601                   ;
-  602 DE14  FE 41       SCANH:	CP	'A'		; Sonderzeichen ?
-  603 DE16  38 57       	JR	C,SCAN4
-  604 DE18  04          SCANZ:	INC	B		; B=0 ?
-  605 DE19  10 54       	DJNZ	SCAN4
-  606 DE1B  E5          	PUSH	HL		; Test auf Hexzahl:
-  607 DE1C  D5          	PUSH	DE
-  608 DE1D  C5          	PUSH	BC
-  609 DE1E  EB          	EX	DE,HL
-  610 DE1F  CD DEAD     	CALL	CRHEX		; Leseversuch
-  611 DE22  79          	LD	A,C		; A=HWT der Hexzahl
-  612 DE23  EB          	EX	DE,HL
-  613 DE24  C1          	POP	BC
-  614 DE25  D1          	POP	DE
-  615 DE26  38 4C       	JR	C,SCAND
-  616 DE28  E3          	EX	(SP),HL		; Hex => Dez:
-  617 DE29  D5          	PUSH	DE
-  618 DE2A  ED 5B B796  	LD	DE,(NUMNX)	; ADE=Hexzahl (Mantisse)
-  619 DE2E  06 98       	LD	B,98H		; Exponent
-  620 DE30  CD 04B6     	CALL	BSGN+MCBEG-UPBEG ; BADE => PRINT-Puffer
-  621 DE33  D1          	POP	DE		; Zahl kopieren, dabei Vorzeichen
-  622 DE34  CD DE38     	CALL	SCANN		;  in Token umwandeln
-  623 DE37  E1          	POP	HL
-  624                   ;
-  625 DE38  01 0000     SCANN:	LD	BC,0
-  626 DE3B  7B          SCAN1:	LD	A,E		; Eingabepufferende erreicht ?
-  627 DE3C  FE AB       	CP	LOW(EOINPB-1)	; (03ABH)
-  628 DE3E  D0          	RET	NC
-  629 DE3F  7E          	LD	A,(HL)
-  630 DE40  A7          	AND	A		; Ende-0?
-  631 DE41  C8          	RET	Z
-  632 DE42  FE 22       	CP	'"'
-  633 DE44  28 28       	JR	Z,SCANS		; String?
-  634 DE46  CB 41       	BIT	0,C
-  635 DE48  20 25       	JR	NZ,SCAN4	; kopiere String
-  636 DE4A  FE 3A       	CP	'9'+1
-  637 DE4C  30 08       	JR	NC,SCAN2	; keine Dezimalziffer
-  638 DE4E  FE 30       	CP	'0'
-  639 DE50  30 C6       	JR	NC,SCANZ	; Zahl erkennen
+  581                   ;
+  582                   ; Ruecksetzen Ausgabeumleitung
+  583                   ;-----------------------------
+  584                   ;
+  585 DE05  E5          OURET:	PUSH	HL
+  586 DE06  2A 0528     	LD	HL,(OOUTB)
+  587 DE09  22 B7B9     	LD	(OUTAB),HL
+  588 DE0C  2A 052D     	LD	HL,(OUOUT)
+  589 DE0F  22 B7BE     	LD	(UOUT1+1),HL
+  590 DE12  E1          	POP	HL
+  591 DE13  C9          	RET
+  592                   ;
+  593                   ;--------------------------------------
+  594                   ; UP zur Umwandlung des Ausdrucks in die BASIC-Token-Form
+  595                   ;----------------
+  596                   ; PE:	HL=Ausdruck
+  597                   ;	DE=Basic-Eingabepuffer
+  598                   ;
+  599                   ; Verwendung Register BC:
+  600                   ;	B<>0	kopiere Dezimalzahl
+  601                   ;	C(0)=1	kopiere String
+  602                   ;
+  603 DE14  FE 41       SCANH:	CP	'A'		; Sonderzeichen ?
+  604 DE16  38 57       	JR	C,SCAN4
+  605 DE18  04          SCANZ:	INC	B		; B=0 ?
+  606 DE19  10 54       	DJNZ	SCAN4
+  607 DE1B  E5          	PUSH	HL		; Test auf Hexzahl:
+  608 DE1C  D5          	PUSH	DE
+  609 DE1D  C5          	PUSH	BC
+  610 DE1E  EB          	EX	DE,HL
+  611 DE1F  CD DEAD     	CALL	CRHEX		; Leseversuch
+  612 DE22  79          	LD	A,C		; A=HWT der Hexzahl
+  613 DE23  EB          	EX	DE,HL
+  614 DE24  C1          	POP	BC
+  615 DE25  D1          	POP	DE
+  616 DE26  38 4C       	JR	C,SCAND
+  617 DE28  E3          	EX	(SP),HL		; Hex => Dez:
+  618 DE29  D5          	PUSH	DE
+  619 DE2A  ED 5B B796  	LD	DE,(NUMNX)	; ADE=Hexzahl (Mantisse)
+  620 DE2E  06 98       	LD	B,98H		; Exponent
+  621 DE30  CD 04B6     	CALL	BSGN+MCBEG-UPBEG ; BADE => PRINT-Puffer
+  622 DE33  D1          	POP	DE		; Zahl kopieren, dabei Vorzeichen
+  623 DE34  CD DE38     	CALL	SCANN		;  in Token umwandeln
+  624 DE37  E1          	POP	HL
+  625                   ;
+  626 DE38  01 0000     SCANN:	LD	BC,0
+  627 DE3B  7B          SCAN1:	LD	A,E		; Eingabepufferende erreicht ?
+  628 DE3C  FE AB       	CP	LOW(EOINPB-1)	; (03ABH)
+  629 DE3E  D0          	RET	NC
+  630 DE3F  7E          	LD	A,(HL)
+  631 DE40  A7          	AND	A		; Ende-0?
+  632 DE41  C8          	RET	Z
+  633 DE42  FE 22       	CP	'"'
+  634 DE44  28 28       	JR	Z,SCANS		; String?
+  635 DE46  CB 41       	BIT	0,C
+  636 DE48  20 25       	JR	NZ,SCAN4	; kopiere String
+  637 DE4A  FE 3A       	CP	'9'+1
+  638 DE4C  30 08       	JR	NC,SCAN2	; keine Dezimalziffer
 KC-Debugger     							    SLR180 1.31 Page 105
 CALC    Z80
 
-  640 DE52  FE 20       	CP	' '
-  641 DE54  28 15       	JR	Z,SCAN3
-  642 DE56  D5          SCAN2:	PUSH	DE
-  643 DE57  C5          	PUSH	BC
-  644 DE58  11 C120     	LD	DE,TOKTBB	; BASIC-Wortliste im BASIC-ROM
-  645 DE5B  06 80       	LD	B,80H		; Zugehoerigen Token-Nummer
-  646 DE5D  CD DE81     	CALL	SCTOK
-  647 DE60  ED 5B E00C  	LD	DE,(TOKTBC)	; BASIC-Wortliste im CAOS-ROM
-  648 DE64  DC DE81     	CALL	C,SCTOK		; weitersuchen, falls noch nicht gefunden
-  649 DE67  C1          	POP	BC
-  650 DE68  D1          	POP	DE
-  651                   	;JR	C,SCAN4		; <=falls Variablen erlaubt sind
-  652 DE69  38 A9       	JR	C,SCANH		; kein Token, Test ob Hexzahl
-  653 DE6B  06 00       SCAN3:	LD	B,0
-  654 DE6D  0D          	DEC	C
-  655 DE6E  0C          SCANS:	INC	C
-  656 DE6F  12          SCAN4:	LD	(DE),A		; tokenisiert in BASIC-Eingabepuffer schreiben
-  657 DE70  23          	INC	HL
-  658 DE71  13          	INC	DE
-  659 DE72  18 C7       	JR	SCAN1
-  660                   ;
-  661 DE74  E1          SCAND:	POP	HL		; keine Hexzahl
-  662 DE75  04          	INC	B
-  663 DE76  7E          	LD	A,(HL)
-  664 DE77  FE 41       	CP	'A'		; Buchstabe ?
-  665 DE79  38 F4       	JR	C,SCAN4
-  666 DE7B  3E 80       	LD	A,80H		; dann SN-Error
-  667 DE7D  12          	LD	(DE),A
-  668 DE7E  C9          	RET			; und raus
-  669                   ;
-  670                   ; Suche Token:
-  671                   ;------------
-  672                   ; PE:	B =Nr. erstes Token
-  673                   ;	DE=Wortliste im ROM
-  674                   ;	HL=Akt.Zeichen im Ausdruck
-  675                   ; PA:	B =Nr. letztes getestetes Token
-  676                   ;	HL=neue Position im Ausdruck-1
-  677                   ;	CY=0: Token gefunden
-  678                   ;	dann: A=Token, sonst: A=(HL)
-  679                   ;
-  680 DE7F  04          SCT1:	INC	B		; naechstes Token
-  681 DE80  E1          	POP	HL		; Eingabepuffer zurueck
-  682 DE81  E5          SCTOK:	PUSH	HL		; suche Wortanfang:
-  683 DE82  CD 04AE     SCT2:	CALL	BTKCHR+MCBEG-UPBEG
-  684 DE85  30 FB       	JR	NC,SCT2		; Wortanfang ?
-  685 DE87  28 21       	JR	Z,SCT5		; Listenende ?
-  686 DE89  0F          SCT3:	RRCA
-  687 DE8A  4F          	LD	C,A
-  688 DE8B  7E          	LD	A,(HL)		; => Grossbuchstaben
-  689 DE8C  FE 61       	CP	'a'
-  690 DE8E  38 06       	JR	C,SCT4
-  691 DE90  FE 7B       	CP	'z'+1
-  692 DE92  30 02       	JR	NC,SCT4
-  693 DE94  D6 20       	SUB	20H
-  694 DE96  B9          SCT4:	CP	C		; Zeichen passt ?
-  695 DE97  20 E6       	JR	NZ,SCT1
-  696 DE99  23          	INC	HL		; naechstes Zeichen
-  697 DE9A  CD 04AE     	CALL	BTKCHR+MCBEG-UPBEG
+  639 DE4E  FE 30       	CP	'0'
+  640 DE50  30 C6       	JR	NC,SCANZ	; Zahl erkennen
+  641 DE52  FE 20       	CP	' '
+  642 DE54  28 15       	JR	Z,SCAN3
+  643 DE56  D5          SCAN2:	PUSH	DE
+  644 DE57  C5          	PUSH	BC
+  645 DE58  11 C120     	LD	DE,TOKTBB	; BASIC-Wortliste im BASIC-ROM
+  646 DE5B  06 80       	LD	B,80H		; Zugehoerigen Token-Nummer
+  647 DE5D  CD DE81     	CALL	SCTOK
+  648 DE60  ED 5B E00C  	LD	DE,(TOKTBC)	; BASIC-Wortliste im CAOS-ROM
+  649 DE64  DC DE81     	CALL	C,SCTOK		; weitersuchen, falls noch nicht gefunden
+  650 DE67  C1          	POP	BC
+  651 DE68  D1          	POP	DE
+  652                   	;JR	C,SCAN4		; <=falls Variablen erlaubt sind
+  653 DE69  38 A9       	JR	C,SCANH		; kein Token, Test ob Hexzahl
+  654 DE6B  06 00       SCAN3:	LD	B,0
+  655 DE6D  0D          	DEC	C
+  656 DE6E  0C          SCANS:	INC	C
+  657 DE6F  12          SCAN4:	LD	(DE),A		; tokenisiert in BASIC-Eingabepuffer schreiben
+  658 DE70  23          	INC	HL
+  659 DE71  13          	INC	DE
+  660 DE72  18 C7       	JR	SCAN1
+  661                   ;
+  662 DE74  E1          SCAND:	POP	HL		; keine Hexzahl
+  663 DE75  04          	INC	B
+  664 DE76  7E          	LD	A,(HL)
+  665 DE77  FE 41       	CP	'A'		; Buchstabe ?
+  666 DE79  38 F4       	JR	C,SCAN4
+  667 DE7B  3E 80       	LD	A,80H		; dann SN-Error
+  668 DE7D  12          	LD	(DE),A
+  669 DE7E  C9          	RET			; und raus
+  670                   ;
+  671                   ; Suche Token:
+  672                   ;------------
+  673                   ; PE:	B =Nr. erstes Token
+  674                   ;	DE=Wortliste im ROM
+  675                   ;	HL=Akt.Zeichen im Ausdruck
+  676                   ; PA:	B =Nr. letztes getestetes Token
+  677                   ;	HL=neue Position im Ausdruck-1
+  678                   ;	CY=0: Token gefunden
+  679                   ;	dann: A=Token, sonst: A=(HL)
+  680                   ;
+  681 DE7F  04          SCT1:	INC	B		; naechstes Token
+  682 DE80  E1          	POP	HL		; Eingabepuffer zurueck
+  683 DE81  E5          SCTOK:	PUSH	HL		; suche Wortanfang:
+  684 DE82  CD 04AE     SCT2:	CALL	BTKCHR+MCBEG-UPBEG
+  685 DE85  30 FB       	JR	NC,SCT2		; Wortanfang ?
+  686 DE87  28 21       	JR	Z,SCT5		; Listenende ?
+  687 DE89  0F          SCT3:	RRCA
+  688 DE8A  4F          	LD	C,A
+  689 DE8B  7E          	LD	A,(HL)		; => Grossbuchstaben
+  690 DE8C  FE 61       	CP	'a'
+  691 DE8E  38 06       	JR	C,SCT4
+  692 DE90  FE 7B       	CP	'z'+1
+  693 DE92  30 02       	JR	NC,SCT4
+  694 DE94  D6 20       	SUB	20H
+  695 DE96  B9          SCT4:	CP	C		; Zeichen passt ?
+  696 DE97  20 E6       	JR	NZ,SCT1
 KC-Debugger     							    SLR180 1.31 Page 106
 CALC    Z80
 
-  698 DE9D  30 EA       	JR	NC,SCT3		; naechstes Wort?
-  699 DE9F  2B          	DEC	HL		; Token gefunden
-  700 DEA0  3E 94       	LD	A,94H		; Anweisung "DEF"?
-  701 DEA2  B8          	CP	B
-  702 DEA3  37          	SCF
-  703 DEA4  28 04       	JR	Z,SCT5		; Token ignorieren
-  704 DEA6  F1          	POP	AF
-  705 DEA7  78          	LD	A,B
-  706 DEA8  A7          	AND	A
-  707 DEA9  C9          	RET
-  708 DEAA  E1          SCT5:	POP	HL		; zurueck auf Wortanfang
-  709 DEAB  7E          	LD	A,(HL)
-  710 DEAC  C9          	RET
-  711                   ;
-  712                   ;--------------------------------------
-  713                   ; Hexzahl erfassen (24Bit), muss mit 'H' enden
-  714                   ;---------
-  715                   ; PE:	DE=Position im Ausdruck
-  716                   ; PA:	DE=neue Position im Ausdruck
-  717                   ;	CY=0: Zahl gefunden
-  718                   ;	dann: NUMNX,NUMVX=Wert der erfassten Zahl
-  719                   ;	      C=HWT	
-  720                   ;
-  721 DEAD  06 02       CRHEX:	LD	B,'9'-'0'-7	; Endekennzeichen zunaechst inaktiv
-  722 DEAF  AF          	XOR	A
-  723 DEB0  21 B798     	LD	HL,NUMVX+1
-  724 DEB3  77          	LD	(HL),A
-  725 DEB4  2B          	DEC	HL		; HL=NUMVX
-  726 DEB5  77          	LD	(HL),A
-  727 DEB6  2B          	DEC	HL		; HL=NUMNX
-  728 DEB7  77          	LD	(HL),A
-  729 DEB8  1A          CRHX1:	LD	A,(DE)
-  730 DEB9  13          	INC	DE		;	       aus: 3A..40 41..60 61..80 81..FF
-  731 DEBA  D6 30       	SUB	'0'		;<'0':Fehler  wird: 0A..10 11..30 31..50 51..CF
-  732 DEBC  D8          	RET	C
-  733 DEBD  FE 0A       	CP	10		; Ziffer: Ok.
-  734 DEBF  38 0C       	JR	C,CRHX2
-  735 DEC1  D6 11       	SUB	17		; HEX-Korrektur	    F9..FF 00..1F 20..3F 40..BE
-  736 DEC3  E6 DF       	AND	11011111b	; klein -> gross    D9..DF 00..1F 00..1F 40..9E
-  737 DEC5  C6 0A       	ADD	10		; <'A': Fehler	    E3..E9 0A..29 0A..29 4A..A8
-  738 DEC7  B8          	CP	B		; ='H': dann fertig
-  739 DEC8  C8          	RET	Z
-  740 DEC9  FE 10       	CP	16		; >'F': Fehler
-  741 DECB  3F          	CCF
-  742 DECC  D8          	RET	C
-  743 DECD  ED 6F       CRHX2:	RLD			; Tetrade durchschieben
-  744 DECF  23          	INC	HL
-  745 DED0  ED 6F       	RLD
-  746 DED2  23          	INC	HL
-  747 DED3  ED 6F       	RLD
-  748 DED5  4E          	LD	C,(HL)		; HWT fuer Parameterrueckgabe nach C
-  749 DED6  2B          	DEC	HL
-  750 DED7  2B          	DEC	HL
-  751 DED8  06 11       	LD	B,'H'-'0'-7	; Endekennzeichen aktiv
-  752 DEDA  18 DC       	JR	CRHX1
-  753                   ;
-  754                   ;--------------------------------------
-  755                   ; UP's fuer den Sprung in den BASIC-ROM
+  697 DE99  23          	INC	HL		; naechstes Zeichen
+  698 DE9A  CD 04AE     	CALL	BTKCHR+MCBEG-UPBEG
+  699 DE9D  30 EA       	JR	NC,SCT3		; naechstes Wort?
+  700 DE9F  2B          	DEC	HL		; Token gefunden
+  701 DEA0  3E 94       	LD	A,94H		; Anweisung "DEF"?
+  702 DEA2  B8          	CP	B
+  703 DEA3  37          	SCF
+  704 DEA4  28 04       	JR	Z,SCT5		; Token ignorieren
+  705 DEA6  F1          	POP	AF
+  706 DEA7  78          	LD	A,B
+  707 DEA8  A7          	AND	A
+  708 DEA9  C9          	RET
+  709 DEAA  E1          SCT5:	POP	HL		; zurueck auf Wortanfang
+  710 DEAB  7E          	LD	A,(HL)
+  711 DEAC  C9          	RET
+  712                   ;
+  713                   ;--------------------------------------
+  714                   ; Hexzahl erfassen (24Bit), muss mit 'H' enden
+  715                   ;---------
+  716                   ; PE:	DE=Position im Ausdruck
+  717                   ; PA:	DE=neue Position im Ausdruck
+  718                   ;	CY=0: Zahl gefunden
+  719                   ;	dann: NUMNX,NUMVX=Wert der erfassten Zahl
+  720                   ;	      C=HWT	
+  721                   ;
+  722 DEAD  06 02       CRHEX:	LD	B,'9'-'0'-7	; Endekennzeichen zunaechst inaktiv
+  723 DEAF  AF          	XOR	A
+  724 DEB0  21 B798     	LD	HL,NUMVX+1
+  725 DEB3  77          	LD	(HL),A
+  726 DEB4  2B          	DEC	HL		; HL=NUMVX
+  727 DEB5  77          	LD	(HL),A
+  728 DEB6  2B          	DEC	HL		; HL=NUMNX
+  729 DEB7  77          	LD	(HL),A
+  730 DEB8  1A          CRHX1:	LD	A,(DE)
+  731 DEB9  13          	INC	DE		;	       aus: 3A..40 41..60 61..80 81..FF
+  732 DEBA  D6 30       	SUB	'0'		;<'0':Fehler  wird: 0A..10 11..30 31..50 51..CF
+  733 DEBC  D8          	RET	C
+  734 DEBD  FE 0A       	CP	10		; Ziffer: Ok.
+  735 DEBF  38 0C       	JR	C,CRHX2
+  736 DEC1  D6 11       	SUB	17		; HEX-Korrektur	    F9..FF 00..1F 20..3F 40..BE
+  737 DEC3  E6 DF       	AND	11011111b	; klein -> gross    D9..DF 00..1F 00..1F 40..9E
+  738 DEC5  C6 0A       	ADD	10		; <'A': Fehler	    E3..E9 0A..29 0A..29 4A..A8
+  739 DEC7  B8          	CP	B		; ='H': dann fertig
+  740 DEC8  C8          	RET	Z
+  741 DEC9  FE 10       	CP	16		; >'F': Fehler
+  742 DECB  3F          	CCF
+  743 DECC  D8          	RET	C
+  744 DECD  ED 6F       CRHX2:	RLD			; Tetrade durchschieben
+  745 DECF  23          	INC	HL
+  746 DED0  ED 6F       	RLD
+  747 DED2  23          	INC	HL
+  748 DED3  ED 6F       	RLD
+  749 DED5  4E          	LD	C,(HL)		; HWT fuer Parameterrueckgabe nach C
+  750 DED6  2B          	DEC	HL
+  751 DED7  2B          	DEC	HL
+  752 DED8  06 11       	LD	B,'H'-'0'-7	; Endekennzeichen aktiv
+  753 DEDA  18 DC       	JR	CRHX1
+  754                   ;
 KC-Debugger     							    SLR180 1.31 Page 107
 CALC    Z80
 
-  756                   ;-------------------------------------
-  757 DEDC              UPBEG
-  758                   ;
-  759                   ; BASIC-Notizspeicher initialisieren
-  760                   ;
-  761 DEDC  11 0300     BLDIR:	LD	DE,WSP
-  762 DEDF  ED B0       	LDIR
-  763 DEE1  C9          	RET
-  764                   ;
-  765                   ; Zeichen aus Wortliste holen und testen
-  766                   ; PE:	DE=Zeiger auf Zeichen
-  767                   ; PA:	DE=DE+1
-  768                   ;	A=Zeichen*2
-  769                   ;	CY=1:Wortanfang
-  770                   ;
-  771 DEE2  CD 04D3     BTKCHR:	CALL	PON+MCBEG-UPBEG	; BASIC-Ebene ein
-  772 DEE5  1A          	LD	A,(DE)
-  773 DEE6  13          	INC	DE
-  774 DEE7  87          	ADD	A
-  775 DEE8  18 10               JR      POFF
-  776                   ;
-  777                   ; Zahl aus den Registern BADE nach Printpuffer
-  778                   ; PE:	B=Exponent, ADE=Mantisse
-  779                   ; PA:	HL=INTPRB
-  780                   ;
-  781 DEEA  CD 04D3     BSGN:	CALL	PON+MCBEG-UPBEG	; BASIC-Ebene ein
-  782 DEED  CD D6AE     	CALL	SGN1            ; BADE => WRA1
-  783 DEF0  11 D834     BNUMKN:	LD	DE,NUMKON       ; WRA1 => Printpuffer
-  784                   ;
-  785                   ; Aufruf eines UP im BASIC-ROM
-  786                   ;  mit Einschalten der Basic-Ebene beim Aufruf
-  787                   ;  und Zurueckschalten in die CALC-Ebene beim Ruecksprung
-  788                   ; PE: DE=Adresse des UP im BASIC-ROM
-  789                   ; VR: IY
-  790                   ;
-  791 DEF3  FD E1       CBASDE: POP     IY              ; fuer NEW1 (veraendert SP)
-  792 DEF5  CD 04D2             CALL    PONDE+MCBEG-UPBEG ; Basic-Ebene ein und UP ausfuehren
-  793 DEF8  FD E5               PUSH    IY
-  794                   ;
-  795 DEFA  F5          POFF:	PUSH	AF		; CALC-Ebene einschalten
-  796 DEFB  3A 09EC     	LD	A,(NP88)	; IRM an
-  797 DEFE  D3 88       	OUT	(88H),A		; PIO-A
-  798                   	RESIXA	5,4		; RES 5,(IX+4),A  Basic => Debugger
+  755                   ;--------------------------------------
+  756                   ; UP's fuer den Sprung in den BASIC-ROM
+  757                   ;-------------------------------------
+  758 DEDC              UPBEG
+  759                   ;
+  760                   ; BASIC-Notizspeicher initialisieren
+  761                   ;
+  762 DEDC  11 0300     BLDIR:	LD	DE,WSP
+  763 DEDF  ED B0       	LDIR
+  764 DEE1  C9          	RET
+  765                   ;
+  766                   ; Zeichen aus Wortliste holen und testen
+  767                   ; PE:	DE=Zeiger auf Zeichen
+  768                   ; PA:	DE=DE+1
+  769                   ;	A=Zeichen*2
+  770                   ;	CY=1:Wortanfang
+  771                   ;
+  772 DEE2  CD 04D3     BTKCHR:	CALL	PON+MCBEG-UPBEG	; BASIC-Ebene ein
+  773 DEE5  1A          	LD	A,(DE)
+  774 DEE6  13          	INC	DE
+  775 DEE7  87          	ADD	A
+  776 DEE8  18 10               JR      POFF
+  777                   ;
+  778                   ; Zahl aus den Registern BADE nach Printpuffer
+  779                   ; PE:	B=Exponent, ADE=Mantisse
+  780                   ; PA:	HL=INTPRB
+  781                   ;
+  782 DEEA  CD 04D3     BSGN:	CALL	PON+MCBEG-UPBEG	; BASIC-Ebene ein
+  783 DEED  CD D6AE     	CALL	SGN1            ; BADE => WRA1
+  784 DEF0  11 D834     BNUMKN:	LD	DE,NUMKON       ; WRA1 => Printpuffer
+  785                   ;
+  786                   ; Aufruf eines UP im BASIC-ROM
+  787                   ;  mit Einschalten der Basic-Ebene beim Aufruf
+  788                   ;  und Zurueckschalten in die CALC-Ebene beim Ruecksprung
+  789                   ; PE: DE=Adresse des UP im BASIC-ROM
+  790                   ; VR: IY
+  791                   ;
+  792 DEF3  FD E1       CBASDE: POP     IY              ; fuer NEW1 (veraendert SP)
+  793 DEF5  CD 04D2             CALL    PONDE+MCBEG-UPBEG ; Basic-Ebene ein und UP ausfuehren
+  794 DEF8  FD E5               PUSH    IY
+  795                   ;
+  796 DEFA  F5          POFF:	PUSH	AF		; CALC-Ebene einschalten
+  797 DEFB  3A 09EC     	LD	A,(NP88)	; IRM an
+  798 DEFE  D3 88       	OUT	(88H),A		; PIO-A
+  799                   	RESIXA	5,4		; RES 5,(IX+4),A  Basic => Debugger
     1 DF00  DD CB 04    	 DB	0DDh,0CBh,4
     2 DF03  AF          	 DB	5 SHL 3 OR 10000111b
-  799 DF04  18 06       	JR	PO1
-  800                   ;
-  801 DF06  D5          PONDE:  PUSH    DE              ; Sprung in das durch DE adressierte UP
-  802 DF07  F5          PON:	PUSH	AF		; BASIC-Ebene einschalten
-  803                   	SETIXA	5,4		; SET 5,(IX+4),A  Debugger => Basic
+  800 DF04  18 06       	JR	PO1
+  801                   ;
+  802 DF06  D5          PONDE:  PUSH    DE              ; Sprung in das durch DE adressierte UP
+  803 DF07  F5          PON:	PUSH	AF		; BASIC-Ebene einschalten
+  804                   	SETIXA	5,4		; SET 5,(IX+4),A  Debugger => Basic
     1 DF08  DD CB 04    	 DB	0DDh,0CBh,4
     2 DF0B  EF          	 DB	5 SHL 3 OR 11000111b
-  804 DF0C  D3 86       PO1:	OUT	(86H),A
-  805 DF0E  F1          	POP	AF
-  806 DF0F  C9          	RET
-  807                   ;
-  808                   ; Ausgabeumleitung
-  809                   ;----------------
+  805 DF0C  D3 86       PO1:	OUT	(86H),A
+  806 DF0E  F1          	POP	AF
+  807 DF0F  C9          	RET
+  808                   ;
 KC-Debugger     							    SLR180 1.31 Page 108
 CALC    Z80
 
-  810                   ; Zeigt die Basic-Fehlermeldung an, verhindert aber den Wechsel in die
-  811                   ; Basic-Kommandoebene.
-  812                   ;
-  813 DF10  02          NOUTAB:	DB	UOT1		; UP-Nummer
-  814 DF11  FE 0D       NUOUT1:	CP	CR		; CR unterdruecken
-  815 DF13  C4 F003     	CALL	NZ,PV1
-  816 DF16  00          	DB	CRT	; wird bei CR als NOP ausgefuehrt
-  817 DF17  FE 20       	CP	' '
-  818 DF19  D0          	RET	NC		; Ende wenn Steuerzeichen
-  819 DF1A  CD 04C6     	CALL	POFF+MCBEG-UPBEG
-  820 DF1D  CD DE05     	CALL	OURET
-  821 DF20  C3 DDF3     	JP	PREND
-  822 DF23              UPEND:
-  823                   ;
-  824                   ;--------------------------------------
-  825                   ; UP im RAM fuer die Reaktion auf die Drucktaste (Shift+CLR)
-  826                   ;-------------------------------------
-  827                   ;
-  828                   ; Schaltet das Speichersegment von CALC in den Vordergrund
-  829                   ; und springt dann in das Programm hinein
-  830                   ;
-  831 DF23  F5          DTBEG:	PUSH	AF
-  832 DF24  D5          	PUSH	DE
-  833 DF25  DB 88       	IN	A,(88H)		; Schaltzustand des Speichers merken
-  834 DF27  5F          	LD	E,A
-  835 DF28  F6 85       	OR	A,85H		; CALC in den Vordergrund
-  836 DF2A  D3 88       	OUT	(88H),A		; PIO-A: USER-ROM an
-  837 DF2C  DD 7E 04    	LD	A,(IX+4)
-  838 DF2F  57          	LD	D,A		; Port 86H:
-  839 DF30  F6 40       	OR	A,40H		; - Debugger
-  840 DF32  E6 5F       	AND	A,5FH		; - CAOS-ROM C aus
-  841 DF34  DD 77 04    	LD	(IX+4),A
-  842 DF37  D3 86       	OUT	(86H),A
-  843 DF39  CD DBFF     	CALL	DTSR		; CALC im USER-ROM aufrufen
-  844 DF3C  7A          	LD	A,D		; Speicher wieder zurueck
-  845 DF3D  DD 77 04    	LD	(IX+4),A	; Port 86H
-  846 DF40  D3 86       	OUT	(86H),A
-  847 DF42  7B          	LD	A,E
-  848 DF43  D3 88       	OUT	(88H),A		; und PIO-A
-  849 DF45  D1          	POP	DE
-  850 DF46  DC 0000     OHCADR:	CALL	C,0		; Aufruf Original HCADR
-  851 DF49  F1          	POP	AF
-  852 DF4A  C9          	RET
-  853 DF4B              DTEND:
-  854                   ;--------------------------------------
+  809                   ; Ausgabeumleitung
+  810                   ;----------------
+  811                   ; Zeigt die Basic-Fehlermeldung an, verhindert aber den Wechsel in die
+  812                   ; Basic-Kommandoebene.
+  813                   ;
+  814 DF10  02          NOUTAB:	DB	UOT1		; UP-Nummer
+  815 DF11  FE 0D       NUOUT1:	CP	CR		; CR unterdruecken
+  816 DF13  C4 F003     	CALL	NZ,PV1
+  817 DF16  00          	DB	CRT	; wird bei CR als NOP ausgefuehrt
+  818 DF17  FE 20       	CP	' '
+  819 DF19  D0          	RET	NC		; Ende wenn Steuerzeichen
+  820 DF1A  CD 04C6     	CALL	POFF+MCBEG-UPBEG
+  821 DF1D  CD DE05     	CALL	OURET
+  822 DF20  C3 DDF3     	JP	PREND
+  823 DF23              UPEND:
+  824                   ;
+  825                   ;--------------------------------------
+  826                   ; UP im RAM fuer die Reaktion auf die Drucktaste (Shift+CLR)
+  827                   ;-------------------------------------
+  828                   ;
+  829                   ; Schaltet das Speichersegment von CALC in den Vordergrund
+  830                   ; und springt dann in das Programm hinein
+  831                   ;
+  832 DF23  F5          DTBEG:	PUSH	AF
+  833 DF24  D5          	PUSH	DE
+  834 DF25  DB 88       	IN	A,(88H)		; Schaltzustand des Speichers merken
+  835 DF27  5F          	LD	E,A
+  836 DF28  F6 85       	OR	A,85H		; CALC in den Vordergrund
+  837 DF2A  D3 88       	OUT	(88H),A		; PIO-A: USER-ROM, CAOS-E und IRM ein
+  838 DF2C  DD 7E 04    	LD	A,(IX+4)
+  839 DF2F  57          	LD	D,A		; Port 86H:
+  840 DF30  F6 40       	OR	A,40H		; - Debugger
+  841 DF32  E6 5F       	AND	A,5FH		; - CAOS-ROM C aus
+  842 DF34  DD 77 04    	LD	(IX+4),A
+  843 DF37  D3 86       	OUT	(86H),A
+  844 DF39  CD DBFF     	CALL	DTSR		; CALC im USER-ROM aufrufen
+  845 DF3C  7A          	LD	A,D		; Speicher wieder zurueck
+  846 DF3D  DD 77 04    	LD	(IX+4),A	; Port 86H
+  847 DF40  D3 86       	OUT	(86H),A
+  848 DF42  7B          	LD	A,E
+  849 DF43  D3 88       	OUT	(88H),A		; und PIO-A
+  850 DF45  D1          	POP	DE
+  851 DF46  DC 0000     OHCADR:	CALL	C,0		; Aufruf Original HCADR
+  852 DF49  F1          	POP	AF
+  853 DF4A  C9          	RET
+  854 DF4B              DTEND:
+  855                   ;--------------------------------------
    53                   ENDIF
    54                   	INCLUDE	BSAVE.INC	; KCB-Datei abspeichern
     1                   ;******************   PROGRAMM BSAVE	**************************************
@@ -6584,11 +6586,11 @@ CALC    Z80
     7                   ; Test, ob BASIC initialisiert wurde.					     *
     8                   ;									     *
     9                   ; BASIC-Programmspeicher kann auf 7FFFH begrenzt werden, um Programme kompa- *
-   10                   ; tibel zum KC85/3 zu machen.						     *
-   11                   ;									     *
 KC-Debugger     							    SLR180 1.31 Page 109
 BSAVE   INC
 
+   10                   ; tibel zum KC85/3 zu machen.						     *
+   11                   ;									     *
    12                   ; NUR Menuewort %BSAVE							     *
    13                   ;									     *
    14                   ; 19.03.2017: Anpassungen fuer CAOS 4.7	als Include zu USER-ROM		     *
@@ -6645,11 +6647,11 @@ BSAVE   INC
    65                   ;-----------------------------------------------------------------------------
    66                   ;
    67 DF63  7F7F        STARTE:	DW	7F7FH
-   68 DF65  42 53 41 56 	DB	'BSAVE',1
-   69 DF6B  CD DFF3     	CALL	UROM		; Schaltzustand User-ROM merken
 KC-Debugger     							    SLR180 1.31 Page 110
 BSAVE   INC
 
+   68 DF65  42 53 41 56 	DB	'BSAVE',1
+   69 DF6B  CD DFF3     	CALL	UROM		; Schaltzustand User-ROM merken
    70 DF6E  E5          	PUSH	HL		; Ruecksprungadresse auf Stack legen
    71                   ;
    72                   ; Test, ob BASIC initialisiert wurde:
@@ -6706,11 +6708,11 @@ BSAVE   INC
   123 DFE2  22 B782     	LD	(ARG1),HL
   124 DFE5  7C          	LD	A,H		; 3 Argumente
   125 DFE6  32 B781     	LD	(ARGN),A
-  126                   
-  127                   ; Datei abspeichern:
 KC-Debugger     							    SLR180 1.31 Page 111
 BSAVE   INC
 
+  126                   
+  127                   ; Datei abspeichern:
   128                   
   129 DFE9  EB          	EX	DE,HL		; Dateiname
   130 DFEA  CD F003     	CALL	PV1
@@ -6736,6 +6738,8 @@ BSAVE   INC
    67                   	.DEPHASE
    68                   	END
  0 Error(s) Detected.
- 8320 Absolute Bytes. 855 Symbols Detected.
+ 8320 Absolute Bytes. 856 Symbols Detected.
 03     	CALL	PV1
-  131 DFED  36          	DB	SAVE
+  131 DFED  36          	DB	SAVE
+  132 DFEE  C9          	RET
+  133     

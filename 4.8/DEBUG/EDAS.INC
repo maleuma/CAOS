@@ -3,7 +3,7 @@
 ;	----------------------------------------	;
 ;	(und CAOS-Editor, Assembler und Reassembler)	;
 ;							;
-; EDAS.INC		ML-Soft 21.01.2018-04.03.2020	;
+; EDAS.INC		ML-Soft 21.01.2018-27.03.2023	;
 ;-------------------------------------------------------;
 
 NAME0	EQU	0000H		; Dateiname 8 Zeichen, Typ 3 Zeichen
@@ -32,8 +32,7 @@ LSTR	EQU	27		; max. Laenge Stringpuffer (26 Zeichen + 00)
 STAT	EQU	STRING+LSTR	; Merkzelle fuer verschiedene Einstellungen
 		;Bit 0 = 1 - Floppy vorhanden
 		;Bit 1 = 1 - DEP mit LW-Steuerung
-		;Bit 2 = 1 - Fehler bei Diskette
-		;	     oder MTAB-Ueberschreitung aufgetreten
+		;Bit 2 = 1 - Fehler bei MTAB-Ueberschreitung aufgetreten
 		;Bit 3 = 1 - Option 'S' merken
 		;Bit 4 = 1 - Ueberschreiben (0=Einfuegen)
 		;Bit 5 = 1 - Zeichensatz (0=IBM, 1=deutsch)
