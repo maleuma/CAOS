@@ -1,0 +1,52 @@
+TITLE	KC-Assembler
+;----------------------------------------------------------------
+;		Assembler-Ebene im USER-ROM CAOS 4.8		I
+;								I
+;		(c) ML-Soft 27.03.2023 - 03.04.2026		I
+;----------------------------------------------------------------
+	.Z80
+
+; CAOS-Vorblock:
+	DB	'ASM22   KCC'	; 11 Byte Dateiname
+	DS	5,0
+	DB	2		; 2 Argumente
+	DW	ROMBEG		; Anfangsadresse
+	DW	ROMEND		; Endadresse
+	DW	0
+	DS	95,0
+	DB	'03.04.2026'	; Datum
+;---------------
+	.PHASE	0C000H
+ROMBEG:
+	INCLUDE	ASM22.INC	; Assembler ASM 2.2
+
+;-------
+; Geraeteumschaltung und Anzeige fuer CAOS 4.8
+; DEVICE	Auflisten der installierten Treiber
+; DEVICE n	Umschaltung Geraet n (0..7)
+;
+	DW	0DDDDH
+	DB	'DEVICE',1
+	AND	A		; Parameter angegeben?
+	JR	Z,DRLIST	; nein, Treiber auflisten
+	LD	A,L
+	CP	8
+	JR	NC,DERR		; n > 8
+	CALL	SETDRV		; Treiber einstellen
+	RET	NC		; kein Fehler
+DERR:	CALL	PV1
+	DB	ERRM		; Treiber nicht aktiv
+	RET
+	;
+DRLIST:	LD	A,0FFh		; Treiber auflisten
+SETDRV:	CALL	PV1
+	DB	DEVICE		; 49H - neue Funktion seit CAOS 4.6
+	RET
+
+	INCLUDE	CAOSEX48.INC	; SETRO, SETWR, TIME, PRINT
+
+	ABSFILL	0E000h,<USER-ROM-Ende (ASM)>
+ROMEND:
+
+	.DEPHASE
+	END

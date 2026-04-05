@@ -1,10 +1,20 @@
-TITLE	ASM V2.1
+TITLE	ASM V2.2
 PAGE	80
 ;--------------------------------------------------------
-;	 Assemblerlisting von ASM Version 2.1		I
+;	 Assemblerlisting von ASM Version 2.2		I
 ;	 ------------------------------------		I
 ;					(c) ML-Soft	I
+; ASM 2.2:						I
+; 03.04.2026: HELP-Anzeige loescht Zeile nach Anzeige	I
+;	      DEVICE-Kommando ausgelagert, damit auch	I
+;	      fuer CAOS 4.8 tauglich			I
+; 22.03.2026: Fehlererkennung verbessert fuer PUSH/POP	I
+;	      LD Einzelregister,(nn) -> Fehler 9	I
+; 24.02.2026: verbesserte Fehlererkennung:		I
+;	      LD (nn),Einzelregister -> Fehler 9	I
+; 11.01.2026: DEVICE-Umschaltung mit Name fuer CAOS 4.9	I
 ; ASM 2.1:						I
+; 15.02.2024: CAOSEX49.INC statt CAOSEX.INC		I
 ; 02.01.2024: ORG-Fehlerpruefung nicht mehr im Pass 1	I
 ; 26.03.2023: Fehlerpruefung bei MC-Ausgabe eingebaut	I
 ; 18.02.2023: Adress-Ueberwachung bei Option 'O' und	I
@@ -161,23 +171,10 @@ PAGE	80
 
 ;-------
 IF1
-	.PRINTX	'ASM 2.1 mit HELP-Funktion.'
+	.PRINTX	'ASM 2.2 fuer CAOS 4.9 mit HELP-Funktion und FSE.'
 ENDIF
-;-------
-
-; CAOS-Vorblock:
-	DB	'ASM21   KCC'	; 11 Byte Dateiname
-	DS	5,0
-	DB	2		; 2 Argumente
-	DW	ROMBEG		; Anfangsadresse
-	DW	ROMEND		; Endadresse
-	DW	0
-	DS	95,0
-	DB	'02.01.2024'	; Datum
-;---------------
-	.PHASE	0C000H
 ;
-ROMBEG:	DW	TB		; String 1
+STRTAB:	DW	TB		; String 1
 ITAB:	DB	T1A		; Wert 1
 	DW	TO		; String 2
 	DB	MTOP		; Wert 2
@@ -299,7 +296,7 @@ NORAM:	LD	HL,IRM_OF	; von hier aus dem ROM
 	DB	OSTR
 	DB	ESC,'3',CLS	; Bild 1 loeschen
 	DB	ESC,'1',CLS	; Bild 0 loeschen
-	DB	LF,LF,">> CAOS-Assembler 2.1  ` ML 1997-2024 <<",0
+	DB	LF,LF,">> CAOS-Assembler 2.2  ` ML 1997-2026 <<",0
 	CALL	RAMSW		; RAM zuschalten, Hilfsprogramm kopieren
 	LD	HL,2808H	; linker Rand=8, rechter Rand=40
 	LD	(RANDL),HL	; fuer Editor setzen
@@ -330,7 +327,7 @@ RAM2:	LD	(MBOT),HL	; RAM-Ende
 INI1:	CALL	WIN0		; grosses Fenster
 	LD	A,6
 	LD	(CURSO+1),A	; Zeile 6
-	LD	DE,ROMBEG
+	LD	DE,STRTAB
 	LD	B,4		; 4 Zeilen
 INI2:	LD	A,(DE)
 	INC	DE
@@ -632,7 +629,7 @@ TNAME:	LD	HL,(CURSO)
 	;
 NONAM:	CALL	PV1
 	DB	OSTR
-	DB	'>> KC-ASM 2.1 << ',CR,LF,0
+	DB	'>> KC-ASM 2.2 << ',CR,LF,0
 	JR	FRE2		; Fenster regenerieren
 ;-------
 ; Anzeige des freien Speicherplatzes,
@@ -1536,7 +1533,11 @@ help1:	ld	a,2		; aktuelle Zeile loeschen
 	call	chr
 	call	pv1		; Text ausgeben
 	db	zkout
-	jp	lfcr		; naechste Zeile
+	call	pv1
+	db	ostr
+	db	lf,2,0		; naechste Zeile, geloescht
+	ret
+;	jp	lfcr
 	;
 HTTL:	DB	'Fehlercodes:',0
 HTAB:	DB	'1-Semikolon?'0
@@ -2138,12 +2139,12 @@ ASS24:	POP	BC
 	RET
 ;-------
 ; Programmverteiler:
-; PE:	C	UP-Nummer 0-15 in Bit 0..3
+; PE:	C	UP-Nummer 0-31 in Bit 0..4
 ;	B	Befehlsbyte in vorbereiteter Form
 ; VR:	DE, AF
 OPPV:	PUSH	HL
 	PUSH	BC
-	LD	A,0FH		; max. 00..0FH
+	LD	A,1FH		; max. 00..1FH
 	AND	C
 	LD	HL,UP0		; 1. Adresse
 	LD	DE,UPTAB	; Adressdifferenz-Tabelle
@@ -2228,33 +2229,44 @@ ERR_9:	CALL	ERRX		; Fehlercode eintragen
 ;
 ;*__*__*__*__*__*__*__*__*__*__*__*__*__
 ;
-; CCF, NEG, SCF, DAA, RLA, DI, EI, RLD, LDD, LDDR, CPD, POP, PUSH ...
+; mit Doppelregister:
+; PUSH, POP
 ;
-UP2:	PUSH	BC
-EDU14:	CALL	EDU40		; Operand analysieren
-	JR	Z,UP31		; kein Register erkannt
+UP2:	CALL	EDU40		; Operand analysieren
+	JR	Z,ERR_9		; kein Register erkannt
+	OR	A		; BC (oder auch B)?
+	JR	Z,UP33
+	CP	10H		; DE?
+	JR	Z,UP33
+	CP	20H		; HL, IX, IY?
+	JR	Z,UP33
 	CP	31H		; AF?
-	JR	Z,UP32		; Korrektur 31H -> 30H
-	CP	30H		; SP?
-	JR	NZ,UCBEB	; anderes Register erkannt!
-	POP	BC
-	LD	A,B		; vorbereiteter Opcode
-	AND	0FBH
-	CP	0C1H		; PUSH oder POP?
-	JR	Z,ERR_9		; nicht mit SP erlaubt!
-	PUSH	BC
-	LD	E,31H		; ergibt wieder A=30H fuer Register SP
+	JR	Z,UP32		; Korrektur 31H -> 30H fuer AF
+	JR	ERR_9		; Fehler 9 bei allen anderen Registern
+
+; mit Adresse
+; RST
+;
+UP3:	CALL	EDU40		; Operand analysieren
+	JR	NZ,ERR_9	; Register erkannt -> Fehler
 UP31:	LD	A,E		; Wert
 UP32:	DEC	A		; -1 (fuer RST n)
-UCBEB:	POP	BC
-	JP	ABOUT		; einarbeiten und ausgeben
+UP33:	JP	ABOUT		; einarbeiten und ausgeben
+
+; ohne weitere Angaben (mit und ohne Vorbyte ED):
+; CCF, CPL, DAA, DI, EI, EXX, HALT, NOP, SCF, INF, NEG, RETI, RETN, RLA, RLCA
+; RRA, RRCA, RLD, RRD, CPD, CPDR, CPI, CPIR, IND, INDR, INI, INIR, LDD, LDDR
+; LDI, LDIR, OTCL, OUTD, OUTI, OTDR, OTIR
+
+UP4:	DEC	B
+	JP	B_OUT		; vorbereiteten Opcode ausgeben
 ;
 ;*__*__*__*__*__*__*__*__*__*__*__*__*__
 ;
 ; Logik- und Arithmetikbefehle
 ; CP, ADC, ADD, DEC, AND, SBC, INC, OR, XOR, SUB
 ;
-UP3:	CALL	EDU40		; Operand analysieren
+UP5:	CALL	EDU40		; Operand analysieren
 	JR	NZ,EDU11	; Register erkannt
 ; Wert direkt nach Logikbefehl, also
 ; CP n, ADC n, ADD n, DEC n, AND n, SBC n, INC n, OR n, XOR n, SUB n
@@ -2276,7 +2288,7 @@ EDU12:	DEC	HL
 	CALL	GET
 	INC	HL
 	CP	','
-	JR	Z,UP3		; Komma danach, dann 2. Operanden benutzen
+	JR	Z,UP5		; Komma danach, dann 2. Operanden benutzen
 	LD	A,5
 	CP	B
 	LD	A,(REGC)	; Registercode
@@ -2306,19 +2318,24 @@ EDU13:	EX	DE,HL		; Quelltextpointer in DE merken
 	LD	A,B		; vorbereiteter OpCode
 	CP	40H		; SBC=42H, ADC=4AH
 	CALL	NC,ED_OUT	; Vorbyte ED ausgeben bei ADC und SBC
-	JR	UP2
+	CALL	EDU40		; Operand analysieren
+	JR	Z,UP31		; kein Register erkannt
+	CP	31H		; AF?
+	JR	Z,UP32		; Korrektur 31H -> 30H
+	JR	UP33		; einarbeiten und ausgeben
+
 ; Kurzform
 EDUX1:	LD	A,B		; vorbereiteter OpCode
 	CP	40H		; INC=03H, ADD=09H, DEC=0BH
 	CALL	NC,ED_OUT	; Vorbyte ED ausgeben, ausser bei ADD, INC, DEC
 	LD	A,(REGC)	; Registercode mitgeben
-	JP	ABOUT
+	JR	UP33
 ;
 ;*__*__*__*__*__*__*__*__*__*__*__*__*__
 ;
 ; IM
 ;
-UP4:	CALL	ARITH		; Wert berechnen (IM 0 ... 2)
+UP6:	CALL	ARITH		; Wert berechnen (IM 0 ... 2)
 	LD	A,E
 	CP	3
 	JR	C,UP51
@@ -2337,7 +2354,7 @@ UP51:	LD	DE,IMTAB	; Codes fuer IM-Befehle
 ;
 ; IN
 ;
-UP5:	CALL	EDU40		; 1. Operand analysieren
+UP7:	CALL	EDU40		; 1. Operand analysieren
 	LD	C,A		; Registercode fuer ED-Befehl
 	LD	A,(REGC)	; Registercode
 	INC	A		; Register erkannt?
@@ -2360,7 +2377,7 @@ EDU19:	CALL	ED_OUT		; Vorbyte ED ausgeben
 ;
 ; OUT
 ;
-UP6:	CALL	EDU40		; 1. Operand analysieren
+UP8:	CALL	EDU40		; 1. Operand analysieren
 	LD	A,(REGC)	; Registercode
 	CP	0FFH		; Register erkannt?
 	PUSH	AF
@@ -2378,7 +2395,7 @@ UP6:	CALL	EDU40		; 1. Operand analysieren
 ;
 ; RLC, RRC, RL, RR, SLA, SRA, SLS, SRL
 ;
-UP7:	LD	A,0CBH		; Vorbyte CB
+UP9:	LD	A,0CBH		; Vorbyte CB
 	CALL	A_OUT		; Code ausgeben
 	JP	BIT1		; weiter wie bei Bitbefehle
 ;
@@ -2387,7 +2404,7 @@ UP7:	LD	A,0CBH		; Vorbyte CB
 ; EX	EX AF,AF'	EX DE,HL
 ;	EX (SP),HL	EX (SP),IX	EX (SP),IY
 ;
-UP8:	CALL	EDU40		; 1. Operand analysieren
+UP10:	CALL	EDU40		; 1. Operand analysieren
 	CP	'('		; Klammer erkannt?
 	JR	NZ,UP91		; nein
 	LD	A,(REGC)	; Register in der Klammer
@@ -2421,7 +2438,7 @@ EDU1C:	JP	B_OUT		; Code in B ausgeben
 ;
 ; JP, CALL
 ;
-UP9:	CALL	TFLAG		; Bedingungscode holen
+UP11:	CALL	TFLAG		; Bedingungscode holen
 	JR	C,SKIP1		; nicht gefunden
 	CP	7		; M?
 	JR	NZ,SKIP4	; nein
@@ -2455,14 +2472,13 @@ SKIP5:	LD	A,B
 	CP	0C2H
 	JR	Z,SKIP6
 	LD	B,0CDH		; CALL
-SKIP6:	LD	A,B
-	JP	EDU30
+SKIP6:	JP	EDU7
 ;
 ;*__*__*__*__*__*__*__*__*__*__*__*__*__
 ;
 ; RET, RET (cc)
 ;
-UP10:	CALL	TFLAG		; Bedingungscode holen
+UP12:	CALL	TFLAG		; Bedingungscode holen
 	JP	NC,ASBOT	; einschieben und ausgeben
 	CALL	ARITH		; Wert berechnen
 	JR	NZ,ERR_A	; Fehler 'A', da Wert gefunden!
@@ -2473,7 +2489,7 @@ UP10:	CALL	TFLAG		; Bedingungscode holen
 ;
 ; JR, DJNZ
 ;
-UP11:	CALL	TFLAG		; Bedingungscode holen
+UP13:	CALL	TFLAG		; Bedingungscode holen
 	JR	NC,JR1		; gueltiger Bedingungscode
 	CALL	B_OUT		; unbedingten Code ausgeben
 	JR	JR2
@@ -2507,7 +2523,7 @@ JR3:	LD	A,L
 ;
 ; DEFB, DEFW, DEFS, DB, DW, DS
 ;
-UP12:	call	SPCTB		; naechstes Zeichen holen
+UP14:	call	SPCTB		; naechstes Zeichen holen
 	cp	' '
 	jr	nc,DB1
 ERR_4:	CALL	ERRX		; in (NERR) eintragen
@@ -2525,7 +2541,7 @@ DB1:	PUSH	BC
 DB2:	CP	','		; folgt Operand?
 	RET	NZ		; nein
 	INC	HL		; nach Komma
-	JR	UP12		; und noch einmal
+	JR	UP14		; und noch einmal
 ;
 DEFWS:	CALL	EDU40		; Operand analysieren
 	POP	BC
@@ -2566,7 +2582,7 @@ DS0:	LD	A,E		; Low = Code
 ;
 ; DEFM
 ;
-UP13:	CALL	SPCTB		; naechstes ASCII-Zeichen
+UP15:	CALL	SPCTB		; naechstes ASCII-Zeichen
 	CP	27H
 	JR	NZ,ERR_8
 	CALL	STR		; String auswerten
@@ -2617,7 +2633,7 @@ STR2:	CALL	SPCTB
 ;
 ; ORG
 ;
-UP14:	CALL	ARITH		; Wert berechnen
+UP16:	CALL	ARITH		; Wert berechnen
 ;02.01.2024: Fehlerpruefung nicht mehr in Pass 1
 	LD	A,(OPT)
 	RLA			; Pass '2'?
@@ -2633,7 +2649,7 @@ UP14A:	PUSH	DE		; ermittelter Wert
 ;
 ; LD
 ;
-UP15:	PUSH	HL
+UP17:	PUSH	HL
 	XOR	A		; Indexspeicher
 	LD	(M78),A
 	CALL	EDU40		; 1. Operand analysieren
@@ -2642,7 +2658,7 @@ UP15:	PUSH	HL
 	LD	A,(DDFD)
 	LD	B,A		; Index merken
 	CALL	EDU40		; 2. Operand analysieren
-	JR	Z,EDU2		; Klammer oder kein Register
+	JP	Z,EDU2		; Klammer oder kein Register
 	LD	E,A		; 2. Register
 	ADD	A,C		; + 1. Register
 	CP	0FH
@@ -2700,21 +2716,33 @@ EDU4:	LD	A,(KLAM)
 	CALL	EDU40		; 2. Operand analysieren
 	LD	(NUMB),BC
 	CP	7		; Register A?
-	JR	NZ,EDU5
-	LD	A,32H		; LD (nn),A
-EDU30:	CALL	A_OUT		; Code ausgeben
-	JR	EDU6		; Wert ausgeben
-;
-EDU5:	CP	31H		; AF?
-	JP	Z,ERR_9
-	CP	20H		; (HL)?
+	LD	B,32H		; LD (nn),A
+	JR	Z,EDU7		; ohne Vorbyte ausgeben
+	CP	20H		; Register HL, IX oder IY?
 	LD	B,22H		; LD (nn),HL
-	JR	Z,EDU7
+	JR	Z,EDU7		; ohne Vorbyte ausgeben
+;
+; LD (nn),Doppelregister
+;
+; 23.02.2026: hier wurde auch ED ausgegeben bei LD (nn),Einzelregister
+; bei Doppelregister ist A=0(BC), 10h(DE), 20h(HL), 30h(SP) und OK
+; bei Einzelregister ist A=0(B), 1(C), 2(D), 3(E), 4(H) oder 5(L) und falsch
+; Unterscheidung BC und B am Registercode nicht moeglich, da beides mit 0
+; gekennzeichnet ist. Deshalb wird nun zusaetzlich das Kennbyte getestet
+;
+EDU5:	LD	B,A		; Registercode
+	AND	0FH		; 00H=BC, 10H=DE, 20H=HL und 30H=SP zulaessig
+	JP	NZ,ERR_9	; Register unzulaessig
+	LD	A,(REGNR)	; Registerkennbyte (1 bei Einzelregister B)
+	DEC	A		; Einzelregister B?
+	JP	Z,ERR_9		; ebenfalls unzulaessig
+	LD	A,B		; Registercode
 	CALL	ED_OUT		; Vorbyte ED ausgeben
-	ADD	A,43H
-	LD	B,A
+	ADD	A,43H		; ED 43 bei LD (nn),BC
+	LD	B,A		; ED 53 bei LD (nn),DE
+				; ED 73 bei LD (nn),SP
 EDU7:	CALL	B_OUT		; Code ausgeben
-	JR	EDU6		; Wert ausgeben
+	JR	EDU6		; Wert von (NUMB) ausgeben
 
 ; LD Register,n
 ; LD Register,(nn)
@@ -2723,16 +2751,26 @@ EDU7:	CALL	B_OUT		; Code ausgeben
 ; LD Doppelregister,(nn)
 EDU2:	POP	HL
 	CP	'('		; Klammer?
-	JR	NZ,EDU8
+	JR	NZ,EDU8		; nein
+; LD Register,(nn)
+; LD Register,(dd)
+; LD Doppelregister,(nn)
 	LD	(M78),A
 	LD	A,(REGC)	; Registercode
 	CP	0FFH		; Register erkannt?
-	JR	Z,EDU8		; nein
-	CP	20H
-	JR	NC,ERRR
+	JR	Z,EDU8a		; nein, dann Adresse in Klammer?
+	CP	20H		; Doppelregister?
+	JP	NC,ERRR
 	ADD	A,0AH		; LD A,(BC) oder LD A,(DE)
 EDU3:	JP	A_OUT		; Code ausgeben
 
+; LD A,(nn)
+; LD Doppelregister,(nn)
+EDU8a:	LD	A,C		; 1. Registercode
+	CP	7		; A?
+	JR	Z,EDU8		; OK
+	AND	11001111b
+	JR	NZ,ERRR		; nicht BC, DE, HL, SP, IX oder IY
 ; LD Register,n
 ; LD Doppelregister,nn
 EDU8:	CALL	ARITH		; Wert berechnen
@@ -2745,7 +2783,7 @@ EDU8:	CALL	ARITH		; Wert berechnen
 	LD	A,3AH		; LD A,(nn)
 	CALL	A_OUT		; Code ausgeben
 	CALL	ARITH		; Wert berechnen
-EDU6:	JP	BCOUT		; Wert ausgeben
+EDU6:	JP	BCOUT		; Wert von (NUMB) ausgeben
 ;
 EDU9:	CP	31H		; AF?
 	JR	Z,ERRR
@@ -2779,7 +2817,7 @@ EDU0D:	CALL	ED_OUT		; Vorbyte ED ausgeben
 EDU0C:	LD	A,C
 	POP	BC
 	CALL	ABOUT
-	JR	EDU6		; Wert ausgeben
+	JR	EDU6		; Wert von (NUMB) ausgeben
 
 ; Doppelregister oder I oder R bei LD-Befehl dabei:
 EDU31:	POP	HL		; nochmals von vorn beginnen
@@ -2856,6 +2894,7 @@ IOFFS:	LD	A,(DDFD)
 	RET
 ;-------
 ; Vorbyte 0EDH ausgeben
+; VR:	IY
 ED_OUT:	PUSH	AF
 	LD	A,0EDH
 	CALL	A_OUT
@@ -3309,7 +3348,7 @@ REG:	PUSH	AF		; 1. Zeichen retten
 
 ;Test auf Einzelregister:
 REG_1:	LD	HL,RGTAB1	; Registertabelle
-	LD	BC,9		; 9 Einzelregister
+	LD	BC,9		; 9 Einzelregister (I,R,B,C,D,E,H,L,A)
 	CPIR
 	JP	NZ,MRK_4	; nicht gefunden -> Marke?
 	SLA	C		; *2
@@ -3318,12 +3357,12 @@ REG_1:	LD	HL,RGTAB1	; Registertabelle
 ; Test auf Doppelregister:
 REG_2:	INC	DE
 	LD	HL,RGTAB2	; Registertabelle von hinten
-	LD	BC,22		; 11 Doppelregisterpaare
+	LD	BC,22		; 11 Doppelregisterpaare (BC,DE,HL,AF,SP,IX,IY,HX,HY,LX,LY)
 REG1:	CPD			; Suche 2. Zeichen
 	JR	Z,REG2		; gefunden
 REG4:	CPD
 	JP	PO,MRK_2	; Tabellenende, Marke?
-	JR	REG1
+	JR	REG1		; weiter testen
 ;
 REG2:	LD	B,A		; 2. Zeichen
 	CALL	GETDE		; 2. Folgezeichen
@@ -3414,20 +3453,22 @@ TAB_F:	DB	'NZ'	; A=0
 ; Adressdifferenztabelle:		alt: TAB_3
 UPTAB:	DB	UP0-UP0		; 0	END
 	DB	UP1-UP0		; 1	BIT, RES, SET
-	DB	UP2-UP1		; 2	CCF, NEG, SCF, DAA, RLA, DI, EI, RLD, LDD, LDDR, CPD, ...
-	DB	UP3-UP2		; 3	CP, ADC, ADD, DEC, AND, SBC, INC, OR, XOR, SUB
-	DB	UP4-UP3		; 4	IM
-	DB	UP5-UP4		; 5	IN
-	DB	UP6-UP5		; 6	OUT
-	DB	UP7-UP6		; 7	RLC, RRC, RL, RR, SLA, SRA, SLS, SRL
-	DB	UP8-UP7		; 8	EX
-	DB	UP9-UP8		; 9	JP, CALL
-	DB	UP10-UP9	; 10	RET, RET cc
-	DB	UP11-UP10	; 11	JR, DJNZ
-	DB	UP12-UP11	; 12	DEFB, DEFW, DEFS, DB, DW, DS
-	DB	UP13-UP12	; 13	DEFM
-	DB	UP14-UP13	; 14	ORG
-	DB	UP15-UP14	; 15	LD
+	DB	UP2-UP1		; 2	PUSH, POP
+	DB	UP3-UP2		; 3	RST
+	DB	UP4-UP3		; 4	CCF, NEG, SCF, DAA, RLA, DI, EI, RLD, LDD, LDDR, CPD, ...
+	DB	UP5-UP4		; 5	CP, ADC, ADD, DEC, AND, SBC, INC, OR, XOR, SUB
+	DB	UP6-UP5		; 6	IM
+	DB	UP7-UP6		; 7	IN
+	DB	UP8-UP7		; 8	OUT
+	DB	UP9-UP8		; 9	RLC, RRC, RL, RR, SLA, SRA, SLS, SRL
+	DB	UP10-UP9	; 10	EX
+	DB	UP11-UP10	; 11	JP, CALL
+	DB	UP12-UP11	; 12	RET, RET cc
+	DB	UP13-UP12	; 13	JR, DJNZ
+	DB	UP14-UP13	; 14	DEFB, DEFW, DEFS, DB, DW, DS
+	DB	UP15-UP14	; 15	DEFM
+	DB	UP16-UP15	; 16	ORG
+	DB	UP17-UP16	; 17	LD
 
 ;-------
 ; Registertabelle:
@@ -3465,87 +3506,87 @@ RGTAB3:	DB	7	; 00=A		alt: TAB_7
 ;		 |   Quersumme
 ;		 |	|  vorbereiteter OpCode
 ;		 |	|   |   UP-Nummer (Bit 0-3), Vorbyte ED (Bit 7=1)
-HQTAB:	DB	 1CH, 10H, 00H, 15	; 40 LD		2522
-	DB	 0AH, 06H, 01H, 12	; 14 DB		1414
-	DB	 40H, 1CH,0C4H,  9	; 05 CALL	1265
-	DB	 26H, 1CH, 18H, 11	; 39 JR		1193
-	DB	 43H, 1AH, 04H,  3	; 32 INC	 655
-	DB	 16H, 13H,0B8H,  3	; 07 CP		 491
-	DB	 66H, 2BH,0C0H, 10	; 58 RET	 452
+HQTAB:	DB	 1CH, 10H, 00H, 17	; 40 LD		2522
+	DB	 0AH, 06H, 01H, 14	; 14 DB		1414
+	DB	 40H, 1CH,0C4H, 11	; 05 CALL	1265
+	DB	 26H, 1CH, 18H, 13	; 39 JR		1193
+	DB	 43H, 1AH, 04H,  5	; 32 INC	 655
+	DB	 16H, 13H,0B8H,  5	; 07 CP		 491
+	DB	 66H, 2BH,0C0H, 12	; 58 RET	 452
 	DB	 4BH, 2BH, 00H,  0	; 26 EQU	 450
 	DB	 2EH, 1FH, 40H,  1	; 04 BIT	 431
 	DB	 02H, 40H,0C5H,  2	; 56 PUSH	 463
 	DB	 6EH, 2FH,0C1H,  2	; 55 POP	 417
-	DB	 1FH, 1BH, 03H, 12	; 23 DW		 284
-	DB	 24H, 13H,0A0H,  3	; 03 AND	 237
-	DB	 24H, 1AH,0C2H,  9	; 38 JP		 221
+	DB	 1FH, 1BH, 03H, 14	; 23 DW		 284
+	DB	 24H, 13H,0A0H,  5	; 03 AND	 237
+	DB	 24H, 1AH,0C2H, 11	; 38 JP		 221
 ; ab hier in alphabetischer Reihenfolge
-	DB	 0FH, 08H, 88H,  3	; 01 ADC
-	DB	 10H, 09H, 80H,  3	; 02 ADD
-	DB	 18H, 0CH, 40H,  2	; 06 CCF
-	DB	 30H, 17H,0AAH,  2+80H	; 08 CPD
-	DB	 72H, 29H,0BAH,  2+80H	; 09 CPDR
-	DB	 38H, 1FH, 30H,  2	; 10 CPL
-	DB	 35H, 1CH,0A2H,  2+80H	; 11 CPI
-	DB	 7CH, 2EH,0B2H,  2+80H	; 12 CPIR
-	DB	 13H, 06H, 28H,  2	; 13 DAA
-	DB	 1DH, 0CH, 05H,  3	; 15 DEC
-	DB	 42H, 11H, 02H, 12	; 16 DEFB
-	DB	 4DH, 1CH, 00H, 13	; 17 DEFM
-	DB	 53H, 22H, 04H, 12	; 18 DEFS
-	DB	 57H, 26H, 03H, 12	; 19 DEFW
-	DB	 11H, 0DH,0F4H,  2	; 20 DI
-	DB	 7EH, 36H, 10H, 11	; 21 DJNZ
-	DB	 1BH, 17H, 04H, 12	; 22 DS
-	DB	 13H, 0EH,0FCH,  2	; 24 EI
+	DB	 0FH, 08H, 88H,  5	; 01 ADC
+	DB	 10H, 09H, 80H,  5	; 02 ADD
+	DB	 18H, 0CH, 40H,  4	; 06 CCF
+	DB	 30H, 17H,0AAH,  4+80H	; 08 CPD
+	DB	 72H, 29H,0BAH,  4+80H	; 09 CPDR
+	DB	 38H, 1FH, 30H,  4	; 10 CPL
+	DB	 35H, 1CH,0A2H,  4+80H	; 11 CPI
+	DB	 7CH, 2EH,0B2H,  4+80H	; 12 CPIR
+	DB	 13H, 06H, 28H,  4	; 13 DAA
+	DB	 1DH, 0CH, 05H,  5	; 15 DEC
+	DB	 42H, 11H, 02H, 14	; 16 DEFB
+	DB	 4DH, 1CH, 00H, 15	; 17 DEFM
+	DB	 53H, 22H, 04H, 14	; 18 DEFS
+	DB	 57H, 26H, 03H, 14	; 19 DEFW
+	DB	 11H, 0DH,0F4H,  4	; 20 DI
+	DB	 7EH, 36H, 10H, 13	; 21 DJNZ
+	DB	 1BH, 17H, 04H, 14	; 22 DS
+	DB	 13H, 0EH,0FCH,  4	; 24 EI
 	DB	 34H, 17H, 00H,  0	; 25 END
-	DB	 22H, 1DH, 00H,  8	; 27 EX
-	DB	 5CH, 35H,0DAH,  2	; 28 EXX
-	DB	 70H, 29H, 77H,  2	; 29 HALT
-	DB	 1FH, 16H, 47H,  4+80H	; 30 IM
-	DB	 20H, 17H, 40H,  5	; 31 IN
-	DB	 44H, 1BH,0ABH,  2+80H	; 33 IND
-	DB	 9AH, 2DH,0BBH,  2+80H	; 34 INDR
-	DB	 46H, 1DH, 71H,  2+80H	; 35 INF
-	DB	 49H, 20H,0A3H,  2+80H	; 36 INI
-	DB	0A4H, 32H,0B3H,  2+80H	; 37 INIR
-	DB	 3CH, 14H,0A9H,  2+80H	; 41 LDD
-	DB	 8AH, 26H,0B9H,  2+80H	; 42 LDDR
-	DB	 41H, 19H,0A1H,  2+80H	; 43 LDI
-	DB	 94H, 2BH,0B1H,  2+80H	; 44 LDIR
-	DB	 49H, 1AH, 45H,  2+80H	; 45 NEG
-	DB	 66H, 2DH, 01H,  2	; 46 NOP
-	DB	 30H, 21H,0B0H,  3	; 47 OR
-	DB	 67H, 28H, 00H, 14	; 48 ORG
-	DB	0DAH, 32H, 72H,  2+80H	; 49 OTCL
-	DB	 7AH, 38H, 41H,  6	; 50 OUT
-	DB	0F8H, 3CH,0ACH,  2+80H	; 51 OUTD
-	DB	0FDH, 41H,0A4H,  2+80H	; 52 OUTI
-	DB	0E2H, 39H,0BCH,  2+80H	; 53 OTDR
-	DB	0ECH, 3EH,0B4H,  2+80H	; 54 OTIR
+	DB	 22H, 1DH, 00H, 10	; 27 EX
+	DB	 5CH, 35H,0DAH,  4	; 28 EXX
+	DB	 70H, 29H, 77H,  4	; 29 HALT
+	DB	 1FH, 16H, 47H,  6+80H	; 30 IM
+	DB	 20H, 17H, 40H,  7	; 31 IN
+	DB	 44H, 1BH,0ABH,  4+80H	; 33 IND
+	DB	 9AH, 2DH,0BBH,  4+80H	; 34 INDR
+	DB	 46H, 1DH, 71H,  4+80H	; 35 INF
+	DB	 49H, 20H,0A3H,  4+80H	; 36 INI
+	DB	0A4H, 32H,0B3H,  4+80H	; 37 INIR
+	DB	 3CH, 14H,0A9H,  4+80H	; 41 LDD
+	DB	 8AH, 26H,0B9H,  4+80H	; 42 LDDR
+	DB	 41H, 19H,0A1H,  4+80H	; 43 LDI
+	DB	 94H, 2BH,0B1H,  4+80H	; 44 LDIR
+	DB	 49H, 1AH, 45H,  4+80H	; 45 NEG
+	DB	 66H, 2DH, 01H,  4	; 46 NOP
+	DB	 30H, 21H,0B0H,  5	; 47 OR
+	DB	 67H, 28H, 00H, 16	; 48 ORG
+	DB	0DAH, 32H, 72H,  4+80H	; 49 OTCL
+	DB	 7AH, 38H, 41H,  8	; 50 OUT
+	DB	0F8H, 3CH,0ACH,  4+80H	; 51 OUTD
+	DB	0FDH, 41H,0A4H,  4+80H	; 52 OUTI
+	DB	0E2H, 39H,0BCH,  4+80H	; 53 OTDR
+	DB	0ECH, 3EH,0B4H,  4+80H	; 54 OTIR
 	DB	 65H, 2AH, 80H,  1	; 57 RES
-	DB	0D5H, 34H, 4EH,  2+80H	; 59 RETI
-	DB	0DAH, 39H, 46H,  2+80H	; 60 RETN
-	DB	 30H, 1EH, 10H,  7	; 61 RL
-	DB	 61H, 1FH, 18H,  2	; 62 RLA
-	DB	 63H, 21H, 00H,  7	; 63 RLC
-	DB	0C7H, 22H, 08H,  2	; 64 RLCA
-	DB	 64H, 22H, 70H,  2+80H	; 65 RLD
-	DB	 36H, 24H, 18H,  7	; 66 RR
-	DB	 6DH, 25H, 20H,  2	; 67 RRA
-	DB	 6FH, 27H, 08H,  7	; 68 RRC
-	DB	0DFH, 28H, 10H,  2	; 69 RRCA
-	DB	 70H, 28H, 68H,  2+80H	; 70 RRD
-	DB	 82H, 39H,0C8H,  2	; 71 RST
-	DB	 53H, 18H, 98H,  3	; 72 SBC
-	DB	 58H, 1CH, 38H,  2	; 73 SCF
+	DB	0D5H, 34H, 4EH,  4+80H	; 59 RETI
+	DB	0DAH, 39H, 46H,  4+80H	; 60 RETN
+	DB	 30H, 1EH, 10H,  9	; 61 RL
+	DB	 61H, 1FH, 18H,  4	; 62 RLA
+	DB	 63H, 21H, 00H,  9	; 63 RLC
+	DB	0C7H, 22H, 08H,  4	; 64 RLCA
+	DB	 64H, 22H, 70H,  4+80H	; 65 RLD
+	DB	 36H, 24H, 18H,  9	; 66 RR
+	DB	 6DH, 25H, 20H,  4	; 67 RRA
+	DB	 6FH, 27H, 08H,  9	; 68 RRC
+	DB	0DFH, 28H, 10H,  4	; 69 RRCA
+	DB	 70H, 28H, 68H,  4+80H	; 70 RRD
+	DB	 82H, 39H,0C8H,  3	; 71 RST
+	DB	 53H, 18H, 98H,  5	; 72 SBC
+	DB	 58H, 1CH, 38H,  4	; 73 SCF
 	DB	 6AH, 2CH,0C0H,  1	; 74 SET
-	DB	 65H, 20H, 20H,  7	; 75 SLA
-	DB	 77H, 32H, 30H,  7	; 76 SLS
-	DB	 71H, 26H, 28H,  7	; 77 SRA
-	DB	 7CH, 31H, 38H,  7	; 78 SRL
-	DB	 78H, 2AH, 90H,  3	; 79 SUB
-	DB	 90H, 39H,0A8H,  3	; 80 XOR
+	DB	 65H, 20H, 20H,  9	; 75 SLA
+	DB	 77H, 32H, 30H,  9	; 76 SLS
+	DB	 71H, 26H, 28H,  9	; 77 SRA
+	DB	 7CH, 31H, 38H,  9	; 78 SRL
+	DB	 78H, 2AH, 90H,  5	; 79 SUB
+	DB	 90H, 39H,0A8H,  5	; 80 XOR
 HQTABE:
 ;-------
 ; Test auf ASCII-Zeichen eines Zahlensystems:
@@ -3825,36 +3866,3 @@ DEVEX	EQU	$
 	CALL	PV7
 	DB	10		; Datei loeschen
 	RET
-
-;-------
-; Geraeteumschaltung und Anzeige
-; DEVICE	Auflisten der installierten Treiber
-; DEVICE n	Umschaltung Geraet n (0..7)
-;
-	DW	0DDDDH
-	DB	'DEVICE',1
-	AND	A		; Parameter angegeben?
-	JR	Z,DRLIST	; nein, Treiber auflisten
-	LD	A,L
-	CP	8
-	JR	NC,DERR		; n > 8
-	CALL	SETDRV		; Treiber einstellen
-	RET	NC		; kein Fehler
-DERR:	CALL	PV1
-	DB	ERRM		; Treiber nicht aktiv
-	RET
-	;
-DRLIST:	LD	A,0FFh		; Treiber auflisten
-SETDRV:	CALL	PV1
-	DB	DEVICE		; 49H - neue Funktion seit CAOS 4.6
-	RET
-
-; hier noch ein paar ausgelagerte CAOS-Programmteile:
-
-	INCLUDE	CAOSEX.INC	; SETRO, SETWR, TIME, PRINT
-
-	ABSFILL	0E000h,<USER-ROM-Ende (ASM)>
-
-ROMEND:
-	.DEPHASE
-	END

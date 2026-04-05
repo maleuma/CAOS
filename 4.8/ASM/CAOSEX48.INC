@@ -1,5 +1,5 @@
 ;*****************************************
-;**	CAOS 4.7	Erweiterungen	**
+;**	CAOS 4.8	Erweiterungen	**
 ;**					**
 ;** Kommandos:				**
 ;**	SETRO, SETWR, TIME, PRINT	**

@@ -241,9 +241,9 @@ CAOS48  Z80
   227         4000      AADR	EQU	4000H		; AADR
   228         8000      EADR	EQU	8000H		; EADR+1
   229                   
-  230                   	INCLUDE	VORBLOCK.INC	; CAOS-Vorblock
+  230                   	INCLUDE	VORBL48.INC	; CAOS-Vorblock
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   5
-VORBLOCKINC
+VORBL48 INC
 
     1                   ; Erzeugen des CAOS-Vorblock fuer CAOS 4.8 und USER-ROM:
     2                   
@@ -11454,4 +11454,4 @@ ZSKLEIN INC
     2                   	END
  0 Error(s) Detected.
  16512 Absolute Bytes. 1305 Symbols Detected.
-0 00 CC CC 	DB	000H, 000H, 0CCH, 0CCH, 0CCH, 078H, 03
+0 00 CC CC 	DB	000H, 000H, 0CCH, 0CCH, 0CCH, 078H, 030
