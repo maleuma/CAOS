@@ -1428,7 +1428,10 @@
           C8A4
           C8A4                  ;Rest frei
           C8A4
-          C8A4                  END
+          C8A4                  ORG	0CFFAH	; Vergleichspruefsummen CRC16
+	  CFFA 5C98		DW	985CH	; CAOS ROM-C C000-CFF9H
+	  CFFC 011C		DW	1C01H	; BASIC-ROM  C000-DFFFH
+	  CFFE D579		DW	79D5H	; CAOS ROM-E E000-FFFFH
 
         Errors: 0000
         End+1 : C8A4
@@ -2212,7 +2215,7 @@
           E4AA F3               DI
           E4AB ED79             OUT     (C),A
           E4AD DB88             IN      A,88H
-          E4AF E67E             AND     7EH
+          E4AF E67E             AND     7EH	;ROM-E und USER-ROM aus
           E4B1 C3B4B7           JP      BJUMP   ;in IRM
           E4B4
           E4B4

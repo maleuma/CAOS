@@ -1434,7 +1434,13 @@
   C883 32DCB7           LD      (DTNR),A
   C886 C9               RET
   C887           
-  C887                  END
+  C887                  ;Rest frei
+  C887
+  C887                  ORG	0CFFAH
+  CFFA			; Vergleichspruefsummen CRC16
+  CFFA 3766		DW	6637H	; CAOS ROM-C C000-CFF9H
+  CFFC 011C		DW	1C01H	; BASIC-ROM  C000-DFFFH
+  CFFE CE2B		DW	2BCEH	; CAOS ROM-E E000-FFFFH
 
 Errors: 0
 End+1 : C887 
