@@ -135,7 +135,7 @@ Y	  DEFL	0
 	DS	5,0
 	DB	2		; 2 Adressen
 	DW	4000H		; AADR
-	DW	8000H		; EADR+1
+	DW	6000H		; EADR+1
 	DS	107,0
 
 ;-------------------------------------------------------
@@ -2714,8 +2714,8 @@ INLI1:	CALL	INTB
 	CALL	CRLF
 	LD	DE,(CURSO)
 	CALL	DABR
-	LD	DE,-40
-	ADD	HL,DE
+	LD	DE,-40		; eine Zeile zurueck
+	ADD	HL,DE		; (funktioniert aber nicht bei PAGE-Wechsel)
 	EX	DE,HL
 	POP	HL
 	RET

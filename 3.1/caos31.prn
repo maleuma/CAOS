@@ -144,7 +144,7 @@ CAOS31  Z80
   135 010B  00 00 00 00 	DS	5,0
   136 0110  02          	DB	2		; 2 Adressen
   137 0111  4000        	DW	4000H		; AADR
-  138 0113  8000        	DW	8000H		; EADR+1
+  138 0113  6000        	DW	6000H		; EADR+1
   139 0115  00 00 00 00 	DS	107,0
   140                   
   141                   ;-------------------------------------------------------
@@ -3033,8 +3033,8 @@ CAOS31  Z80
  2714 F2AF  CD F2D7     	CALL	CRLF
  2715 F2B2  ED 5B B7A0  	LD	DE,(CURSO)
  2716 F2B6  CD E024     	CALL	DABR
- 2717 F2B9  11 FFD8     	LD	DE,-40
- 2718 F2BC  19          	ADD	HL,DE
+ 2717 F2B9  11 FFD8     	LD	DE,-40		; eine Zeile zurueck
+ 2718 F2BC  19          	ADD	HL,DE		; (funktioniert aber nicht bei PAGE-Wechsel)
  2719 F2BD  EB          	EX	DE,HL
  2720 F2BE  E1          	POP	HL
  2721 F2BF  C9          	RET
@@ -4825,4 +4825,4 @@ CAOS31  Z80
  0 Error(s) Detected.
  8320 Absolute Bytes. 544 Symbols Detected.
 03CH, 03CH, 018H, 000H	; 76h
- 4404 FF
+ 4404 FFB8  00 00 63 63 	DB	000H, 000H, 063H, 063H, 06BH, 07FH, 036H
