@@ -1,0 +1,23 @@
+;*************************************************
+;**						**
+;**	CAOS 3.5   (c) KC-Club 2026		**
+;**						**
+;*************************************************
+;**						**
+;**	Vorblock fuer ROM mit CAOS 3.1+3.5	**
+;**				28.07.2026	**
+;*************************************************
+
+	DB	'CAOS35  KCC'
+	DS	5,0
+	DB	2		; 2 Adressen
+	DW	4000H		; AADR
+	DW	8000H		; EADR+1
+	DS	97,0
+	DB	'28.07.2026'	; Versionsdatum
+
+; Der CAOS-ROM besitzt 2 Ebenen:
+; Ebene 0	CAOS 3.1	; 1:1 wie im Original BM604
+; Ebene 1	CAOS 3.5	; neues System, startet bei PWRON + RESET
+
+	END

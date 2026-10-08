@@ -1,0 +1,48 @@
+; Zusammensetzen der Einzeldateien zu CAOS 3.5
+; interne Version
+; (C) Mario Leubner, 10.05.2019 - 15.08.2026
+;-------------------------------------------------
+DATUM	MACRO
+	DB	'15.08.2026'	; Versionsdatum nur hier aendern!
+	ENDM
+
+; CAOS-Vorblock:
+	ORG	0E000H-128
+	DB	'CAOS35iVKCC'
+	DS	5,0
+	DB	2		; 2 Adressen
+	DW	4000H		; AADR
+	DW	6000H		; EADR+1
+	DS	97,0
+	DATUM
+;-------------------------------------------------
+V24	EQU	1		; 0 erzeugt Centronics-Version (M001)
+				; 1 erzeugt V.24-Version (M003)
+DUENN	EQU	1		; 0 = Zeichensatz klassisch, 1 = Zeichensatz duenn
+SEEK	EQU	1		; 0 erzeugt Version mit AUTOSWITCH USER-ROM
+				; 1 erzeugt Version mit Bytesuche im Speicher
+; Portadressen
+SIO	EQU	08H		; M003 SIO PORT A
+CTC	EQU	0CH		; M003 SIO-CTC
+
+; StrukturByte des Interface-Moduls
+UMODL	EQU	1EEH		; M003 V24
+
+include	equ35.inc		; CAOS-Vereinbarungen
+include	caos35e.asm		; ROM-E
+LARGE:
+	IF DUENN
+include	EE00EFFF.inc		; Zeichensatz schmal (aus CAOS 4.8)
+	else
+include zsgr35.inc		; Zeichensatz Grossbuchstaben
+	endif
+include	caos35f.asm		; ROM-F
+SMALL:
+	IF DUENN
+include	FE00FFFF.inc		; Zeichensatz schmal (aus CAOS 4.8)
+	ELSE
+include zskl35.inc		; Zeichensatz Kleinbuchstaben
+	ENDIF
+
+	END
+
