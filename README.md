@@ -10,6 +10,10 @@ Standardbetriebssystem fuer den KC85/3 von MPM
 ### CAOS 3.4
 schnelles Betriebssystem fuer den KC85/3 mit Bildschirmroutinen wie KC85/4
 
+### CAOS 3.5
+Weiterentwicklung von CAOS 3.4i, also der internen Version fuer den KC85/3.
+mit voller Unterstuetzung eines 32K USER-ROM und schmalem Zeichensatz
+
 ### CAOS 4.1
 Originalbetriebssystem von MPM, erste bekannte Version fuer den KC85/4
 
@@ -39,9 +43,9 @@ DEVICE-Umschaltung USB hinzugefuegt, wahlweise 80-Zeichen-Editor oder FORTH
 - dezimale Argumente bei WINDOW, COLOR und dem User-Bereich im Kommando CD
 
 ### CAOS 4.9
-${\color{red}ACHTUNG! \space CAOS \space 4.9 \space benoetigt \space 16K \space ROM:C \space und \space 16K \space ROM:E \space (Flash \space ROM \space Erweiterung)}$
 - Fullscreen-Editor fuer BASIC (ausgelagert in USER-ROM)
-- 16Bit-SWITCH fuer Module, Erkennung Flash-ROM-Groesse bei M044
-- Time-Kommando erkennt RTC auf Portadresse 55h
-- TAPE-Directory listet nun auch CP/M-Dateien auf mit ARGN=1
-- Erweiterung Modulcheck bei M011 auf mehrere Ebenen
+- 16Bit-SWITCH fuer Module
+- DEVICE-Umschaltung mit Name statt Nummer
+- Erkennung Flash-ROM-Groesse bei M044
+- Time-Kommando erkennt RTC auf Portadresse 55h (M064)
+- Erweiterung Modulcheck auf mehrere Ebenen (z.B. M011 2* 64K RAM)
