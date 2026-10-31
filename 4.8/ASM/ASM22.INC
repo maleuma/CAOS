@@ -171,7 +171,7 @@ PAGE	80
 
 ;-------
 IF1
-	.PRINTX	'ASM 2.2 fuer CAOS 4.9 mit HELP-Funktion und FSE.'
+	.PRINTX	'ASM 2.2 fuer CAOS 4.8 und 4.9 mit HELP-Funktion'
 ENDIF
 ;
 STRTAB:	DW	TB		; String 1
