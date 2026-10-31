@@ -1,0 +1,19 @@
+;*************************************************
+;**						**
+;**	CAOS 4.9   (c) KC-Club 2020		**
+;**						**
+;*************************************************
+;**						**
+;**	Vorblock fuer CAOS-ROM			**
+;**				01.09.2023	**
+;*************************************************
+
+; !!! Versionsdatum nur noch in VORBL49.INC eintragen !!!
+
+VB_NAME	MACRO
+	DB	'CAOS49  KCC'	; Dateiname im Vorblock
+	ENDM
+AADR	EQU	4000H		; AADR
+EADR	EQU	0C000H		; EADR+1
+
+	INCLUDE	VORBL49.INC	; CAOS-Vorblock
