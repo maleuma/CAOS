@@ -456,7 +456,7 @@ CAOS48  INC
     3                   ;	----------------------------------------	;
     4                   ;	(und CAOS-Editor, Assembler und Reassembler)	;
     5                   ;							;
-    6                   ; EDAS.INC		ML-Soft 21.01.2018-04.03.2020	;
+    6                   ; EDAS.INC		ML-Soft 21.01.2018-27.03.2023	;
     7                   ;-------------------------------------------------------;
     8                   
     9         0000      NAME0	EQU	0000H		; Dateiname 8 Zeichen, Typ 3 Zeichen
@@ -485,89 +485,88 @@ CAOS48  INC
    32         003E      STAT	EQU	STRING+LSTR	; Merkzelle fuer verschiedene Einstellungen
    33                   		;Bit 0 = 1 - Floppy vorhanden
    34                   		;Bit 1 = 1 - DEP mit LW-Steuerung
-   35                   		;Bit 2 = 1 - Fehler bei Diskette
+   35                   		;Bit 2 = 1 - Fehler bei MTAB-Ueberschreitung aufgetreten
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   9
 EDAS    INC
 
-   36                   		;	     oder MTAB-Ueberschreitung aufgetreten
-   37                   		;Bit 3 = 1 - Option 'S' merken
-   38                   		;Bit 4 = 1 - Ueberschreiben (0=Einfuegen)
-   39                   		;Bit 5 = 1 - Zeichensatz (0=IBM, 1=deutsch)
-   40                   		;Bit 6 = 1 - Zeichensatz (0=IBM, 1=CAOS)
-   41                   		;Bit 7 = 1 - END-Befehl erkannt (ASM)
-   42                   
-   43                   ; Assembler-Arbeitszellen:
-   44                   
-   45         003F      OPT	EQU	STAT+1		; Assembler-Optionen
-   46                   		;Bit 0	L - Listing ausgeben
-   47                   		;Bit 1	P - Umschaltung Drucker
-   48                   		;Bit 2	+ - Markentabelle erweitern
-   49                   		;Bit 3	1 - nur PASS 1!
-   50                   		;Bit 4	3 - PASS 3 laeuft (Save MC)
-   51                   		;Bit 5	B - Bildschirmformat (40 Spalten)
-   52                   		;Bit 6	O - MC in Speicher laden
-   53                   		;Bit 7	2 - nur PASS 2
-   54         0040      OFFS	EQU	OPT+1		; Assembler-Offset
-   55         0042      OBJ	EQU	OFFS+2		; Beginn Maschinencode
-   56         0044      MBOT	EQU	OBJ+2		; RAM-Ende+1	8000H oder C000H
-   57         0046      MTOP	EQU	MBOT+2		; Marken-Tabelle (Anfang)
-   58         0048      PBL	EQU	MTOP+2		; Pointer auf Byte-Liste
-   59         004A      M78	EQU	PBL+2
-   60         004B      M79	EQU	M78+1
-   61         004C      MPC	EQU	M79+1		; Adressenzaehler fuer MC-Erzeugung
-   62         004E      ERRNO	EQU	MPC+2		; Zaehler (BCD) fuer Fehler beim Assemblieren
-   63         0050      MCL	EQU	ERRNO+2		; MC-Endadresse
-   64         0052      NUMB	EQU	MCL+2		; + Berechneter Wert eines Ausdrucks (Operand)
-   65         0054      DDFD	EQU	NUMB+2		; | DD/FD-Speicher
-   66         0055      KLAM	EQU	DDFD+1		; | Klammer-Speicher
-   67         0056      M84	EQU	KLAM+1		; | Merker, ob Operand gefunden wurde
-   68         0057      VORZ	EQU	M84+1		; | Rechenzeichen-Speicher
-   69         0058      REGNR	EQU	VORZ+1		; + Registerkennbyte
-   70         0059      REGC	EQU	REGNR+1		; Registercode
-   71                   	; Registerkennbyte	Registercode	DDFD
-   72                   	;				Bit
-   73                   	; A	00H		07H	8
-   74                   	; B	01H		00H	8
-   75                   	; C	02H		01H	8
-   76                   	; D	03H		02H	8
-   77                   	; E	04H		03H	8
-   78                   	; H	07H		04H	8
-   79                   	; HX	07H		04H	8	DD
-   80                   	; HY	07H		04H	8	FD
-   81                   	; L	0BH		05H	8
-   82                   	; LX	0BH		05H	8	DD
-   83                   	; LY	0BH		05H	8	FD
-   84                   	; I	08H		47H	8
-   85                   	; R	11H		4FH	8
-   86                   	; M(HL)	3AH		06H	8
-   87                   	; (IX+)	3AH		06H	8	DD	
-   88                   	; (IY+)	3AH		06H	8	FD
-   89                   	; BC	2BH		00H	16
-   90                   	; (BC)	2BH		00H	8
-   91                   	; DE	2FH		10H	16
-   92                   	; (DE)	2FH		10H	8
-   93                   	; HL	3AH		20H	16
+   36                   		;Bit 3 = 1 - Option 'S' merken
+   37                   		;Bit 4 = 1 - Ueberschreiben (0=Einfuegen)
+   38                   		;Bit 5 = 1 - Zeichensatz (0=IBM, 1=deutsch)
+   39                   		;Bit 6 = 1 - Zeichensatz (0=IBM, 1=CAOS)
+   40                   		;Bit 7 = 1 - END-Befehl erkannt (ASM)
+   41                   
+   42                   ; Assembler-Arbeitszellen:
+   43                   
+   44         003F      OPT	EQU	STAT+1		; Assembler-Optionen
+   45                   		;Bit 0	L - Listing ausgeben
+   46                   		;Bit 1	P - Umschaltung Drucker
+   47                   		;Bit 2	+ - Markentabelle erweitern
+   48                   		;Bit 3	1 - nur PASS 1!
+   49                   		;Bit 4	3 - PASS 3 laeuft (Save MC)
+   50                   		;Bit 5	B - Bildschirmformat (40 Spalten)
+   51                   		;Bit 6	O - MC in Speicher laden
+   52                   		;Bit 7	2 - nur PASS 2
+   53         0040      OFFS	EQU	OPT+1		; Assembler-Offset
+   54         0042      OBJ	EQU	OFFS+2		; Beginn Maschinencode
+   55         0044      MBOT	EQU	OBJ+2		; RAM-Ende+1	8000H oder C000H
+   56         0046      MTOP	EQU	MBOT+2		; Marken-Tabelle (Anfang)
+   57         0048      PBL	EQU	MTOP+2		; Pointer auf Byte-Liste
+   58         004A      M78	EQU	PBL+2
+   59         004B      M79	EQU	M78+1
+   60         004C      MPC	EQU	M79+1		; Adressenzaehler fuer MC-Erzeugung
+   61         004E      ERRNO	EQU	MPC+2		; Zaehler (BCD) fuer Fehler beim Assemblieren
+   62         0050      MCL	EQU	ERRNO+2		; MC-Endadresse
+   63         0052      NUMB	EQU	MCL+2		; + Berechneter Wert eines Ausdrucks (Operand)
+   64         0054      DDFD	EQU	NUMB+2		; | DD/FD-Speicher
+   65         0055      KLAM	EQU	DDFD+1		; | Klammer-Speicher
+   66         0056      M84	EQU	KLAM+1		; | Merker, ob Operand gefunden wurde
+   67         0057      VORZ	EQU	M84+1		; | Rechenzeichen-Speicher
+   68         0058      REGNR	EQU	VORZ+1		; + Registerkennbyte
+   69         0059      REGC	EQU	REGNR+1		; Registercode
+   70                   	; Registerkennbyte	Registercode	DDFD
+   71                   	;				Bit
+   72                   	; A	00H		07H	8
+   73                   	; B	01H		00H	8
+   74                   	; C	02H		01H	8
+   75                   	; D	03H		02H	8
+   76                   	; E	04H		03H	8
+   77                   	; H	07H		04H	8
+   78                   	; HX	07H		04H	8	DD
+   79                   	; HY	07H		04H	8	FD
+   80                   	; L	0BH		05H	8
+   81                   	; LX	0BH		05H	8	DD
+   82                   	; LY	0BH		05H	8	FD
+   83                   	; I	08H		47H	8
+   84                   	; R	11H		4FH	8
+   85                   	; M(HL)	3AH		06H	8
+   86                   	; (IX+)	3AH		06H	8	DD	
+   87                   	; (IY+)	3AH		06H	8	FD
+   88                   	; BC	2BH		00H	16
+   89                   	; (BC)	2BH		00H	8
+   90                   	; DE	2FH		10H	16
+   91                   	; (DE)	2FH		10H	8
+   92                   	; HL	3AH		20H	16
+   93                   	; IX	3AH		20H	16	DD
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  10
 EDAS    INC
 
-   94                   	; IX	3AH		20H	16	DD
-   95                   	; IY	3AH		20H	16	FD
-   96                   	; SP	49H		30H	16
-   97                   	; AF	2DH		31H	16
-   98                   
-   99                   ; Hilfsprogramme fuer Speicherzugriff hinter IRM und ROM-C bis DFFFh
-  100                   
-  101         005A      RAMC	EQU	REGC+1		; Hilfsprogramme fuer Speicherzugriff bis DFFFh
-  102                   	; 005Ch bis 00A0h	  nur bei ext. Editor erforderlich
-  103                   
-  104                   ; Assemblierpuffer:	(hier steht die erzeugte Quelltextzeile)
-  105                   
-  106         A880      NERR	EQU	0A880h		; 1 Byte Assembler-Fehlercode
-  107                   				; 1 Byte "Stern" wenn Fehlercode vorhanden ist
-  108         A882      ADR	EQU	NERR+2		; 4 Byte fuer Adresse
-  109                   				; 10 Byte fuer Hexcodes
-  110         A890      TEXT	EQU	NERR+16		; Quelltext (max. 80 Byte bei ext. Editor)
-  111                   	; A880h bis A8FFh
+   94                   	; IY	3AH		20H	16	FD
+   95                   	; SP	49H		30H	16
+   96                   	; AF	2DH		31H	16
+   97                   
+   98                   ; Hilfsprogramme fuer Speicherzugriff hinter IRM und ROM-C bis DFFFh
+   99                   
+  100         005A      RAMC	EQU	REGC+1		; Hilfsprogramme fuer Speicherzugriff bis DFFFh
+  101                   	; 005Ch bis 00A0h	  nur bei ext. Editor erforderlich
+  102                   
+  103                   ; Assemblierpuffer:	(hier steht die erzeugte Quelltextzeile)
+  104                   
+  105         A880      NERR	EQU	0A880h		; 1 Byte Assembler-Fehlercode
+  106                   				; 1 Byte "Stern" wenn Fehlercode vorhanden ist
+  107         A882      ADR	EQU	NERR+2		; 4 Byte fuer Adresse
+  108                   				; 10 Byte fuer Hexcodes
+  109         A890      TEXT	EQU	NERR+16		; Quelltext (max. 80 Byte bei ext. Editor)
+  110                   	; A880h bis A8FFh
    38                   
    39                   ; IRM-Arbeitszellen im nicht genutzten VRAM-Bereich:
    40                   
@@ -608,10 +607,10 @@ EDAS    INC
     4                   ;
     5                   ; Aufbau: 5 Byte je Zeichen
     6                   ;
+    7                   ; CCTL80.INC			04.01.1997-30.01.2019
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  11
 CCTL80  INC
 
-    7                   ; CCTL80.INC			04.01.1997-30.01.2019
     8                   ;----------------------------------------------------
     9                   
    10 C000  00 00 00 00 CCTL80:	DB	0,0,0,0,0		;00	wie Leerzeichen angezeigt
@@ -669,10 +668,10 @@ CCTL80  INC
    62 C0CD  04 22 22 24 	DB	4,22H,22H,24H,0		;29	)
    63 C0D2  00 05 25 00 	DB	0,5,25H,0,0		;2A	*
    64 C0D7  00 02 72 00 	DB	0,2,72H,0,0		;2B	+
+   65 C0DC  00 00 00 22 	DB	0,0,0,22H,40H		;2C	,
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  12
 CCTL80  INC
 
-   65 C0DC  00 00 00 22 	DB	0,0,0,22H,40H		;2C	,
    66 C0E1  00 00 70 00 	DB	0,0,70H,0,0		;2D	-
    67 C0E6  00 00 00 02 	DB	0,0,0,2,0		;2E	.
    68 C0EB  01 12 22 44 	DB	1,12H,22H,44H,0		;2F	/
@@ -730,10 +729,10 @@ CCTL80  INC
   120 C1E5  00 02 55 53 	DB	0,2,55H,53H,0		;61	a
   121 C1EA  04 46 55 56 	DB	4,46H,55H,56H,0		;62	b
   122 C1EF  00 03 44 43 	DB	0,3,44H,43H,0		;63	c
+  123 C1F4  01 13 55 53 	DB	1,13H,55H,53H,0		;64	d
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  13
 CCTL80  INC
 
-  123 C1F4  01 13 55 53 	DB	1,13H,55H,53H,0		;64	d
   124 C1F9  00 02 57 47 	DB	0,2,57H,47H,0		;65	e
   125 C1FE  02 54 64 44 	DB	2,54H,64H,44H,40H	;66	f
   126 C203  00 03 55 31 	DB	0,3,55H,31H,60H		;67	g
@@ -791,10 +790,10 @@ CCTL80  INC
   178 C2F8  05 05 55 31 	DB	5,5,55H,31H,60H		;98
   179 C2FD  05 07 55 57 	DB	5,7,55H,57H,0		;99
   180 C302  05 05 55 57 	DB	5,5,55H,57H,0		;9A
+  181 C307  00 27 66 67 	DB	0,27H,66H,67H,20H	;9B
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  14
 CCTL80  INC
 
-  181 C307  00 27 66 67 	DB	0,27H,66H,67H,20H	;9B
   182 C30C  02 54 64 47 	DB	2,54H,64H,47H,0		;9C
   183 C311  05 52 72 72 	DB	5,52H,72H,72H,0		;9D
   184 C316  0C AC AB AB 	DB	0CH,0ACH,0ABH,0ABH,0	;9E
@@ -852,10 +851,10 @@ CCTL80  INC
   236 C40B  22 F0 F0 00 	DB	22H,0F0H,0F0H,0,0	;CF
   237                   
   238 C410  66 6F 00 00 	DB	66H,6FH,0,0,0		;D0
+  239 C415  00 F0 F2 22 	DB	0,0F0H,0F2H,22H,22H	;D1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  15
 CCTL80  INC
 
-  239 C415  00 F0 F2 22 	DB	0,0F0H,0F2H,22H,22H	;D1
   240 C41A  00 0F 66 66 	DB	0,0FH,66H,66H,66H	;D2
   241 C41F  66 67 00 00 	DB	66H,67H,0,0,0		;D3
   242 C424  22 32 30 00 	DB	22H,32H,30H,0,0		;D4
@@ -913,10 +912,10 @@ CCTL80  INC
   294 C514  00 21 00 00 	DB	0,21H,0,0,0		;60	`
   295 C519  00 50 25 53 	DB	0,50H,25H,53H,0		;7B	ae
   296 C51E  00 50 25 52 	DB	0,50H,25H,52H,0		;7C	oe
+  297 C523  00 50 55 57 	DB	0,50H,55H,57H,0		;7D	ue
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  16
 CCTL80  INC
 
-  297 C523  00 50 55 57 	DB	0,50H,55H,57H,0		;7D	ue
   298 C528  02 55 65 56 	DB	2,55H,65H,56H,40H	;7E	ss
   299                   
   300 C52D              CCTL82:	; alternativer Zeichensatz 2 (CAOS-Zeichensatz)
@@ -974,10 +973,10 @@ CCTL80  INC
   115 C583  D1          	POP	DE		; Cursorposition
   116 C584  F1          	POP	AF
   117 C585  A7          	AND	A		; CY=0
+  118 C586  C9          	RET
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  17
 EDITOR  Z80
 
-  118 C586  C9          	RET
   119                   	;
   120 C587  F1          IAD2:	POP	AF
   121 C588  37          	SCF			; CY=1
@@ -1035,10 +1034,10 @@ EDITOR  Z80
   173                   ; PE:	DE	Cursorposition
   174                   ;	A	Zeichencode
   175                   ;	STBT	Bildschirmsteuerbyte
+  176                   ; VR:	-
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  18
 EDITOR  Z80
 
-  176                   ; VR:	-
   177                   ;
   178 C5B5  E5          WPIX:	PUSH	HL
   179 C5B6  D5          	PUSH	DE
@@ -1096,10 +1095,10 @@ EDITOR  Z80
   231 C60A  06 05       	LD	B,5		; Zeichenlaenge in CCTL80
   232 C60C  C5          LAB1:	PUSH	BC		; Byteanzahl
   233 C60D  F5          	PUSH	AF		; links oder rechts in CY merken
+  234 C60E  1A          	LD	A,(DE)		; Zeichencode
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  19
 EDITOR  Z80
 
-  234 C60E  1A          	LD	A,(DE)		; Zeichencode
   235 C60F  13          	INC	DE
   236 C610  47          	LD	B,A		; Pixelcode 2
   237 C611  07          	RLCA
@@ -1157,10 +1156,10 @@ EDITOR  Z80
   289 C652  EB          	EX	DE,HL		; HL jetzt Cursorposition
   290 C653  CD C58A     	CALL	CUADR		; BS-Adresse berechnen
   291                   ;	INC	HL
+  292 C656  06 0A       	LD	B,10		; Cursorhoehe
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  20
 EDITOR  Z80
 
-  292 C656  06 0A       	LD	B,10		; Cursorhoehe
   293 C658  0E F0       	LD	C,0F0H		; Maske fuer Zeichen links
   294 C65A  30 02       	JR	NC,CUCP3
   295 C65C  0E 0F       	LD	C,0FH		; Maske fuer Zeichen rechts
@@ -1218,10 +1217,10 @@ EDITOR  Z80
   347                   	;
   348 C6A0  3A B79F     CUR1:	LD	A,(WINLG+1)	; Anzahl Zeilen
   349 C6A3  3D          	DEC	A		; letzte Zeile
+  350 C6A4  BA          	CP	D		; ganz unten?
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  21
 EDITOR  Z80
 
-  350 C6A4  BA          	CP	D		; ganz unten?
   351 C6A5  20 05       	JR	NZ,CUR2		; nein
   352 C6A7  CD C6F7     	CALL	CUD3		; scrollen
   353 C6AA  D8          	RET	C		; nicht gescrollt
@@ -1279,10 +1278,10 @@ EDITOR  Z80
   405 C6EC  7B          CUD2:	LD	A,E
   406 C6ED  A7          	AND	A
   407 C6EE  C8          	RET	Z		; Spalte 0
+  408 C6EF  2B          	DEC	HL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  22
 EDITOR  Z80
 
-  408 C6EF  2B          	DEC	HL
   409 C6F0  7E          	LD	A,(HL)		; Zeichen vor akt. Cursorposition
   410 C6F1  FE 20       	CP	' '
   411 C6F3  D0          	RET	NC		; Zeichen davor vorhanden
@@ -1340,10 +1339,10 @@ EDITOR  Z80
   463 C74C  ED 52       	SBC	HL,DE		; sind wir bereits am Textanfang?
   464 C74E  D1          	POP	DE
   465 C74F  37          	SCF			; nicht gescrollt
+  466 C750  C8          	RET	Z		; kein Text 1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  23
 EDITOR  Z80
 
-  466 C750  C8          	RET	Z		; kein Text 1
   467 C751  D5          	PUSH	DE
   468 C752  2A 001C     	LD	HL,(T1E)	; Ende Text 1 merken
   469 C755  E5          	PUSH	HL
@@ -1401,10 +1400,10 @@ EDITOR  Z80
   521 C7AF  87          	ADD	A,A	;*2
   522 C7B0  4F          	LD	C,A
   523 C7B1  87          	ADD	A,A	;*4
+  524 C7B2  87          	ADD	A,A	;*8
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  24
 EDITOR  Z80
 
-  524 C7B2  87          	ADD	A,A	;*8
   525 C7B3  81          	ADD	A,C	;*10 Pixel pro Zeile
   526 C7B4  4F          	LD	C,A		; Anzahl Bytes bis BS-Ende
   527 C7B5  C5          	PUSH	BC
@@ -1462,10 +1461,10 @@ EDITOR  Z80
   579                   ; (ohne Statuszeile, aber mit VRAM)
   580                   ; PE:	B	Rollweite in Zeilen (bis Bildschirmende)
   581                   ;
+  582 C7FF  06 16       DOSCRL:	LD	B,22		; 22 Zeilen = Textfenster nach unten scrollen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  25
 EDITOR  Z80
 
-  582 C7FF  06 16       DOSCRL:	LD	B,22		; 22 Zeilen = Textfenster nach unten scrollen
   583                   	; 10 Pixel/Zeile (max. 220 Byte) im Pixel-RAM scrollen
   584 C801  3E 16       DROLL:	LD	A,22
   585 C803  90          	SUB	B
@@ -1523,10 +1522,10 @@ EDITOR  Z80
   637 C850  C8          	RET	Z		; Textende bereits erreicht
   638 C851  CD D70A     	CALL	MPAGE		; Seite speichern
   639 C854  D8          	RET	C		; No Memory
+  640 C855  11 0016     	LD	DE,22
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  26
 EDITOR  Z80
 
-  640 C855  11 0016     	LD	DE,22
   641 C858  CD D64F     	CALL	TXANF		; 22 Zeilen vorwaerts
   642 C85B  2A 001A     	LD	HL,(T2E)
   643 C85E  ED 5B 001E  	LD	DE,(T2A)
@@ -1584,10 +1583,10 @@ EDITOR  Z80
   695 C8B1  50          	LD	D,B
   696 C8B2  CD F003     	CALL	PV1
   697 C8B5  41          	DB	MULT		; BA = D*B
+  698 C8B6  4F          	LD	C,A		; BC = Anzahl Zeichen bis Bildschirm-Ende
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  27
 EDITOR  Z80
 
-  698 C8B6  4F          	LD	C,A		; BC = Anzahl Zeichen bis Bildschirm-Ende
   699 C8B7  ED 5B B79C  	LD	DE,(WINON)	; Home-Position
   700 C8BB  CD C561     	CALL	DABR80		; VRAM-Adresse berechnen
   701 C8BE  54          	LD	D,H
@@ -1645,10 +1644,10 @@ EDITOR  Z80
   753 C8D2  7B          CUL80:	LD	A,E		; Spalte
   754 C8D3  A7          	AND	A		; ganz links?
   755 C8D4  28 03       	JR	Z,CUL1
+  756 C8D6  1D          	DEC	E		; eine Position nach links gehen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  28
 EDITOR  Z80
 
-  756 C8D6  1D          	DEC	E		; eine Position nach links gehen
   757 C8D7  18 0F       	JR	CUL3
   758                   	;
   759 C8D9  7A          CUL1:	LD	A,D		; Zeile
@@ -1706,10 +1705,10 @@ EDITOR  Z80
   811 C91E  18 F2       	JR	WLE2		; zurueck bis zum Anfang des Wortes
   812                   ;
   813                   ; 0Fh = Hardcopy (Verlassen des 80-Zeichen-Modus, da CALC das nicht kennt)
+  814                   ;
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  29
 EDITOR  Z80
 
-  814                   ;
   815 C920  D5          HCOPY:	PUSH	DE		; Cursorposition
   816 C921  CD CA97     	CALL	SET40		; 40-Zeichen-Modus aktivieren
   817 C924  2A B799     	LD	HL,(HCADR)	; ShCLR
@@ -1767,10 +1766,10 @@ EDITOR  Z80
   869                   ;
   870                   ; 14h = Tastenclick EIN/AUS (Shift+INS wie unter CAOS)
   871                   ;
+  872 C97B  DD 7E 08    CLICK:	LD	A,(IX+8)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  30
 EDITOR  Z80
 
-  872 C97B  DD 7E 08    CLICK:	LD	A,(IX+8)
   873 C97E  EE 20       	XOR	20H		; Click EIN/AUS
   874 C980  DD 77 08    	LD	(IX+8),A
   875 C983  CD D845     CLI1:	CALL	STATUS		; und in Statuszeile anzeigen
@@ -1828,10 +1827,10 @@ EDITOR  Z80
   927 C9CF  1C          	INC	E		; naechste Spalte
   928 C9D0  CD C561     	CALL	DABR80		; raus?
   929 C9D3  30 08       	JR	NC,DEL2
+  930 C9D5  1E 00       	LD	E,0		; ja, wie NL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  31
 EDITOR  Z80
 
-  930 C9D5  1E 00       	LD	E,0		; ja, wie NL
   931 C9D7  14          	INC	D
   932 C9D8  CD C561     	CALL	DABR80		; raus?
   933 C9DB  38 0F       	JR	C,DEL3		; ja, Ende
@@ -1889,10 +1888,10 @@ EDITOR  Z80
   985                   ;
   986         0078      TCPDR	EQU	$+RAMC-IRM_OF
   987 CA11  CD 005A     	CALL	RAMC		; IRM OFF
+  988 CA14  ED B9       	CPDR
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  32
 EDITOR  Z80
 
-  988 CA14  ED B9       	CPDR
   989 CA16  18 17       	JR	IRM_ON
   990                   ;
   991                   ; Zeichen suchen mit CPI
@@ -1950,10 +1949,10 @@ EDITOR  Z80
  1108                   
  1109 CA48  11 004A     	LD	DE,2*25h	; UP 25 = Routine CUCP
  1110 CA4B  19          	ADD	HL,DE
+ 1111 CA4C  5E          	LD	E,(HL)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  33
 EDITOR  Z80
 
- 1111 CA4C  5E          	LD	E,(HL)
  1112 CA4D  23          	INC	HL
  1113 CA4E  56          	LD	D,(HL)		; aktuelle CUCP-Routine
  1114 CA4F  ED 53 B4D2  	LD	(CUCP40),DE	; merken
@@ -2011,10 +2010,10 @@ EDITOR  Z80
  1166 CAA4  19          	ADD	HL,DE
  1167 CAA5  ED 5B B4D2  	LD	DE,(CUCP40)	; alte CUCP-Routine
  1168 CAA9  73          	LD	(HL),E		; regenerieren
+ 1169 CAAA  23          	INC	HL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  34
 EDITOR  Z80
 
- 1169 CAAA  23          	INC	HL
  1170 CAAB  72          	LD	(HL),D
  1171                   
  1172                   ; ESC-Tabelle regenerieren
@@ -2072,10 +2071,10 @@ EDITOR  Z80
  1224         0001      IF EXRAM
  1225 CB04  CD CACF     	CALL	RAMSW		; RAM zuschalten, Hilfsprogramm kopieren
  1226                   ENDIF
+ 1227 CB07  21 0200     	LD	HL,0200h	; Beginn Textspeicher
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  35
 EDITOR  Z80
 
- 1227 CB07  21 0200     	LD	HL,0200h	; Beginn Textspeicher
  1228 CB0A  36 0D       	LD	(HL),CR		; Anfangszeichen eintragen
  1229 CB0C  23          	INC	HL
  1230 CB0D  22 0018     	LD	(T1A),HL	; Textspeicher 1 Anfang
@@ -2133,10 +2132,10 @@ EDITOR  Z80
  1282 CB73  CD F003     	CALL	PV1
  1283 CB76  23          	DB	OSTR
  1284 CB77  0C 00       	DB	CLS,0		; Bild 0 loeaschen
+ 1285 CB79  21 B7A2     	LD	HL,STBT
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  36
 EDITOR  Z80
 
- 1285 CB79  21 B7A2     	LD	HL,STBT
  1286 CB7C  CB CE       	SET	1,(HL)		; Schreiben Farbe aus (geht schneller!)
  1287                   
  1288 CB7E  21 003E     	LD	HL,STAT		; Statusbits
@@ -2194,10 +2193,10 @@ EDITOR  Z80
  1340 CBE1  2D          	DB	HOME
  1341 CBE2  21 BA00     	LD	HL,0BA00H	; Beginn Menuewortsuche (wegen Erweiterungen)
  1342 CBE5  C1          	POP	BC		; Menuelaenge
+ 1343 CBE6  CD F003     MEN1:	CALL	PV1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  37
 EDITOR  Z80
 
- 1343 CBE6  CD F003     MEN1:	CALL	PV1
  1344 CBE9  23          	DB	OSTR
  1345 CBEA  02 2D 00    	DB	2,'-',0		; Prompt
  1346 CBED  CD F003     	CALL	PV1
@@ -2255,10 +2254,10 @@ EDITOR  Z80
  1398 CC4F  21 BA00     	LD	HL,0BA00H
  1399 CC52  01 4700     	LD	BC,4700H	; bis 0100H
  1400 CC55  CD F003     	CALL	PV1
+ 1401 CC58  1D          	DB	ZSUCH		; Menuewort suchen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  38
 EDITOR  Z80
 
- 1401 CC58  1D          	DB	ZSUCH		; Menuewort suchen
  1402 CC59  30 BE       	JR	NC,NLP2		; nicht gefunden
  1403                   ;	LD	A,(HL)		; Epilog - ist bei CAOS 4.8 automatisch in A
  1404 CC5B  01 CC2A     	LD	BC,LOOP2
@@ -2316,10 +2315,10 @@ EDITOR  Z80
  1456 CCD2  23          	DB	OSTR
  1457 CCD3  46 72 65 69 	DB	'Frei:',1Fh,1Fh,1Fh,1Fh,0
  1458 CCDD  2A 001E     	LD	HL,(T2A)	; Beginn Teiltext 2
+ 1459 CCE0  ED 5B 001C  	LD	DE,(T1E)	; Ende Teiltext 1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  39
 EDITOR  Z80
 
- 1459 CCE0  ED 5B 001C  	LD	DE,(T1E)	; Ende Teiltext 1
  1460 CCE4  AF          	XOR	A
  1461 CCE5  ED 52       	SBC	HL,DE		; das was dazwischen liegt, ist frei
  1462 CCE7  CD F003     	CALL	PV1
@@ -2377,10 +2376,10 @@ EDITOR  Z80
  1514 CD47  01 80F1     	LD	BC,80F1H
  1515 CD4A  ED 79       	OUT	(C),A
  1516 CD4C  ED 78       LWA1:	IN	A,(C)
+ 1517 CD4E  CB 47       	BIT	0,A		; Rueckmeldung?
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  40
 EDITOR  Z80
 
- 1517 CD4E  CB 47       	BIT	0,A		; Rueckmeldung?
  1518 CD50  20 FA       	JR	NZ,LWA1		; nein, warten
  1519 CD52  04          	INC	B		; 81F1H
  1520 CD53  ED 78       	IN	A,(C)		; Laufwerk
@@ -2438,10 +2437,10 @@ EDITOR  Z80
  1572 CDBD  7C          	LD	A,H
  1573 CDBE  B5          	OR	L
  1574 CDBF  28 27       	JR	Z,NACLR		; kein Text, nur Name loeschen
+ 1575 CDC1  CD F003     	CALL	PV1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  41
 EDITOR  Z80
 
- 1575 CDC1  CD F003     	CALL	PV1
  1576 CDC4  23          	DB	OSTR
  1577 CDC5  0D 44 65 6C 	DB	CR,'Delete Text',0
  1578 CDD2  CD D55D     	CALL	YESNO
@@ -2499,10 +2498,10 @@ EDITOR  Z80
  1630 CE3D  13          	INC	DE
  1631 CE3E  77          	LD	(HL),A		; in IRM (Kassettenpuffer) ablegen
  1632 CE3F  FE 03       	CP	3
+ 1633 CE41  28 03       	JR	Z,SAV5		; Ende-Kennung erkannt
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  42
 EDITOR  Z80
 
- 1633 CE41  28 03       	JR	Z,SAV5		; Ende-Kennung erkannt
  1634 CE43  23          	INC	HL
  1635 CE44  10 F2       	DJNZ	SAV4
  1636 CE46  DD 7E 02    SAV5:	LD	A,(IX+2)	; Blocknummer
@@ -2560,10 +2559,10 @@ EDITOR  Z80
  1688 CEB0  28 07       	JR	Z,LOA0		; bei Kassette Dateiname nicht abfragen
  1689 CEB2  CD D5F5     	CALL	NAME		; Dateiname eingeben -> NAME0
  1690 CEB5  D8          	RET	C		; BRK
+ 1691 CEB6  CD CE99     	CALL	LFCR
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  43
 EDITOR  Z80
 
- 1691 CEB6  CD CE99     	CALL	LFCR
  1692 CEB9  CD CDF3     LOA0:	CALL	HOM		; EDIT-Cursor Home
  1693 CEBC  21 B700     	LD	HL,CASS		; Kassettenpuffer
  1694 CEBF  DD 75 05    	LD	(IX+5),L
@@ -2621,10 +2620,10 @@ EDITOR  Z80
  1746 CF25  FE 1A       	CP	1Ah		; CP/M-Endezeichen?
  1747 CF27  28 12       	JR	Z,LOA12		; ja
  1748 CF29  23          	INC	HL
+ 1749 CF2A  EB          	EX	DE,HL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  44
 EDITOR  Z80
 
- 1749 CF2A  EB          	EX	DE,HL
  1750 CF2B  CD 0092     	CALL	PUT		; Datenbyte in Textspeicher
  1751 CF2E  EB          	EX	DE,HL
  1752 CF2F  13          	INC	DE
@@ -2682,10 +2681,10 @@ EDITOR  Z80
  1804 CF81  DD CB 07 FE 	SET	7,(IX+7)	; Init merken, wenn Vorblock
  1805 CF85  18 35       	JR	BLRD2		; Daten uebernehmen
  1806                   	;
+ 1807 CF87  CD F003     BLRD1:	CALL	PV1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  45
 EDITOR  Z80
 
- 1807 CF87  CD F003     BLRD1:	CALL	PV1
  1808 CF8A  2A          	DB	BRKT
  1809 CF8B  D8          	RET	C		; BRK
  1810 CF8C  DD 7E 03    	LD	A,(IX+3)	; 1. Datenblock erwartet?
@@ -2743,10 +2742,10 @@ EDITOR  Z80
  1862 CFEE  2C          	INC	L
  1863 CFEF  2D          	DEC	L		; Z=0, falscher Block
  1864 CFF0  18 E9       	JR	BLRD4
+ 1865                   	;
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  46
 EDITOR  Z80
 
- 1865                   	;
  1866 CFF2  28 0B       BLRD6:	JR	Z,BLRD7		; Blocknr. richtig
  1867 CFF4  CD F003     	CALL	PV1
  1868 CFF7  23          	DB	OSTR
@@ -2804,10 +2803,10 @@ EDITOR  Z80
  1920 D055  CD 0086     HEX1:	CALL	GET		; Folgezeichen nach 0Fh
  1921 D058  FE 20       	CP	20H		; Leerzeichen?
  1922 D05A  20 03       	JR	NZ,HEX2
+ 1923 D05C  23          	INC	HL		; falls Leerzeichen -> ignorieren
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  47
 EDITOR  Z80
 
- 1923 D05C  23          	INC	HL		; falls Leerzeichen -> ignorieren
  1924 D05D  18 F6       	JR	HEX1		; weiter bis das erste Zeichen kommt
  1925                   	;
  1926 D05F  D5          HEX2:	PUSH	DE		; Zeichenzaehler retten
@@ -2865,10 +2864,10 @@ EDITOR  Z80
  1978 D0B0  38 0C       	JR	C,PRI9		; BRK
  1979 D0B2  C3 D030     	JP	PRI3		; naechstes Zeichen
  1980                   
+ 1981                   ; Druck beendet
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  48
 EDITOR  Z80
 
- 1981                   ; Druck beendet
  1982 D0B5  3A B782     PRI8:	LD	A,(ARG1)	; Zeilen/Seite
  1983 D0B8  B8          	CP	B		; sind wir bereits auf einer neuen Seite?
  1984 D0B9  3E 0C       	LD	A,CLS
@@ -2926,10 +2925,10 @@ EDITOR  Z80
  2036 D0FF  C1          	POP	BC
  2037 D100  C9          	RET
  2038                   ;
+ 2039                   ; UP1 fuer PRINT und PPRINT:
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  49
 EDITOR  Z80
 
- 2039                   ; UP1 fuer PRINT und PPRINT:
  2040                   ; - Kontrolle, ob Drucker aktiviert ist
  2041                   ; - Einstellung Seitenwechsel nach Parameter in ARG1
  2042                   ; - EIN/AUS-Merker fuer Druckersteuerzeichen initialisieren
@@ -2987,10 +2986,10 @@ EDITOR  Z80
  2094 D161  EE 01       	XOR	1		; abwechselnd on/off
  2095 D163  77          	LD	(HL),A
  2096 D164  81          	ADD	A,C		; 0/1 plus Funktionsnummer
+ 2097 D165  81          	ADD	A,C		; verdoppeln
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  50
 EDITOR  Z80
 
- 2097 D165  81          	ADD	A,C		; verdoppeln
  2098 D166  4F          	LD	C,A
  2099 D167  0C          	INC	C		; zu suchende Nummer 1..20
  2100 D168  21 D17E     	LD	HL,GTC		; Druckercode-Tabelle
@@ -3048,10 +3047,10 @@ EDITOR  Z80
  2152 D1D0  7D          KEYL:	LD	A,L
  2153 D1D1  B7          	OR	A
  2154 D1D2  28 09       	JR	Z,KEY0		; KEY 0
+ 2155 D1D4  FE D5       	CP	0D5H
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  51
 EDITOR  Z80
 
- 2155 D1D4  FE D5       	CP	0D5H
  2156 D1D6  28 0C       	JR	Z,KEYD5		; KEY D5
  2157 D1D8  CD F003     	CALL	PV1
  2158 D1DB  39          	DB	KEY		; F-Taste belegen
@@ -3109,10 +3108,10 @@ EDITOR  Z80
  2210 D21D  2A 001A     	LD	HL,(T2E)
  2211 D220  AF          	XOR	A
  2212 D221  ED 52       	SBC	HL,DE
+ 2213 D223  CA D2B0     	JP	Z,BOTO		; kein Text 2 vorhanden
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  52
 EDITOR  Z80
 
- 2213 D223  CA D2B0     	JP	Z,BOTO		; kein Text 2 vorhanden
  2214 D226  44          	LD	B,H
  2215 D227  4D          	LD	C,L		; BC = Laenge
  2216 D228  EB          	EX	DE,HL		; HL = Anfang
@@ -3170,10 +3169,10 @@ EDITOR  Z80
  2268 D284  13          	INC	DE
  2269 D285  0C          	INC	C
  2270 D286  FE 09       	CP	TAB		; Tabulator?
+ 2271 D288  20 06       	JR	NZ,FIN6
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  53
 EDITOR  Z80
 
- 2271 D288  20 06       	JR	NZ,FIN6
  2272 D28A  79          	LD	A,C
  2273 D28B  C6 07       	ADD	A,7
  2274 D28D  E6 78       	AND	78H
@@ -3231,10 +3230,10 @@ EDITOR  Z80
  2326 D2F7  2A 001E     	ld	hl,(t2a)	; dass beim Speichern kein Platz ist
  2327 D2FA  22 B4DA     	ld	(T2MERK),hl
  2328 D2FD  30 55       	JR	NC,EDI3		; nicht BRK
+ 2329 D2FF  CD D70A     	CALL	MPAGE		; Seite speichern
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  54
 EDITOR  Z80
 
- 2329 D2FF  CD D70A     	CALL	MPAGE		; Seite speichern
  2330 D302  38 6C       	JR	C,EDI6		; No Memory
  2331                   ; zusaetzliche CR+LF am Ende von Text 2 abschneiden:
  2332 D304  2A 001A     	ld	hl,(t2e)
@@ -3292,10 +3291,10 @@ EDITOR  Z80
  2384 D373  CD D845     	CALL	STATUS		; Staturzeile aktualisieren
  2385 D376  2A B4D8     	ld	hl,(T1MERK)
  2386 D379  22 001C     	ld	(t1e),hl	; urspruengliche Textgrenzen
+ 2387 D37C  2A B4DA     	ld	hl,(T2MERK)	; wieder regenerieren
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  55
 EDITOR  Z80
 
- 2387 D37C  2A B4DA     	ld	hl,(T2MERK)	; wieder regenerieren
  2388 D37F  22 001E     	ld	(t2a),hl
  2389 D382  C3 D2EB     	JP	EDI2		; zurueck zum Editieren
  2390                   ;
@@ -3353,10 +3352,10 @@ EDITOR  Z80
  2442 D3D7  C0          	RET	NZ		; nicht gefunden (Fehler)
  2443 D3D8  3F          	CCF
  2444 D3D9  E2 D3E0     	JP	PO,CFR3		; ausgesucht
+ 2445 D3DC  1D          	DEC	E
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  56
 EDITOR  Z80
 
- 2445 D3DC  1D          	DEC	E
  2446 D3DD  20 F5       	JR	NZ,CFR2		; weitere freie Zeichen suchen
  2447 D3DF  C9          	RET
  2448                   	;
@@ -3414,10 +3413,10 @@ EDITOR  Z80
  2500 D432  C5          	PUSH	BC
  2501 D433  CD D3C1     	CALL	CFREE		; Kontrolle, ob genug Zeichen frei sind
  2502 D436  C1          	POP	BC
+ 2503 D437  ED 5B B7A0  	LD	DE,(CURSO)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  57
 EDITOR  Z80
 
- 2503 D437  ED 5B B7A0  	LD	DE,(CURSO)
  2504 D43B  D8          	RET	C		; nicht genug frei!
  2505 D43C  C5          TAB1:	PUSH	BC
  2506 D43D  3E 20       	LD	A,' '		; Leerzeichen
@@ -3475,10 +3474,10 @@ EDITOR  Z80
  2558 D495  CD C561     ENT3:	CALL	DABR80		; VRAM-Adresse holen
  2559 D498  4E          	ld	c,(hl)		; Zeichen entnehmen
  2560 D499  AF          	xor	a
+ 2561 D49A  77          	ld	(hl),a		; leer machen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  58
 EDITOR  Z80
 
- 2561 D49A  77          	ld	(hl),a		; leer machen
  2562 D49B  CD C5B5     	call	wpix		; anzeigen, also loeschen
  2563 D49E  D5          	PUSH	DE
  2564 D49F  14          	INC	D		; Zeile darunter
@@ -3536,10 +3535,10 @@ EDITOR  Z80
  2616 D4EE  32 B7A1     	LD	(CURSO+1),A
  2617 D4F1  CD D519     	CALL	BLER1		; Anzeige "Blockmarken?" statt Zeile/Spalte
  2618 D4F4  18 0E       	JR	MEMW1		; Tastatureingabe abwarten
+ 2619                   ;-------
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  59
 EDITOR  Z80
 
- 2619                   ;-------
  2620                   ; Anzeige "no Memory" und warten:
  2621 D4F6  2A B7A0     MEMW:	LD	HL,(CURSO)
  2622 D4F9  E5          	PUSH	HL
@@ -3597,10 +3596,10 @@ EDITOR  Z80
  2674                   ;
  2675                   ; Tastatureingabe in einer Zeile:	(fuer FIND, RPLACE, NAME, ZEILE)
  2676                   ; (bei CR wird kein Zeilenvorschub ausgegeben)
+ 2677                   ; PE:	BC=min./max. Cursorspalte!
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  60
 EDITOR  Z80
 
- 2677                   ; PE:	BC=min./max. Cursorspalte!
  2678                   ;	BC=0610h	Eingabe Dateiname
  2679                   ;	BC=0627h	Eingabe REPLACE
  2680                   ;	BC=080Ch	Eingabe ESC-Z (Zeilennummer)
@@ -3658,10 +3657,10 @@ EDITOR  Z80
  2732                   
  2733                   ; Zeichen anzeigen
  2734 D5D3  3E 2E       INP10:	LD	A,'.'
+ 2735 D5D5  CD F003     INP2:	CALL	PV1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  61
 EDITOR  Z80
 
- 2735 D5D5  CD F003     INP2:	CALL	PV1
  2736 D5D8  00          	DB	CRT		; Zeichen anzeigen
  2737 D5D9  21 B7A0     INP3:	LD	HL,CURSO
  2738 D5DC  7E          	LD	A,(HL)
@@ -3719,10 +3718,10 @@ EDITOR  Z80
  2790 D638  10 F6       	DJNZ	NAME1
  2791 D63A  C9          	RET
  2792                   ;
+ 2793                   ; Kassettenpuffer initialisieren, Dateiname eintragen:
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  62
 EDITOR  Z80
 
- 2793                   ; Kassettenpuffer initialisieren, Dateiname eintragen:
  2794                   ; PE:	HL=Dateiname
  2795                   ;
  2796 D63B  11 B780     KPINI:	LD	DE,CASS+80h	; Ende Kassettenpuffer+1
@@ -3780,10 +3779,10 @@ EDITOR  Z80
  2848 D694  28 03       	JR	Z,TXA3		; nichts zu verschieben
  2849 D696  CD 0063     	CALL	TLDIR		; an Text 1 anhaengen
  2850 D699  ED 53 001C  TXA3:	LD	(T1E),DE
+ 2851 D69D  22 001E     	LD	(T2A),HL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  63
 EDITOR  Z80
 
- 2851 D69D  22 001E     	LD	(T2A),HL
  2852 D6A0  C9          	RET
  2853                   ;
  2854                   ; Text an Speicherende verschieben:
@@ -3841,10 +3840,10 @@ EDITOR  Z80
  2906 D6F5  4D          	LD	C,L		; BC=Laenge des zu verschiebenden Textes
  2907 D6F6  E1          	POP	HL
  2908 D6F7  ED 5B 001E  	LD	DE,(T2A)
+ 2909 D6FB  1B          	DEC	DE		; DE=Quelle
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  64
 EDITOR  Z80
 
- 2909 D6FB  1B          	DEC	DE		; DE=Quelle
  2910 D6FC  2B          	DEC	HL		; HL=Ziel
  2911 D6FD  C4 006A     	CALL	NZ,TLDDR	; Text verschieben
  2912 D700  13          	INC	DE
@@ -3902,10 +3901,10 @@ EDITOR  Z80
  2964 D74B  10 F8       	DJNZ	MLN3
  2965 D74D  3E 0D       MLN5:	LD	A,CR
  2966 D74F  CD D778     	CALL	MLN9		; in Textspeicher
+ 2967 D752  D8          	RET	C
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  65
 EDITOR  Z80
 
- 2967 D752  D8          	RET	C
  2968 D753  3E 0A       	LD	A,LF
  2969 D755  CD D778     	CALL	MLN9		; in Textspeicher
  2970 D758  D8          	RET	C
@@ -3963,10 +3962,10 @@ EDITOR  Z80
  3022 D797  28 4A       	JR	Z,WRZL10	; T2A setzen und Rest der Zeile loeschen
  3023 D799  03          	INC	BC		; Zeiger auf naechstes Zeichen setzen
  3024 D79A  FE 20       	CP	' '
+ 3025 D79C  38 07       	JR	C,WRZL02	; Steuerzeichen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  66
 EDITOR  Z80
 
- 3025 D79C  38 07       	JR	C,WRZL02	; Steuerzeichen
  3026 D79E  CD C5B2     WRZL01:	CALL	WRZCH		; Zeichen anzeigen (wenn anders)
  3027 D7A1  23          	INC	HL		; naechste VRAM-Adresse
  3028 D7A2  1C          	INC	E		; naechste Spaltenposition
@@ -4024,10 +4023,10 @@ EDITOR  Z80
  3080                   ; Ausgabe einer Text-Seite auf Bildschirm:
  3081                   ;
  3082 D7F2  CD D845     WRPG:	CALL	STATUS		; Statuszeile anzeigen
+ 3083 D7F5  ED 4B 001E  WRPG0:	LD	BC,(T2A)	; Anfang Teiltext 2
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  67
 EDITOR  Z80
 
- 3083 D7F5  ED 4B 001E  WRPG0:	LD	BC,(T2A)	; Anfang Teiltext 2
  3084 D7F9  11 0000     	LD	DE,0		; Zeile 0, Spalte 0
  3085 D7FC  CD C561     	CALL	DABR80		; HL=VRAM-Adresse
  3086 D7FF  1E 00       WRPG1:	LD	E,0
@@ -4085,10 +4084,10 @@ EDITOR  Z80
  3138 D8A1  18 0E       	JR	STA2
  3139                   	;
  3140 D8A3  CD F003     STA1:	CALL	PV1
+ 3141 D8A6  23          	DB	OSTR
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  68
 EDITOR  Z80
 
- 3141 D8A6  23          	DB	OSTR
  3142 D8A7  9A 62 65 72 	DB	9Ah,'berschr.',0
  3143                   
  3144                   ; Bit 5+6 (STAT) testen: Zeichensatz
@@ -4146,10 +4145,10 @@ EDITOR  Z80
  3196 D922  BD          	CP	L		; linke Randmarke?
  3197 D923  20 02       	JR	NZ,STA7
  3198 D925  0E 02       	LD	C,2		; Code fuer linke Randmarke
+ 3199 D927  BC          STA7:	CP	H		; rechte Randmarke?
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  69
 EDITOR  Z80
 
- 3199 D927  BC          STA7:	CP	H		; rechte Randmarke?
  3200 D928  20 02       	JR	NZ,STA8
  3201 D92A  0E 03       	LD	C,3		; Code fuer rechte Randmarke		
  3202 D92C  79          STA8:	LD	A,C		; Zeichencode
@@ -4207,10 +4206,10 @@ EDITOR  Z80
  3254                   
  3255                   ; CAPS-Zustand anzeigen
  3256                   
+ 3257 D98F  D5          CAPS80:	PUSH	DE
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  70
 EDITOR  Z80
 
- 3257 D98F  D5          CAPS80:	PUSH	DE
  3258 D990  CD CA8A     	CALL	WIN80		; Fenster mit Statuszeile
  3259 D993  CD D999     	CALL	CAPS0
  3260 D996  D1          	POP	DE
@@ -4268,10 +4267,10 @@ EDITOR  Z80
  3312                   ;
  3313 DA02  EB          SRCH40:	EX	DE,HL
  3314 DA03  B7          	OR	A		; CY=0
+ 3315 DA04  ED 52       	SBC	HL,DE
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  71
 EDITOR  Z80
 
- 3315 DA04  ED 52       	SBC	HL,DE
  3316 DA06  4D          	LD	C,L
  3317 DA07  44          	LD	B,H		; Textlaenge
  3318 DA08  03          	INC	BC
@@ -4329,10 +4328,10 @@ EDITOR  Z80
  3370                   ;
  3371 DA64  DDDD        	DEFW	0DDDDH
  3372 DA66  50 50 52 49 	DB	'PPRINT',11H	; Argument als Dezimalzahl
+ 3373 DA6D  CD D101     	CALL	PRINT1		; Druck vorbereiten
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  72
 EDITOR  Z80
 
- 3373 DA6D  CD D101     	CALL	PRINT1		; Druck vorbereiten
  3374 DA70  D8          	RET	C		; kein Drucker oder Parameterfehler
  3375 DA71  CD D6A1     	CALL	TOP		; gesamten Text an Speicherende
  3376 DA74  2A 001E     	LD	HL,(T2A)
@@ -4390,10 +4389,10 @@ EDITOR  Z80
  3428 DAEB  B7          	OR	A
  3429 DAEC  ED 52       	SBC	HL,DE
  3430 DAEE  C8          	RET	Z		; kein Text im Speicher
+ 3431 DAEF  44          	LD	B,H
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  73
 EDITOR  Z80
 
- 3431 DAEF  44          	LD	B,H
  3432 DAF0  4D          	LD	C,L		; Textlaenge
  3433 DAF1  EB          	EX	DE,HL
  3434 DAF2  ED 5B 0014  REPL1:	LD	DE,(FTXT)	; Suchtext
@@ -4451,10 +4450,10 @@ EDITOR  Z80
  3486 DB51  ED 53 001C  REPL7:	LD	(T1E),DE	; Ende Text 1 neu setzen
  3487 DB55  FD          	DB	0FDH
  3488 DB56  7C          	LD	A,H		; Zaehler HY
+ 3489 DB57  C6 01       	ADD	A,1		; +1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  74
 EDITOR  Z80
 
- 3489 DB57  C6 01       	ADD	A,1		; +1
  3490 DB59  27          	DAA
  3491 DB5A  FD          	DB	0FDH
  3492 DB5B  67          	LD	H,A		; Zaehler HY
@@ -4512,10 +4511,10 @@ EDITOR  Z80
  3544 DB9F  3E 1F       ESCD:	LD	A,1FH		; Pfeil nach unten (DOWN)
  3545 DBA1  18 D3       	JR	ESC1
  3546                   
+ 3547                   ; ESC-G (Eingabe Grafikzeichen mit Auswahl in Statuszeile)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  75
 EDITOR  Z80
 
- 3547                   ; ESC-G (Eingabe Grafikzeichen mit Auswahl in Statuszeile)
  3548                   
  3549 DBA3  21 0000     ESCG:	LD	HL,0		; Fenster ab links/oben
  3550 DBA6  22 B79C     	LD	(WINON),HL
@@ -4573,10 +4572,10 @@ EDITOR  Z80
  3602 DC25  2C          gra9:	inc	l		; eine Pos. nach rechts
  3603 DC26  18 CD       	jr	gra4
  3604                   	;
+ 3605 DC28  FE 4F       gra10:	cp	79		; ganz rechts?
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  76
 EDITOR  Z80
 
- 3605 DC28  FE 4F       gra10:	cp	79		; ganz rechts?
  3606 DC2A  20 F9       	jr	nz,gra9
  3607 DC2C  21 0100     	ld	hl,100h		; erste Spalte in Zeile 1
  3608 DC2F  18 C4       	jr	gra4
@@ -4634,10 +4633,10 @@ EDITOR  Z80
  3660                   ; ESC-C (Block kopieren direkt zu aktueller Cursorposition)
  3661                   ; PE:	DE	aktuelle Cursorposition
  3662                   
+ 3663 DC7C  CD DC98     ESCC:	CALL	COPY		; Block kopieren
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  77
 EDITOR  Z80
 
- 3663 DC7C  CD DC98     ESCC:	CALL	COPY		; Block kopieren
  3664 DC7F  CD D3E4     ESCC0:	CALL	LCOUNT		; tatsaechliche Zeilennummer ermitteln
  3665 DC82  C3 D7F2     	JP	WRPG		; Seite neu anzeigen (mit Statuszeile)
  3666                   
@@ -4695,10 +4694,10 @@ EDITOR  Z80
  3718 DCCC  ED 52       	SBC	HL,DE
  3719 DCCE  44          	LD	B,H
  3720 DCCF  4D          	LD	C,L		; Laenge des zu verschiebenden Textes
+ 3721 DCD0  0B          	DEC	BC		; ohne Kennung
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  78
 EDITOR  Z80
 
- 3721 DCD0  0B          	DEC	BC		; ohne Kennung
  3722 DCD1  EB          	EX	DE,HL		; Quelle = Anfang von Text 2
  3723 DCD2  ED 5B 001C  	LD	DE,(T1E)	; Ziel = Ende von Text 1
  3724 DCD6  78          	LD	A,B
@@ -4756,10 +4755,10 @@ EDITOR  Z80
  3776 DD2B  ED 53 001E  	LD	(T2A),DE	; neuer Anfang von Text 2 jetzt hier
  3777                   
  3778                   ; So viele Zeilen zurueck gehen wie die Cursorposition angibt
+ 3779 DD2F  ED 5B 0021  ESC98:	LD	DE,(LIN)	; E=aktuelle Bildschirmzeile
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  79
 EDITOR  Z80
 
- 3779 DD2F  ED 5B 0021  ESC98:	LD	DE,(LIN)	; E=aktuelle Bildschirmzeile
  3780 DD33  16 00       	LD	D,0		; Spalte uninteressant
  3781 DD35  3A 0020     	LD	A,(COL)		; aktuelle Cursorspalte
  3782 DD38  A7          	AND	A		; ganz links?
@@ -4817,10 +4816,10 @@ EDITOR  Z80
  3834                   ;	HL zeigt auf Blockanfang (nach Marke)
  3835                   ;	DE zeigt auf die Blockendemarke
  3836 DD85  D5          KILL2:	PUSH	DE
+ 3837 DD86  ED 5B 001E  	LD	DE,(T2A)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  80
 EDITOR  Z80
 
- 3837 DD86  ED 5B 001E  	LD	DE,(T2A)
  3838 DD8A  ED 52       	SBC	HL,DE
  3839 DD8C  44          	LD	B,H
  3840 DD8D  4D          	LD	C,L		; Laenge von Textanfang bis Blockanfang
@@ -4878,10 +4877,10 @@ EDITOR  Z80
  3892 DDE3  FE 3A       	CP	'9'+1
  3893 DDE5  30 DD       	JR	NC,ESCZ1	; Zeichen groesser als '9'
  3894 DDE7  E6 0F       	AND	0Fh
+ 3895 DDE9  60          	LD	H,B
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  81
 EDITOR  Z80
 
- 3895 DDE9  60          	LD	H,B
  3896 DDEA  69          	LD	L,C
  3897 DDEB  29          	ADD	HL,HL	; *2
  3898 DDEC  29          	ADD	HL,HL	; *4
@@ -4939,10 +4938,10 @@ EDITOR  Z80
  3950 DE43  21 0001     	LD	HL,1		; Zeile 0, Spalte 1
  3951 DE46  22 B7A0     	LD	(CURSO),HL
  3952 DE49  CD F003     	CALL	PV1
+ 3953 DE4C  23          	DB	OSTR
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  82
 EDITOR  Z80
 
- 3953 DE4C  23          	DB	OSTR
  3954 DE4D  53 75 63 68 	DB	'Suche:',0
  3955 DE54  11 0008     	LD	DE,8		; Zeile 0, Spalte 8
  3956 DE57  06 11       	LD	B,17
@@ -5000,10 +4999,10 @@ EDITOR  Z80
  4008 DEC0  44 49 52    	DEFM	'DIR'
  4009 DEC3  1F          	DB	1Fh		; In Register DE Maske uebergeben
  4010 DEC4  CD F021     	CALL	PV7		; neue Funktion ab CAOS 4.7
+ 4011 DEC7  08          	DB	8		; Verzeichnis anzeigen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  83
 EDITOR  Z80
 
- 4011 DEC7  08          	DB	8		; Verzeichnis anzeigen
  4012 DEC8  C9          	RET
  4013                   
  4014 DEC9  DDDD        	DEFW	0DDDDH
@@ -5061,10 +5060,10 @@ EDITOR  Z80
  4066 DF14  D424        	DW	EDTAB	; 05	-	F1 (Tabulator)		OK INS und NoINS
  4067 DF16  DE7C        	DW	EFIND	; 06	-	F2 (weitersuchen)	OK
  4068 DF18  C671        	DW	NOOP	; 07	BEEP
+ 4069 DF1A  C8D2        	DW	CUL80	; 08	CUL	Cursor nach links	OK mit Scrolling
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  84
 EDITOR  Z80
 
- 4069 DF1A  C8D2        	DW	CUL80	; 08	CUL	Cursor nach links	OK mit Scrolling
  4070 DF1C  C696        	DW	CUR80	; 09	CUR	Cursor nach rechts	OK mit Scrolling
  4071 DF1E  C6D8        	DW	CUD80	; 0A	CUD	Cursor runter		OK mit Scrolling
  4072 DF20  C737        	DW	CUU80	; 0B	CUU	Cursor hoch		OK mit Scrolling
@@ -5122,13 +5121,14 @@ EDITOR  Z80
     7 DF7E  FF FF FF FF 	  DS	0E000h - $,0FFh
  4124                   
  4125 E000              ROMEND:
+ 4126                   	.DEPHASE
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  85
 EDITOR  Z80
 
- 4126                   	.DEPHASE
  4127                   
  4128                   	END
  0 Error(s) Detected.
  8320 Absolute Bytes. 704 Symbols Detected.
  DC73        	DW	ESCR	; ESC-R	RECHTS	setze rechte Randmarke
- 4114 DF6E
+ 4114 DF6E  C671        	DW	NOOP	; ESC-S
+ 4115 DF70  DD58
