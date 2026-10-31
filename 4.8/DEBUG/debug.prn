@@ -6615,7 +6615,7 @@ BSAVE   INC
    33                   ; CAOS-Vereinbarungen
    34                   
    35         E011      BASMEN	EQU	0E011H		; hier steht beim KC85/4+ das BASIC-Menuewort
-   36         E02F      BASON	EQU	0E02FH		; BASIC aktivieren
+   36         E02F      BASON	EQU	0E02FH		; BASIC aktivieren (ab CAOS 4.1 gleiche Adresse)
    37                   ;
    38                   ; BASIC-Autostart:
    39                   ;
@@ -6741,5 +6741,4 @@ BSAVE   INC
  8320 Absolute Bytes. 856 Symbols Detected.
 03     	CALL	PV1
   131 DFED  36          	DB	SAVE
-  132 DFEE  C9          	RET
-  133     
+  132 DFEE
