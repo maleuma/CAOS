@@ -39,7 +39,7 @@ DUENN   Z80
    34                   ;**						**
    35                   ;*************************************************
    36                   
-   37                   ; !!! Versionsdatum nur noch in VORBLOCK.INC eintragen !!!
+   37                   ; !!! Versionsdatum nur noch in VORBL48.INC eintragen !!!
    38                   
    39         0000      BETA	equ	0		; 0 fuer Vollversion, 1 fuer beta-Version
    40                   	;benoetigt 1 Byte im ROM C
@@ -11461,4 +11461,4 @@ FE00FFFFINC
  0 Error(s) Detected.
  16512 Absolute Bytes. 1305 Symbols Detected.
 H, 000H, 044H, 044H, 028H, 028H, 010H, 000H	; 76h v
-   7
+   70

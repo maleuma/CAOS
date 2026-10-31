@@ -34,7 +34,7 @@
 ;**						**
 ;*************************************************
 
-; !!! Versionsdatum nur noch in VORBLOCK.INC eintragen !!!
+; !!! Versionsdatum nur noch in VORBL48.INC eintragen !!!
 
 BETA	equ	0		; 0 fuer Vollversion, 1 fuer beta-Version
 	;benoetigt 1 Byte im ROM C
