@@ -1,0 +1,56 @@
+TITLE	KC-Assembler
+;----------------------------------------------------------------
+;		Assembler-Ebene im USER-ROM CAOS 4.9		I
+;								I
+; enthaelt:	BASIC-Verteiler	mit Fullscreen-Editor		I
+;		Assembler					I
+;								I
+;		(c) ML-Soft 27.03.2023 - 03.04.2026		I
+;----------------------------------------------------------------
+	.Z80
+
+; CAOS-Vorblock:
+	DB	'ASM22   KCC'	; 11 Byte Dateiname
+	DS	5,0
+	DB	2		; 2 Argumente
+	DW	ROMBEG		; Anfangsadresse
+	DW	ROMEND		; Endadresse
+	DW	0
+	DS	95,0
+	DB	'03.04.2026'	; Datum
+;---------------
+	.PHASE	0C000H
+ROMBEG:
+	INCLUDE	BASPV.INC	; BASIC-IO-Routinen mit Fullscreen-Editor
+	INCLUDE	ASM22.INC	; Assembler ASM 2.2
+
+;-------
+; Geraeteumschaltung und Anzeige fuer CAOS 4.9
+; DEVICE	Auflisten der installierten Treiber
+; DEVICE n	Umschaltung Geraet n (0..7)
+; DEVICE name	Umschaltung auf Geraet mit Name
+;
+	DW	0DDDDH
+	DB	'DEVICE',1FH	; Textargument zulaessig (Device-Name)
+	LD	A,(DE)
+	AND	A		; Parameter angegeben?
+	JR	Z,DRLIST	; nein, Treiber auflisten
+	LD	A,8		; ansonsten Treibername in DE uebergeben
+	CALL	SETDRV		; Treiber einstellen
+	RET	NC		; kein Fehler
+DERR:	CALL	PV1
+	DB	ERRM		; Treiber nicht aktiv
+	RET
+	;
+DRLIST:	LD	A,0FFh		; Treiber auflisten
+SETDRV:	CALL	PV1
+	DB	DEVICE		; 49H - neue Funktion seit CAOS 4.6
+	RET
+
+	INCLUDE	CAOSEX49.INC	; TIME, PRINT
+
+	ABSFILL	0E000h,<USER-ROM-Ende (ASM)>
+ROMEND:
+
+	.DEPHASE
+	END

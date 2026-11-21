@@ -1,0 +1,160 @@
+;-----------------------------------------------------------------------;
+;	Hilfefunktion fuer CAOS-Text-Editor 0.4+			;
+;	--------------------------------------------			;
+;	(nachladbar in den IRM-Bereich ab Adresse BA00h bis max. BFE0h)	;
+;				(c) ML-Soft 28.01.2019 - 07.02.2021	;
+;-----------------------------------------------------------------------;
+;
+; - Anzeigen einer Hilfeseite im Bild 1
+; - Umschaltung auf Hilfeseite im Editor mit ESC-H
+;-------------------------------------------------------------------------------
+	.Z80
+
+	INCLUDE	CAOS48.INC	; CAOS-Vereinbarungen
+	INCLUDE EDAS.INC	; EDAS-Arbeitszellen (auch fuer Editor)
+
+;-----------------------------------------------------------------------
+IF1
+	.PRINTX	'Hilfe-Seite fuer CAOS-Editor'
+ENDIF
+;-------
+
+; CAOS-Vorblock:
+
+	DB	'HILFE   KCC'	; 11 Byte Dateiname
+	DS	5,0
+	DB	2		; 2 Argumente
+	DW	AADR		; Anfangsadresse
+	DW	EADR		; Endadresse
+	DW	0
+	DS	95,0
+	DB	'02.02.2019'	; Datum
+;-------
+	.PHASE	0BA00H
+AADR:				; Anfangsadresse fuer Vorblock
+
+; Einsprung von EDIT nach Laden des Overlays
+
+	JR	HILFE
+	;
+	DEFW	0DDDDH
+	DB	'HELP',1Fh
+HILFE:	LD	HL,(CURSO)	; Cursorposition und Fenster
+	PUSH	HL		; merken
+	LD	HL,(WINON)
+	PUSH	HL
+	LD	HL,(WINLG)
+	PUSH	HL
+	LD	HL,0		; volles Fenster
+	LD	(WINON),HL
+	LD	HL,2028H	; 32 Zeilen, 40 Spalten
+	LD	(WINLG),HL
+
+	CALL	PV1
+	DB	OSTR
+	DB	ESC,'3',0	; Anzeige Bild 0, Zugriff Bild 1
+
+	CALL	PV1
+	DB	OSTR
+	DB	CLS,LF		; Bildschirm komplett loeschen
+	DB	' ESC-Funktionen  KC-EDIT 0.5   F-Tasten',cr,lf
+	;	'----------------------------------------'
+	DB	cr,LF
+	DB	' ESC-0 unidirektional          F1=ESC',cr,lf
+	DB	' ESC-1 Exponentschrift         F2=TAB',cr,lf
+	DB	' ESC-2 Schmalschrift           F3=FIND',cr,lf
+	DB	' ESC-3 Unterstreichen',cr,lf
+	DB	' ESC-4 Pica/Elite              D005:',cr,lf
+	DB	' ESC-5 Breitschrift            F5=TAB',cr,lf
+	DB	' ESC-6 Doppeldruck             F6=FIND',cr,lf
+	DB	' ESC-7 Indexschrift',cr,lf
+	DB	' ESC-8 Fettschrift',cr,lf
+	DB	' ESC-9 NLQ',cr,lf
+	DB	' ESC-A ANFANG Blockanfangsmarke 1Ch',cr,lf
+	DB	' ESC-B BOTTOM gehe zu Textende',cr,lf
+	DB	' ESC-C COPY   markierten Block kopieren',cr,lf
+;	DB	' ESC-D DOWN   Pfeil runter 1FH',cr,lf		; ohne Funktion
+	DB	' ESC-E ENDE   Blockendemarke 1Eh',cr,lf
+	DB	' ESC-F FIND   Suchen (F3=weitersuchen)',cr,lf
+	DB	' ESC-G GRAFIK Eingabe Grafikzeichen',cr,lf
+	DB	' ESC-H HELP   Umschaltung Hilfeseite',cr,lf
+	DB	' ESC-J eJect  Druck: Seitenwechsel 0Ch',cr,lf
+	DB	' ESC-K KILL   markierten Block l|schen',cr,lf
+	DB	' ESC-L LINKS  setze linke Randmarke',cr,lf
+	DB	' ESC-N NOCRLF Zeile binden',cr,lf
+	DB	' ESC-R RECHTS setze rechte Randmarke',cr,lf
+	DB	' ESC-T TOP    gehe zu Textanfang',cr,lf
+;	DB	' ESC-U UP     Eingabe Pfeil hoch 1Dh',cr,lf	; ohne Funktion
+	DB	' ESC-V moVe   mark. Block verschieben',cr,lf
+	DB	' ESC-X heX    Eingabe HEX-Sequenz 0Fh',cr,lf
+	DB	' ESC-Z ZEILE  gehe zu Zeile Nr.?',cr,lf
+	DB	lf
+	DB	' STOP wechselt Zeichensatz',0
+
+; Linien dazu zeichnen
+	LD	A,00111100b
+	LD	(FARB),A	; Linienfarbe weiss
+	LD	HL,LINES
+	LD	B,3		; 3 Linien zeichnen
+LIN2:	PUSH	BC
+	LD	DE,ARG1
+	LD	BC,8
+	LDIR			; Linienparameter in ARG's laden
+	PUSH	HL
+	CALL	PV1
+	DB	LINE
+	POP	HL
+	POP	BC
+	DJNZ	LIN2
+
+	LD	HL,1E23H	; vorletzte Zeile
+	LD	(CURSO),HL
+	LD	A,CR		; Enter
+	CALL	PV1		; als Zeichencode darstellen
+	DB	CSTBT
+
+	CALL	PV1
+	DB	OSTR
+	DB	ESC,'2',0	; Anzeige+Zugriff Bild 1
+
+	CALL	PV1
+	DB	KBD		; Tastatureingabe abwarten
+
+	CALL	PV1
+	DB	OSTR
+	DB	ESC,'1',0	; Anzeige+Zugriff Bild 0
+
+	POP	HL		; Cursorposition und Fenster
+	LD	(WINLG),HL	; wie vorher
+	POP	HL
+	LD	(WINON),HL
+	POP	HL
+	LD	(CURSO),HL
+	RET
+;
+; Anzeige der Statuszeile im Editiermodus (aehnlich WordPro)
+;
+LINES:	DW	0,236,319,236	; waagerechte Linie unter Statuszeile
+	DW	235,165,235,255	; senkrechte Linie zwischen ESC und F-Tasten
+	DW	235,165,319,165	; waagerechte Linie unter F-Tasten
+
+EADR:			; Endadresse fuer CAOS-Vorblock
+
+PRMSG	MACRO	MSG1,MSG2,MSG3,MSG4
+	 .PRINTX MSG1 MSG2 MSG3 MSG4
+	ENDM
+
+	IF2
+	 IF EADR GT 0BFE0H
+	 long	equ eadr-0bfe0h
+	  PRMSG	<Programm>, %long, <Bytes zu lang,>, <max. bis BFE0!>
+	 ELSE
+	 .RADIX	16
+	  PRMSG	<Programm von>, %AADR, <bis>, %EADR
+	 .RADIX	10
+	 ENDIF
+	ENDIF
+
+	.DEPHASE
+
+	END

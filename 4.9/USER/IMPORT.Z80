@@ -1,0 +1,946 @@
+;-----------------------------------------------------------------------;
+;	Import von Textdateien fuer CAOS-Text-Editor			;
+;	--------------------------------------------			;
+;	(nachladbar in den IRM-Bereich ab Adresse BA00h bis max. BFE0h)	;
+;				(c) ML-Soft 06.01.2019 - 13.02.2019	;
+;-----------------------------------------------------------------------;
+;
+; - Laden und Konvertieren von:
+;	WordPro'86
+;	WordPro'89
+;	WordPro5
+;	WordPro9
+;	TEXOR
+;	WordStar bzw. TPKX
+;-------------------------------------------------------------------------------
+	.Z80
+
+	INCLUDE	CAOS48.INC	; CAOS-Vereinbarungen
+	INCLUDE EDAS.INC	; EDAS-Arbeitszellen (auch fuer Editor)
+
+; Programmadressen aus Editor/Assembler-Hilfsprogrammen:
+
+TLDDR	EQU	006AH		; Text kopieren mit LDDR
+GET	EQU	0086H		; Zeichen aus Textspeicher lesen
+PUT	EQU	0092H		; Zeichen in Textspeicher schreiben
+
+;-----------------------------------------------------------------------
+IF1
+	.PRINTX	'Import-Filter fuer CAOS-Editor'
+ENDIF
+;-------
+
+; CAOS-Vorblock:
+
+	DB	'IMPORT  KCC'	; 11 Byte Dateiname
+	DS	5,0
+	DB	2		; 2 Argumente
+	DW	AADR		; Anfangsadresse
+	DW	EADR		; Endadresse
+	DW	0
+	DS	95,0
+	DB	'13.02.2019'	; Datum
+;-------
+	.PHASE	0BA00H
+AADR:				; Anfangsadresse fuer Vorblock
+
+; Einsprung von EDIT nach Laden des Overlays
+
+	JR	IMPORT
+	;
+	DEFW	0DDDDH
+	DB	'IMPORT',1Fh
+IMPORT:	LD	A,8
+	CALL	PV1
+	DB	DEVICE
+	JR	Z,CON0		; bei Kassette Dateiname nicht abfragen
+	CALL	NAME		; Dateiname eingeben -> NAMP
+	RET	C		; BRK
+	CALL	PV1
+	DB	CRLF
+CON0:	CALL	PV1
+	DB	OSTR
+	DB	'1=WordPro''86/9',cr,lf	; WordPro'86 oder WordPro9
+	DB	'2=TypeStar',cr,lf
+	DB	'3=TEXOR',cr,lf
+	DB	'4=WordPro''89/5',cr,lf	; WordPro'89 oder WordPro5
+	DB	'5=TPKC/WordStar',cr,lf	; WordStar oder TPKC
+	DB	'? ',0
+CON1:	CALL	KEYB
+	JP	C,LFCR		; BRK
+	CP	'1'
+	JR	C,CON1		; < '1'
+	CP	'6'
+	JR	NC,CON1		; > '5'
+	PUSH	AF
+	CALL	CHR		; Auswahl anzeigen
+	CALL	LFCR
+	POP	AF
+	AND	7		; Nummer binaer verwenden
+	EX	AF,AF'		; Konvertierung in A' merken
+	LD	DE,0
+	LD	(COL),DE	; EDIT-Cursor home
+	LD	HL,CASS		; Kassettenpuffer
+	LD	(IX+5),L
+	LD	(IX+6),H
+	SET	0,(IX+7)	; Read, nicht Verify
+	LD	HL,NAMP		; Name an ISRI uebergeben
+	CALL	PV1
+	DB	ISRI		; ersten Block einlesen
+	RET	C		; Fehler
+	XOR	A		; Z=1 (Daten aus Puffer entnehmen!)
+LOA1:	CALL	BLRD		; (Vor-) Block lesen bzw. Blocknummer anzeigen
+	JP	C,LOA12		; BRK oder Fehler
+	LD	A,8		; Treiber abfragen
+	CALL	PV1
+	DB	DEVICE
+	JR	NZ,LOA3		; nicht Kassette
+; Bei Kassette, Name aus Vorblock anzeigen und speichern:
+	LD	A,2		; Zeile loeschen
+	CALL	CHR
+	LD	DE,NAMP
+	LD	HL,CASS
+	LD	BC,11
+LOA2:	LD	A,(HL)		; Zeichen aus Kassettenpuffer
+	CP	' '
+	CALL	NC,CHR		; anzeigen
+	LDI			; und in Puffer kopieren
+	JP	PE,LOA2		; bis alle 11 Zeichen abgearbeitet sind
+	CALL	LFCR
+LOA3:	LD	(IX+3),2	; Block Nr. 2 erwarten (1. Datenblock)
+	LD	DE,(T1E)	; Ladebeginn
+; LOAD-Hauptschleife
+; A'	Nr. der Konvertierungsmethode
+; DE	Adresse, wohin gespeichert wird
+; (T2E)	max. Endadresse
+LOA4:	LD	HL,(T2A)	; max. Endadresse
+	XOR	A
+	SBC	HL,DE		; verfuegbaren Platz berechnen
+	JR	Z,LOA11		; kein Byte frei -> no Memory
+	PUSH	HL
+	CALL	BLRD		; Block in Puffer einlesen
+	POP	HL
+	JR	C,LOA12		; BRK oder Fehler
+	LD	BC,128		; Blocklaenge
+	SBC	HL,BC		; ist im Speicher noch Platz fuer einen Block?
+	JR	NC,LOA5		; ja, voller Block moeglich
+	ADD	HL,BC
+	LD	C,L		; C=restliche Anzahl
+LOA5:	EX	AF,AF'
+	 CP	4		; WP'86/WP9-/TEXOR oder Typestar-Text?
+	 JR	NC,LOA9		; nein
+
+; Dateiformate mit Adressen im CAOS-Vorblock (WordPro'86/9, TypeStar, TEXOR)
+; bei diesen Texten nur die Adressen im Vorblock beachten
+	EX	AF,AF'
+	LD	HL,(ARG3)	; noch zu ladende Anzahl Bytes
+	AND	A
+	SBC	HL,BC		; Blocklaenge abziehen
+	JR	NC,LOA6		; voller Block
+	LD	BC,(ARG3)	; nur noch der Rest!
+LOA6:	LD	B,C		; B=Anzahl in dieser Runde
+	LD	HL,CASS		; Daten aus Kassettenpuffer
+LOA7:	LD	A,(HL)		; Zeichen entnehmen
+	CP	0FFH		; TEXOR-Ende-Kennung?
+	JR	NZ,LOA20	; nein
+	EX	AF,AF'
+	 CP	3		; Laden wir gerade TEXOR-Text?
+	 JR	Z,LOA21		; ja, fertig
+	EX	AF,AF'
+LOA20:	INC	HL
+	EX	DE,HL
+	CALL	PUT		; Datenbyte in Textspeicher
+	EX	DE,HL
+	INC	DE
+	DJNZ	LOA7
+	LD	HL,(ARG3)
+	AND	A
+	SBC	HL,BC		; geladene Blockanzahl abziehen
+	LD	(ARG3),HL
+	JR	Z,LOA12		; Ende erreicht
+LOA8:	INC	(IX+3)		; naechste Blocknummer
+	JR	LOA4
+
+LOA21:	EX	AF,AF'
+	JR	LOA12
+
+; Dateiformate ohne CAOS-Vorblock (TPKC, WordStar)
+; bei diesen Texten auf Endezeichen 03h oder 1Ah achten
+LOA9:	EX	AF,AF'
+	LD	B,C		; B=Anzahl in dieser Runde
+	LD	HL,CASS		; Daten aus Kassettenpuffer
+LOA10:	LD	A,(HL)		; Zeichen entnehmen
+	CP	3		; CAOS-Ende-Zeichen?
+	JR	NZ,LOA10a
+	EX	AF,AF'
+	 CP	4		; WordPro'89/5?
+	 JR	Z,LOA12a
+	EX	AF,AF'
+LOA10a:	CP	1Ah		; CP/M-Endezeichen?
+	JR	NZ,LOA10b
+	EX	AF,AF'
+	 CP	5		; WordStar/TPKC?
+	 JR	Z,LOA12a
+	EX	AF,AF'
+LOA10b:	INC	HL
+	EX	DE,HL
+	CALL	PUT		; Datenbyte in Textspeicher
+	EX	DE,HL
+	INC	DE
+	DJNZ	LOA10
+	JR	LOA8		; naechste Blocknummer
+
+; Speicher voll
+LOA11:	INC	A		; A=1
+	LD	(M4A),A		; Speicher voll setzen
+	EX	AF,AF'
+LOA12a:	EX	AF,AF'
+; BRK, Lesefehler oder Datei fertig eingelesen
+LOA12:	CALL	PV1
+	DB	CSRI		; Datei schliessen
+
+; Text verschieben und dabei konvertieren
+; DE=Ende+1 geladener Text
+; (T1E) Anfang geladener Text
+	LD	H,D
+	LD	L,E		; HL=Textende neu
+	LD	BC,(T1E)	; BC=Textende alt
+	AND	A		; CY=0
+	SBC	HL,BC
+	JP	Z,LFCR		; Abbruch, kein Inhalt geladen!
+	LD	B,H
+	LD	C,L		; BC=Laenge des zu verschiebenden Textes
+	LD	HL,(T2A)	; zu Anfang Teiltext 2 verschieben
+	EX	DE,HL
+	EX	AF,AF'		; Nr. der Konvertierung
+	 EXX
+	 LD	C,0FFh		; 8 Bit (IBM)
+	 LD	HL,WP9D-1
+	 DEC	A
+	 SCF			; CY=1
+	 JR	Z,CON7		; 1 = WordPro'86 und WordPro 9
+	 LD	HL,TYTX-1
+	 DEC	A
+	 CCF			; CY=0
+	 JR	Z,CON7		; 2 = Typestar
+	 DEC	A
+	 LD	HL,CDTX-1
+	 JR	Z,CON3		; 3 = TEXOR
+	 DEC	A
+	 LD	HL,CDT5-1
+	 JR	Z,CON3		; 4 = WordPro5
+	 LD	HL,CDTP-1	; 5-7 = TPKC
+	 LD	C,7Fh		; 7 Bit (ASCII)
+CON3:	 CALL	CONSTR		; konvertiere...
+	EXX
+; DE=Ziel	HL=Quelle	BC=Anzahl
+; HL'=Umcodiertabelle	C'=Maske
+	DEC	DE
+CON4:	DEC	HL
+	CALL	GET		; Zeichen aus Teiltext 1 entnehmen,
+	CALL	PCON		; konvertieren
+	and	a
+	jr	z,tex1		; 00 ignorieren
+	cp	lf
+	jr	z,tex1		; LF ignorieren
+	EX	DE,HL
+	cp	cr
+	jr	nz,tex2		; dafuer cr in cr+lf konvertieren
+	ld	a,lf
+	CALL	PUT
+	DEC	HL
+	ld	a,cr
+tex2:	CALL	PUT		; und in Teiltext 2 ablegen
+	DEC	HL
+	EX	DE,HL
+tex1:	DEC	BC
+	LD	A,B
+	OR	C
+	JR	NZ,CON4
+	INC	DE
+CON5:	LD	(T2A),DE	; neuer Anfang Teiltext 2
+	LD	A,(M4A)
+	OR	A
+	CALL	NZ,MEM		; no Memory
+	RET
+;
+; Typestar/WordPro'86/WordPro9-Datei konvertieren
+;	1. gelesene Daten an Speicherende laden
+;	2. Beim Umladen konvertieren
+;	- Leerzeichen in Tabulatoren umwandeln
+;	- Leerzeichen am Zeilenende entfernen
+;	- Zeichensatz wie WordPro5 behandeln
+;	- WP'86-Komprimierung: FF nn nn aufloesen in nnnn Leerzeichen
+;	- TypeStar-Komprimierung: C0h=1x Leerzeichen, C1h=2x ... bis FFh=64x
+; CY'=1 falls WP86/WP9
+; CY'=0 falls TypeStar
+;
+CON7:	 EX	AF,AF'		; CY' merken
+	 CALL	CONSTR		; konvertiere...
+	 LD	BC,0		; BC' = Bytezaehler fuer Komprimierung
+	 LD	D,C		; D'  = Spaltenzaehler
+	 LD	E,C		; E'  = TAB-Zaehler
+	EXX			; HL=Textende, DE=(T2A), BC=Laenge
+	DEC	HL		; zum letzten Datenbyte gehen
+	DEC	DE		; 03h auf (T2E) erhalten
+	CALL	TLDDR		; Text komplett nach hinten verschieben
+	INC	DE		; auf erstes Zeichen gehen
+	INC	HL		; (T1E)	Text hier konvertiert ablegen
+CON8:	EX	DE,HL		; Quelle in HL, Ziel in DE
+
+; Mit Schleife von hinten wieder nach vorn kopieren und dabei konvertieren
+; HL=Ziel, DE=Quelle
+; BC'=Anzahl kompr. Leerzeichen, E'=Leerzeichenzaehler, D'=Spaltenzaehler
+CON9:	EXX
+CON9a:	 LD	A,B
+	 OR	C		; sind noch komprimierte Leerzeichen da?
+	 JR	Z,CON10		; nein, neues Zeichen lesen
+	 DEC	BC		; runter zaehlen
+	 LD	A,' '
+	EXX
+	JR	CON13		; wie ein gelesenes Zeichen bearbeiten
+	;
+CON10:	EXX
+	CALL	GET		; Zeichen vor Teiltext 2 holen
+	INC	HL
+	EX	AF,AF'
+	 JR	NC,CONT		; Typestar-Datei anders dekomprimieren!
+	EX	AF,AF'
+	OR	A		; 00=Ende-Kennung?
+	JP	Z,CON21		; fertig
+	CP	94h		; amerikan. ZS?
+	JR	NZ,CON10a
+	EXX
+	 LD	HL,WP9E-1	; -> Umlaute amerikanischer ZS
+	 JR	CON10b
+	;
+CONT:	EX	AF,AF'
+	CP	0C0h		; Komprimierte Leerzeichen?	
+	JR	C,CON13		; nein
+	SUB	0BFh		; Anzahl Leerzeichen
+	EXX
+	 ADD	A,C		; in BC' aufaddieren
+	 LD	C,A
+	 LD	A,0
+	 ADC	A,B
+	 LD	B,A
+	 JR	CON9a
+	;
+CON10a:	CP	95h		; deutscher ZS?
+	JR	NZ,CON10c
+	EXX
+	 LD	HL,WP9D-1	; -> Umlaute deutscher ZS
+CON10b:	EXX
+	LD	A,' '		; und das Zeichen selbst als Leerzeichen behandeln
+CON10c:	CP	0EAH		; EA=Komprimiert-Kennung in WP9a?
+	scf			; EA-Kennung merken
+	JR	Z,CON11
+	CP	0FFh		; FF=Komprimiert-Kennung in WP9K?
+	JR	NZ,CON13
+CON11:	CALL	GET		; Anzahl "High"
+	INC	HL
+	LD	B,A
+	CALL	GET		; Anzahl "Low"
+	INC	HL
+	LD	C,A		; BC=Anzahl der Leerzeichen
+	jr	nc,CON12
+	inc	bc		; bei EA-Komprimierung Anzahl+1
+CON12:	EX	DE,HL		; Ziel in HL
+	 push	hl
+	 add	hl,bc		; neues Ziel nach Eintragen der Leerzeichen
+	 jp	c,cerr		; ausserhalb!
+	 sbc	hl,de		; Vergleich mit Beginn der Quelle
+	 jp	nc,cerr		; Speicher zu gering
+	 pop	hl
+	 PUSH	BC
+	 EXX
+	  POP	BC		; Leerzeichen-Anzahl in BC'
+	 EXX
+	 JR	CON8
+;
+; Zeichen nach Teiltext 1 ablegen
+CON13:	CALL	PCON3		; konvertieren
+	JR	Z,CON1X		; Zeichen ist konvertiert
+	CP	20h
+	JR	C,CON1Y		; Zeichencodes <20h unterbinden
+	CP	80h
+	JR	C,CON1X		; Zeichencodes < 80h (ASCII)
+	cp	0B0h
+	JR	NC,CON1X	; Zeichencodes > B0h (Grafikzeichen)
+CON1Y:	LD	A,' '		; Leerzeichen statt 80h..AFh (Druckercodes bei WP9)
+CON1X:	CP	' '		; Leerzeichen?
+	EXX
+	 JR	NZ,CON15	; nein, pruefen ob zuvor welche gesammelt wurden
+	 INC	E		; Leerzeichen zunaechst sammeln
+	 LD	A,D		; geschriebene Zeichen
+	 ADD	E		; plus gesammelte Leerzeichen
+	 CP	80		; Zeilenende erreicht?
+	 JR	Z,CON14		; ja, Leerzeichen am Zeilenende ignorieren
+	EXX
+	JR	CON20
+	;
+CON14:	 LD	DE,0		; Spalten- und Leerzeichenzaehler ruecksetzen
+	EXX
+	EX	DE,HL		; Ziel in HL
+	 LD	A,CR
+	 CALL	PUT		; Zeilenende eintragen
+	 INC	HL
+	 LD	A,LF
+	 CALL	PUT
+	 INC	HL
+	EX	DE,HL		; Quelle in HL
+	JR	CON20
+
+; kein Leerzeichen:
+CON15:	 PUSH	AF		; Zeichen merken
+CON15a:	 DEC	E		; noch gesammelte Leerzeichen vorhanden?
+	 JR	Z,CON17a	; ja, aber nur noch ein Einzelnes
+	 INC	E		; Leerzeichen vorhanden?
+	 JR	Z,CON19		; nein, Zeichen ablegen
+; TABulatoren erzeugen:
+CON16:	 LD	A,D		; aktuelle Spalte
+	 OR	7
+	 CP	D		; sind wir direkt vor dem TAB-Stop?
+	 JR	Z,CON17		; dann reicht ein Leerzeichen
+	 INC	A
+	 LD	C,A		; naechster TAB-Stop waere hier
+	 LD	A,D
+	 ADD	E		; mit den gesammelten Leerzeichen sind wir hier
+	 CP	C		; TAB machbar?
+	 JR	C,CON17		; nein, Rest sind Leerzeichen
+
+	EXX
+	EX	DE,HL		; Ziel in HL
+	 LD	A,TAB
+	 CALL	PUT		; TAB ablegen
+	 INC	HL
+	EX	DE,HL		; Quelle in HL
+	EXX
+	 LD	A,C		; neuer TAB-Stop
+	 SUB	D		; minus bisherige Spalte = bearbeitete Leerzeichen
+	 NEG
+	 ADD	E		; restliche Anzahl Leerzeichen
+	 LD	E,A
+	 LD	D,C		; Spalte auf naechsten TAB-Stop setzen
+	 JR	NZ,CON16	; weitere Leerzeichen vorhanden
+	 JR	CON18
+	;
+CON17a:	 INC	E
+; Rest als Leerzeichen ablegen
+CON17:	EXX
+	EX	DE,HL		; Ziel in HL
+	 LD	A,' '
+	 CALL	PUT		; Leerzeichen ablegen
+	 INC	HL
+	EX	DE,HL		; Quelle in HL
+	EXX
+	 INC	D		; Spalte +1
+	 DEC	E		; Leerzeichen -1
+	 JR	NZ,CON15a	; weitere Leerzeichen vorhanden
+CON18:	 LD	C,0		; benutztes C-Register wieder auf 0 setzen
+CON19:	 POP	AF		; Zeichen, welches den Leerzeichen folgt
+	EXX
+	EX	DE,HL		; Ziel in HL
+	 CALL	PUT		; Zeichen ablegen
+	 INC	HL
+	 EX	DE,HL		; Quelle in HL
+	 EXX
+	  INC	D		; Spalten zaehlen
+	  LD	A,D
+	  CP	80		; Zeilenende erreicht?
+	  JR	Z,CON14		; CR+LF einfuegen
+	 EXX
+CON20:	LD	BC,(T2A)	; bis maximal hierher abarbeiten
+	OR	A	; CY=0
+	SBC	HL,BC
+	ADD	HL,BC
+	JP	NZ,CON9		; bis wir bei T2A angekommen sind
+CON21:
+	EX	DE,HL
+	LD	A,CR		; CR
+	CALL	PUT
+	INC	HL
+	LD	A,LF		; und LF anhaengen
+	CALL	PUT
+	INC	HL		; HL = Textende neu
+	LD	DE,(T1E)	; DE = Textende alt
+	PUSH	HL		; neues Textende merken
+	SBC	HL,DE		; Ermittlung der neuen Textlaenge
+	LD	B,H
+	LD	C,L		; BC=Laenge des zu verschiebenden Textes
+	POP	HL		; HL=Textende neu
+	LD	DE,(T2A)
+	RET	Z		; nichts geladen!
+	DEC	DE
+	DEC	HL
+	CALL	TLDDR		; Text wieder nach hinten verschieben
+	INC	DE
+	INC	HL
+	JP	CON5
+;
+; Anzeige dass Konvertierung laeuft
+;
+CONSTR:	CALL	PV1
+	DB	OSTR
+	DB	'konvertiere...',CR,LF,0
+	RET
+;
+; Umcodierung:
+; PE:	A	Code
+;	HL'	Adresse der Umcodiertabelle -1
+;	C'	Maske FFh oder 7Fh
+; PA:	A	neuer Code
+;	Z=1	Zeichen ist konvertiert (oder FFh)
+; VR:	AF
+;
+PCON:	EXX			; Zweitregistersatz benutzen
+	PUSH	HL		; HL=Umcodiertabelle
+	PUSH	DE
+	AND	C		; bei TPKC Bit 7 abschneiden
+PCON4:	LD	D,A		; Code
+PCON1:	INC	HL
+	LD	A,(HL)
+	CP	0FFh
+	JR	Z,PCON2		; Tabelle zu Ende
+	INC	HL
+	CP	D
+	JR	C,PCON1		; weitersuchen
+	JR	NZ,PCON2	; Code nicht in Tabelle
+	LD	D,(HL)		; ersetzen
+PCON2:	LD	A,D
+	POP	DE
+	POP	HL
+	EXX
+	RET
+;
+; Konvertierung ohne Maske (fuer WordPro9)
+;
+PCON3:	EXX			; Zweitregistersatz benutzen
+	PUSH	HL		; HL=Umcodiertabelle
+	PUSH	DE
+	JR	PCON4
+;-------
+; Block einlesen in Kassettenpuffer:
+; PE:	(IX+3)	erwarteter Block
+;	Z=1	1. Block (nur Puffer entnehmen!)
+;	Z=0	folgenden Block lesen
+; PA:	CY=1	BRK betaetigt oder Fehler bei Diskette
+; VR:	HL,AF
+BLRD:	LD	L,4		; 4 Versuche
+	JR	NZ,BLRD1
+	SET	7,(IX+7)	; Init merken, wenn Vorblock
+	JR	BLRD2		; Daten uebernehmen
+	;
+BLRD1:	CALL	PV1
+	DB	BRKT
+	RET	C		; BRK
+	LD	A,(IX+3)	; 1. Datenblock erwartet?
+	CP	2
+	JR	NZ,BLRD0	; nein
+	BIT	7,(IX+7)	; war vorher Init?
+	JR	Z,BLRD0		; nein
+	RES	7,(IX+7)	; Init ruecksetzen
+	EXX
+	 LD	BC,(CASS+11H)	; AADR bei CAOS-Vorblock
+	 LD	HL,(CASS+13H)	; EADR bei CAOS-Vorblock
+	 SBC	HL,BC		; CY=0 vom vorangehenden CP 2
+	 LD	(ARG3),HL	; Anzahl Datenbytes bei Typestar-Dateien
+	EXX
+	LD	A,(CASS+10H)
+	AND	A		; 0 bei EDAS-Dateien
+	JR	Z,BLRD0		; naechsten Block einlesen
+	DEC	A		; 1 nicht zugelassen (da fehlen Adressen!?)
+	JR	Z,BLRD00	; Daten aus ersten Block verwenden
+	CP	3		; 2 oder 3 = echter CAOS-Vorblock?
+	JR	C,BLRD0		; WordPro'86/9- oder TEXOR-Datei
+BLRD00:	DEC	(IX+3)		; Blocknummer wie vorher
+	JR	BLRD2		; als Daten einlesen!
+	;
+BLRD0:	CALL	PV1
+	DB	MBI		; Block einlesen
+	RET	C		; Fehler
+BLRD2:	LD	A,1
+	DEC	A		; Z=1, CY unveraendert!
+	LD	A,(IX+2)	; Blocknummer
+	PUSH	AF
+	CP	(IX+3)		; richtige Blocknummer?
+	JR	Z,BLRD3		; ja
+	INC	A		; Z=0
+	JR	NZ,BLRD5	; nicht Block FF
+	LD	A,L
+	CP	4		; Block FF im 1. Versuch?
+	JR	NZ,BLRD5	; nein
+BLRD3:	POP	AF
+	JR	C,BLRD4		; Lesefehler
+	PUSH	AF
+	LD	A,2
+	CALL	PV1		; Zeile loeschen
+	DB	CRT
+	POP	AF
+BLRD4:	PUSH	AF
+	CALL	PV1
+	DB	AHEX		; Blocknr.
+	POP	AF
+	JR	C,BLRD6		; Lesefehler
+	CALL	PV1
+	DB	OSTR
+	DB	'> ',0		; ok
+	AND	A		; CY=0
+	RET
+	;
+BLRD5:	POP	AF
+	SCF			; CY=1, Lesefehler setzen
+	INC	L
+	DEC	L		; Z=0, falscher Block
+	JR	BLRD4
+	;
+BLRD6:	JR	Z,BLRD7		; Blocknr. richtig
+	CALL	PV1
+	DB	OSTR
+	DB	'*',8,8,8,0	; falsche Blocknr.
+	JR	BLRD1		; weiterversuchen
+	;
+BLRD7:	LD	H,A
+	DEC	L		; Leseversuche zaehlen
+	JR	Z,BLRD8		; letzter Versuch
+	CALL	PV1
+	DB	OSTR
+	DB	'? ',7,0	; Lesefehler!
+	JP	BLRD1
+	;
+BLRD8:	CALL	PV1
+	DB	OSTR
+	DB	'!',LF,CR,0	; Block fehlerhaft uebernommen
+	AND	A		; CY=0
+	RET
+;
+; Tastatureingabe in einer Zeile:	(hier nur fuer NAME)
+; (bei CR wird kein Zeilenvorschub ausgegeben)
+; PE:	BC=min./max. Cursorspalte!
+; PA:	CY=1	BRK gedrueckt (und LF,CR ausgegeben)
+;	CY=0	Enter, HL=Adresse des Zeilenanfangs im VRAM
+; VR:	AF,DE,HL
+;
+INPUT:	LD	A,B
+	LD	(CURSO),A
+INP1:	CALL	KEYB		; Tasteneingabe
+	JR	NC,INP0		; nicht BRK
+	PUSH	AF
+	CALL	LFCR		; Bei BRK Zeilenvorschub
+	POP	AF
+	RET
+	;
+INP0:	cp	'.'
+	jr	z,inpp		; Punkt trennt Dateiname + Typ
+	cp	5		; TAB
+	jr	z,inpp		; geht zu Dateityp
+	CP	' '
+	JR	NC,INP2		; Zeichen
+	CP	8		; CUL
+	JR	Z,INP2
+	CP	9		; CUR
+	JR	Z,INP2
+	CP	CR
+	JR	NZ,INP1
+
+; Eingabe beenden
+INP7:	LD	A,(CURSO+1)	; aktuelle Zeile
+	LD	D,A
+	LD	E,B		; Eingabeposition
+	CALL	PV1
+	DB	DABR		; Berechnen VRAM-Adresse
+	AND	A		; CY=0
+	RET
+
+; gehe zu Spalte von Dateityp
+inpp:	ld	a,b
+	add	a,8
+	ld	(curso),a
+	jr	inpp2
+
+; Zeichen anzeigen
+INP2:	CALL	PV1
+	DB	CRT		; Zeichen anzeigen
+INP3:	LD	HL,CURSO
+inpp2:	LD	A,(HL)
+	CP	B		; zu klein?
+	JR	NC,INP4
+	LD	A,B
+INP4:	CP	C		; zu gross?
+	JR	C,INP5
+	LD	A,C
+INP5:	LD	(HL),A
+	JR	INP1
+;
+; DateiName (mit Typ) eingeben:
+; PE:	-
+; PA:	HL	Adresse des ersten eingegebenen Zeichens
+;
+NAME:	CALL	PV1
+	DB	OSTR
+	DB	LF,0BH,'Name :',0
+	LD	HL,NAMP		; aktueller Dateiname
+	LD	B,8		; 8 Zeichen Dateiname
+	CALL	NAME1		; anzeigen
+	LD	A,(HL)		; Dateityp
+	CP	' '+1		; leer?
+	JR	C,NAME2		; TXT vorschlagen
+	LD	B,3		; 3 Zeichen Dateityp
+	CALL	NAME1		; anzeigen
+	JR	NAME3
+	;
+NAME2:	CALL	PV1
+	DB	OSTR
+	DB	'TXT',0		; Dateityp vorschlagen
+NAME3:	LD	BC,0610H	; Eingabeposition von-bis
+	CALL	INPUT		; Eingabe
+	RET	C		; BRK
+	PUSH	HL
+	LD	DE,NAMP		; Dateiname
+	LD	BC,11
+	LDIR			; Name merken
+	POP	HL
+	RET
+	;
+NAME1:	LD	A,(HL)		; gemerkter Name
+	AND	7FH		; wegen BASIC UUU
+	INC	HL
+	CALL	PV1
+	DB	CSTBT		; zur Sicherheit!
+	DJNZ	NAME1
+	RET
+
+;====================
+; Umdodiertabellen:
+;====================
+
+;
+; 1. fuer WordPro9
+;
+WP9D:	DB	5BH,8EH		; AE
+	DB	5CH,99H		; OE
+	DB	5DH,9AH		; UE
+	DB	7BH,84H		; ae
+	DB	7CH,94H		; oe
+	DB	7DH,81H		; ue
+	DB	7EH,0E1H	; sz
+WP9E:	;DB	7FH		; Zeichencode +60h
+	;DB	80H		; Zeichencode +80h
+	;DB	81H		; naechster Tabulator
+	DB	82H,0CH		; Seitenvorschub
+	DB	83H,18H		; Breit Ein
+	DB	84H,12H		; Schmal Ein
+	DB	85H,12H		; Schmal Aus
+	DB	86H,18H		; Breit Aus
+	DB	87H,13H		; Unterstreichen Ein
+	DB	88H,13H		; Unterstreichen Aus
+	;DB	89H		; Zeilenabstand 1/8"
+	;DB	8AH		; Zeilenabstand 1/6" (Init)
+	;DB	8BH		; Kursiv Ein
+	;DB	8CH		; Kursiv Aus
+	;DB	8DH		; Zeilenabstand n/60"
+	DB	8EH,18H		; Fett Ein
+	DB	8FH,18H		; Fett Aus
+	DB	90H,16H		; Doppelt Ein 
+	DB	91H,16H		; Doppelt Aus
+	DB	92H,14H		; Elite
+	DB	93H,14H		; Pica
+	DB	96H,11H		; Hoch Ein
+	DB	97H,17H		; Tief Ein
+	DB	98H,11H		; Hoch/Tief Aus
+	;DB	99H		; Micro
+	DB	9AH,19H		; Proportional Ein
+	DB	9BH,19H		; Proportional Aus
+	;DB	9CH		; Umrissdruck
+	;DB	9DH		; Schattendruck
+	;DB	9EH		; Umriss+Schattendruck
+	;DB	9FH		; Standard-Druck
+	;DB	0A0H		; Doppelthoch ein
+	;DB	0A1H		; Doppelthoch aus
+	DB	0A2H,0EH	; Zeile binden
+	DB	0A3H,0FH	; HEX-Sequenz
+	;DB	0A4H		; +n/180" Zeichenabstand
+	;DB	0A5H		; internat. Zeichensatz
+	;DB	0A6H		; linksbuendig
+	;DB	0A7H		; zentriert
+	;DB	0A8H		; rechtsbuendig
+	;DB	0A9H		; Blocksatz
+	;DB	0AAH		; Drucker initialisieren
+	;DB	0ABH
+	;DB	0ACH
+	DB	0AEH,1EH	; MarkierungsPfeil rechts 
+	DB	0AFH,1CH	; MarkierungsPfeil links
+	DB	-1
+;
+; 2. fuer TEXOR-Texte
+;
+CDTX:	DB	0,CR		; Zeilenende
+	DB	80H,84H		; ae
+	DB	81H,94H		; oe
+	DB	82H,81H		; ue
+	DB	83H,0E1H	; sz
+	DB	84H,0		; rechtsbuendig
+	DB	85H,0		; Steuerzeichen
+	DB	86H,8EH		; Ae
+	DB	87H,99H		; Oe
+	DB	88H,9AH		; Ue
+	DB	89H,9		; Tabulliere
+	DB	8AH,0		; Blockmarke
+	DB	8BH,0
+	DB	8CH,0
+	DB	-1
+;
+; 3. fuer WordPro5
+;
+CDT5:	DB	5BH,8EH		; AE
+	DB	5CH,99H		; OE
+	DB	5DH,9AH		; UE
+	DB	7BH,84H		; ae
+	DB	7CH,94H		; oe
+	DB	7DH,81H		; ue
+	DB	7EH,0E1H	; sz
+CDTY:	DB	80H,18H		; Druckersteuerzeichen
+	DB	81H,11H		;	"
+	DB	82H,12H
+	DB	83H,13H
+	DB	84H,14H
+	DB	85H,15H
+	DB	86H,16H
+	DB	87H,17H
+	DB	88H,17H
+	DB	89H,16H
+	DB	8AH,15H
+	DB	8BH,14H
+	DB	8CH,13H
+	DB	8DH,12H
+	DB	8EH,11H
+	DB	8FH,18H
+	DB	90H,19H
+	DB	91H,10H
+	DB	92H,10H
+	DB	93H,19H
+	DB	94H,1FH		; Pfeil nach unten
+	DB	95H,1DH		; Pfeil nach oben
+	DB	96H,1EH		; Pfeil nach rechts
+	DB	97H,1CH		; Pfeil nach links
+	DB	9EH,0ABH	; Grafikzeichen
+	DB	9FH,0ACH	;	"
+	DB	0A0H,0F0H
+	DB	0A1H,0F1H
+	DB	0A2H,0F2H
+	DB	0A3H,0F3H
+	DB	0A4H,0F4H
+	DB	0A5H,0F5H
+	DB	0A6H,0F6H
+	DB	0A7H,0F7H
+	DB	0A8H,0F8H
+	DB	0A9H,0F9H
+	DB	0ABH,0FBH
+	DB	0ACH,0FCH
+	DB	0ADH,0FDH
+	DB	0B6H,0CDH
+	DB	0BBH,7BH	; geschw. Klammer auf
+	DB	0BCH,7CH	; senkr. Strich
+	DB	0BDH,7DH	; geschw. Klammer zu
+	DB	0CBH,5BH	; eck. Klammer auf
+	DB	0CCH,5CH	; Schraegstrich rueckwaerts
+	DB	0CDH,5DH	; eck. Klammer zu
+	DB	0CEH,07EH
+	DB	0D0H,7FH	; Paragraph
+	DB	-1
+;
+; 4. fuer TPKC bzw. WordStar
+;
+CDTP:	DB	1,12H		; ^A komprimiert
+	DB	2,18H		; ^B Fett
+	DB	3,0CH		; ^C Druckpause
+	DB	4,16H		; ^D Doppelt
+	DB	5,19H		; ^E Kursiv ein
+	db	0EH,14H		; ^N Normalschrift
+	DB	0FH,20h		; ^O Leerzeichen im Wort
+	DB	11H,0		; ^Q amerikan. Zeichensatz
+	DB	12H,19H		; ^R Kursiv aus
+	;DB	13H,13H		; ^S Unterstreichen
+	DB	14H,11H		; ^T Exponent bzw. Hoch
+	DB	16H,17H		; ^V Index bzw. Tief
+	DB	17H,0		; ^W amerikan. Zeichensatz
+	DB	18H,0		; ^X Durchstreichen
+	DB	19H,18H		; ^Y Fett
+	DB	1FH,'-'		; Pseudo-Trennung
+	DB	-1
+;
+; 5. fuer TypeStar
+;
+TYTX:	DB	5BH,8EH		; AE
+	DB	5CH,99H		; OE
+	DB	5DH,9AH		; UE
+	DB	7BH,84H		; ae
+	DB	7CH,94H		; oe
+	DB	7DH,81H		; ue
+	DB	7EH,0E1H	; sz
+	DB	80H,10H		; Druckersteuerzeichen
+	DB	81H,11H		;	"
+	DB	82H,12H
+	DB	83H,13H
+	DB	84H,14H
+	DB	85H,15H
+	DB	86H,16H
+	DB	87H,17H
+	DB	88H,18H
+	DB	89H,19H
+	DB	8AH,15H
+	DB	8BH,14H
+	DB	8CH,13H
+	DB	8DH,12H
+	DB	8EH,11H
+	DB	8FH,18H
+	DB	90H,1EH		; Pfeil nach rechts
+	DB	91H,1CH		; Pfeil nach links
+	DB	-1
+;-------
+LFCR:	CALL	PV1
+	DB	CRLF
+	RET
+;-------
+CHR:	CALL	PV1
+	DB	OCHR
+	RET
+;-------
+; Anzeige "no Memory":
+cerr:	pop	hl
+MEM:	CALL	PV1
+	DB	OSTR
+	DB	CR,9,'>>>> No Memory !!! <<<<',7,LF,0
+	XOR	A
+	LD	(M4A),A		; Fehler loeschen
+	RET
+
+; Zeicheneingabe mit Abfrage BRK
+
+KEYB:	CALL	PV1
+	DB	KBD		; Eingabe abwarten
+	CP	3
+	SCF			; BRK -> CY=1
+	RET	Z
+	CCF
+	RET
+EADR:			; Endadresse fuer CAOS-Vorblock
+
+PRMSG	MACRO	MSG1,MSG2,MSG3,MSG4
+	 .PRINTX MSG1 MSG2 MSG3 MSG4
+	ENDM
+
+	IF2
+	 IF EADR GT 0BFE0H
+	 long	equ eadr-0bfe0h
+	  PRMSG	<Programm>, %long, <Bytes zu lang,>, <max. bis BFE0!>
+	 ELSE
+	 .RADIX	16
+	  PRMSG	<Programm von>, %AADR, <bis>, %EADR
+	 .RADIX	10
+	 ENDIF
+	ENDIF
+
+	.DEPHASE
+
+	END

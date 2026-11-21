@@ -1,0 +1,309 @@
+;----------------------------------------------------
+; Include-Datei von ZAS >> Zeichenbildtabelle <<
+; Erweitert fuer CAOS-Editor mit Codes 00-1Fh
+;
+; Aufbau: 5 Byte je Zeichen
+;
+; CCTL80.INC			04.01.1997-30.01.2019
+;----------------------------------------------------
+
+CCTL80:	DB	0,0,0,0,0		;00	wie Leerzeichen angezeigt
+
+; Sonderzeichen Statuszeile (aehnlich WordPro6):
+	DB	22H,22H,22H,22H,22H	;01	senkr. Strich
+	DB	0,0FFh,0ECh,80h,0	;02	linke Randmarke
+	DB	0,0FFh,73h,10h,0 	;03	rechte Randmarke
+	DB	7,65H,11H,11H,0		;04	CLS/Eject
+	DB	0,1,0E6h,20h,0		;05	Gloeckchensymbol Statuszeile
+;	DB	0,0F0h,1Eh,62h,0	;05	Spaltenglocke normal
+;	DB	0,0F0h,87h,64h,0	;06	Spaltenglocke invers
+	DB	0,0F0h,20h,20h,0	;06	Lineal mit TAB-Stop
+	DB	88h,0F0h,0,0,0		;07	Lineal mit linkem Rand
+;	DB	0,27h,22h,72h,0		;07	CAPS-Symbol Statuszeile
+
+;						Bildschirm:	Drucker:
+	DB	0,26h,0F6h,20h,0	;08	Cursor links	Rueckschritt
+	DB	0,46h,0F6h,40h,0	;09	Cursor rechts	TAB
+	DB	2,22h,22h,72h,0		;0A	Cursor runter
+	DB	2,72h,22h,22h,0		;0B	Cursor hoch
+	DB	0Eh,0CAh,22h,27h,0	;0C	CLS		Seitenwechsel
+	DB	1,11h,5Fh,40h,0		;0D	CR
+	DB	1,11h,13h,73h,0		;0E	Zeile binden	kein CR+LF
+	DB	1,24h,0A5h,24h,80h	;0F	Hardcopy	HEX-Sequenz
+
+; Druckersteuerzeichen (WordPro6):		    Bedeutung:
+	DB	7,55H,57H,0,0		;10	0 - unidirectional	ein/aus
+	DB	1,31H,11H,0,0		;11	1 - Exponent		ein/aus
+	DB	7,17H,47H,0,0		;12	2 - Schmalschrift	ein/aus
+	DB	7,17H,17H,0,0		;13	3 - Unterstreichen	ein/aus
+	DB	4,57H,11H,0,0		;14	4 - Elite		ein/aus
+	DB	7,47H,17H,0,0		;15	5 - Breitdruck		ein/aus
+	DB	7,47H,57H,0,0		;16	6 - Doppelt (Kursiv)	ein/aus
+	DB	7,11H,11H,0,0		;17	7 - Index		ein/aus
+	DB	7,57H,57H,0,0		;18	8 - Fettdruck		ein/aus
+	DB	7,57H,17H,0,0		;19	9 - NLQ			ein/aus
+;	DB	0Eh,0CAh,22h,22h,0	;1A	Textendemarke CP/M-Format
+	DB	0Fh,0F0h,0FFh,0Fh,0F0h	;1A	Kennung fuer Suchzeichen
+	DB	96H,69H,96H,69H,0	;1B	ESC
+	DB	0,13H,73H,10H,0		;1C	Dreieck Blockanfang
+	DB	2,72H,22H,20H,0		;1D	Pfeil nach oben     CAPS "gross"
+	DB	0,46H,76H,40H,0		;1E	Dreieck Blockende
+	DB	2,22H,27H,20H,0		;1F	Pfeil nach unten    CAPS "klein"
+
+	DB	0,0,0,0,0		;20	SPC
+	DB	2,77H,22H,2,0		;21	!
+	DB	5,50H,0,0,0		;22	"
+	DB	0,57H,57H,50H,0		;23	#
+	DB	2,76H,23H,72H,0		;24	$
+	DB	0,51H,22H,45H,0		;25	%
+	DB	0,25H,25H,43H,0		;26	&
+	DB	2,20H,0,0,0		;27	'
+	DB	1,22H,22H,21H,0		;28	(
+	DB	4,22H,22H,24H,0		;29	)
+	DB	0,5,25H,0,0		;2A	*
+	DB	0,2,72H,0,0		;2B	+
+	DB	0,0,0,22H,40H		;2C	,
+	DB	0,0,70H,0,0		;2D	-
+	DB	0,0,0,2,0		;2E	.
+	DB	1,12H,22H,44H,0		;2F	/
+	DB	2,55H,55H,52H,0		;30	0
+	DB	1,35H,11H,11H,0		;31	1
+	DB	2,55H,12H,47H,0		;32	2
+	DB	2,51H,21H,52H,0		;33	3
+	DB	4,55H,71H,11H,0		;34	4
+	DB	7,44H,71H,52H,0		;35	5
+	DB	2,44H,65H,52H,0		;36	6
+	DB	7,11H,12H,22H,0		;37	7
+	DB	2,55H,25H,52H,0		;38	8
+	DB	2,55H,31H,52H,0		;39	9
+	DB	0,2,0,20H,0		;3A	:
+	DB	0,2,0,22H,40H		;3B	;
+	DB	0,12H,42H,10H,0		;3C	<
+	DB	0,7,7,0,0		;3D	=
+	DB	0,42H,12H,40H,0		;3E	>
+	DB	2,51H,22H,2,0		;3F	?
+
+	DB	6,51H,25H,53H,0		;40	@
+	DB	2,55H,75H,55H,0		;41	A
+	DB	6,55H,65H,56H,0		;42	B
+	DB	2,54H,44H,52H,0		;43	C
+	DB	6,55H,55H,56H,0		;44	D
+	DB	7,44H,64H,47H,0		;45	E
+	DB	7,44H,64H,44H,0		;46	F
+	DB	2,54H,45H,53H,0		;47	G
+	DB	5,55H,75H,55H,0		;48	H
+	DB	7,22H,22H,27H,0		;49	I
+	DB	7,11H,11H,52H,0		;4A	J
+	DB	5,56H,46H,55H,0		;4B	K
+	DB	4,44H,44H,47H,0		;4C	L
+	DB	5,77H,55H,55H,0		;4D	M
+	DB	6,55H,55H,55H,0		;4E	N
+	DB	7,55H,55H,57H,0		;4F	O
+	DB	6,55H,64H,44H,0		;50	P
+	DB	7,55H,55H,77H,10H	;51	Q
+	DB	6,55H,65H,55H,0		;52	R
+	DB	2,54H,21H,52H,0		;53	S
+	DB	7,22H,22H,22H,0		;54	T
+	DB	5,55H,55H,57H,0		;55	U
+	DB	5,55H,55H,52H,0		;56	V
+	DB	5,55H,57H,75H,0		;57	W
+	DB	5,55H,25H,55H,0		;58	X
+	DB	5,55H,72H,22H,0		;59	Y
+	DB	7,11H,24H,47H,0		;5A	Z
+
+	DB	7,44H,44H,47H,0		;5B	[
+	DB	4,42H,22H,11H,0		;5C	\
+	DB	7,11H,11H,17H,0		;5D	]
+	DB	0,25H,0,0,0		;5E	^
+	DB	0,0,0,0,70H		;5F	_
+	DB	0,21H,0,0,0		;60	`
+	DB	0,2,55H,53H,0		;61	a
+	DB	4,46H,55H,56H,0		;62	b
+	DB	0,3,44H,43H,0		;63	c
+	DB	1,13H,55H,53H,0		;64	d
+	DB	0,2,57H,47H,0		;65	e
+	DB	2,54H,64H,44H,40H	;66	f
+	DB	0,3,55H,31H,60H		;67	g
+	DB	4,46H,55H,55H,0		;68	h
+	DB	0,20H,22H,22H,0		;69	i
+	DB	0,20H,22H,22H,60H	;6A	j
+	DB	4,45H,56H,55H,0		;6B	k
+	DB	4,44H,44H,52H,0		;6C	l
+	DB	0,5,75H,55H,0		;6D	m
+	DB	0,2,55H,55H,0		;6E	n
+	DB	0,2,55H,52H,0		;6F	o
+	DB	0,2,55H,64H,40H		;70	p
+	DB	0,2,55H,31H,10H		;71	q
+	DB	0,6,54H,44H,0		;72	r
+	DB	0,3,42H,16H,0		;73	s
+	DB	2,27H,22H,21H,0		;74	t
+	DB	0,5,55H,57H,0		;75	u
+	DB	0,5,55H,52H,0		;76	v
+	DB	0,5,57H,75H,0		;77	w
+	DB	0,5,52H,55H,0		;78	x
+	DB	0,5,55H,31H,60H		;79	y
+	DB	0,7,12H,47H,0		;7A	z
+
+	DB	3,22H,42H,23H,0		;7B	{
+	DB	2,22H,22H,22H,0		;7C	|
+	DB	6,22H,12H,26H,0		;7D	}
+	DB	7,0,0,0,0		;7E	~
+	DB	7,77H,77H,77H,70H	;7F	Vollzeichen
+
+	DB	2,54H,44H,52H,40H	;80
+	DB	0,50H,55H,57H,0		;81
+	DB	12H,2,57H,43H,0		;82
+	DB	2,50H,25H,53H,0		;83
+	DB	0,50H,25H,53H,0		;84
+	DB	4,20H,25H,53H,0		;85
+	DB	0,20H,25H,53H,0		;86
+	DB	0,3,44H,43H,40H		;87
+	DB	25H,2,57H,47H,0		;88
+	DB	5,2,57H,47H,0		;89
+	DB	42H,2,57H,47H,0		;8A
+	DB	5,2,22H,22H,0		;8B
+	DB	25H,2,22H,22H,0		;8C
+	DB	4,20H,22H,22H,0		;8D
+	DB	5,25H,57H,55H,0		;8E
+	DB	25H,25H,57H,55H,0	;8F
+
+	DB	12H,7,46H,47H,0		;90
+	DB	0,5,37H,65H,0		;91
+	DB	7,0AAH,0FAH,0ABH,0	;92
+	DB	2,50H,25H,52H,0		;93
+	DB	0,50H,25H,52H,0		;94
+	DB	4,20H,25H,52H,0		;95
+	DB	2,50H,55H,53H,0		;96
+	DB	4,20H,55H,53H,0		;97
+	DB	5,5,55H,31H,60H		;98
+	DB	5,7,55H,57H,0		;99
+	DB	5,5,55H,57H,0		;9A
+	DB	0,27H,66H,67H,20H	;9B
+	DB	2,54H,64H,47H,0		;9C
+	DB	5,52H,72H,72H,0		;9D
+	DB	0CH,0ACH,0ABH,0ABH,0	;9E
+	DB	0,32H,72H,22H,60H	;9F
+
+	DB	1,20H,25H,53H,0		;A0
+	DB	1,20H,22H,22H,0		;A1
+	DB	1,20H,25H,52H,0		;A2
+	DB	1,20H,55H,57H,0		;A3
+	DB	0,70H,25H,55H,0		;A4
+	DB	7,6,55H,55H,0		;A5
+	DB	0,25H,55H,30H,70H	;A6
+	DB	0,25H,55H,20H,70H	;A7
+	DB	2,2,24H,52H,0		;A8
+	DB	0,0F8H,0,0,0		;A9
+	DB	0,0F1H,0,0,0		;AA
+	DB	44H,52H,51H,27H,0	;AB
+	DB	44H,41H,25H,71H,0	;AC
+	DB	2,2,27H,72H,0		;AD
+	DB	0,5,0A5H,0,0		;AE
+	DB	0,0AH,5AH,0,0		;AF
+
+	DB	5,5,5,5,5		;B0
+	DB	0AAH,55H,0AAH,55H,0AAH	;B1
+	DB	0A5H,0A5H,0A5H,0A5H,0A5H;B2
+	DB	22H,22H,22H,22H,22H	;B3
+	DB	22H,2EH,22H,22H,22H	;B4
+	DB	22H,0E2H,0E2H,22H,22H	;B5
+	DB	66H,6EH,66H,66H,66H	;B6
+	DB	0,0EH,66H,66H,66H	;B7
+	DB	0,0E2H,0E2H,22H,22H	;B8
+	DB	66H,0E2H,0E6H,66H,66H	;B9
+	DB	66H,66H,66H,66H,66H	;BA
+	DB	0,0E2H,0E6H,66H,66H	;BB
+	DB	66H,0E2H,0E0H,0,0	;BC
+	DB	66H,6EH,0,0,0		;BD
+	DB	22H,0E2H,0E0H,0,0	;BE
+	DB	0,0EH,22H,22H,22H	;BF
+
+	DB	22H,23H,0,0,0		;C0
+	DB	22H,2FH,0,0,0		;C1
+	DB	0,0FH,22H,22H,22H	;C2
+	DB	22H,23H,22H,22H,22H	;C3
+	DB	0,0FH,0,0,0		;C4
+	DB	22H,2FH,22H,22H,22H	;C5
+	DB	22H,32H,32H,22H,22H	;C6
+	DB	66H,67H,66H,66H,66H	;C7
+	DB	66H,74H,70H,0,0		;C8
+	DB	0,74H,76H,66H,66H	;C9
+	DB	66H,0F0H,0F0H,0,0	;CA
+	DB	0,0F0H,0F6H,66H,66H	;CB
+	DB	66H,74H,76H,66H,66H	;CC
+	DB	0,0F0H,0F0H,0,0		;CD
+	DB	66H,0F0H,0F6H,66H,66H	;CE
+	DB	22H,0F0H,0F0H,0,0	;CF
+
+	DB	66H,6FH,0,0,0		;D0
+	DB	0,0F0H,0F2H,22H,22H	;D1
+	DB	0,0FH,66H,66H,66H	;D2
+	DB	66H,67H,0,0,0		;D3
+	DB	22H,32H,30H,0,0		;D4
+	DB	0,32H,32H,22H,22H	;D5
+	DB	0,7,66H,66H,66H		;D6
+	DB	66H,6FH,66H,66H,66H	;D7
+	DB	22H,0F2H,0F2H,22H,22H	;D8
+	DB	22H,2EH,0,0,0		;D9
+	DB	0,3,22H,22H,22H		;DA
+	DB	-1,-1,-1,-1,-1		;DB	Vollzeichen
+	DB	0,0,0FH,-1,-1		;DC
+	DB	0CCH,0CCH,0CCH,0CCH,0CCH;DD
+	DB	33H,33H,33H,33H,33H	;DE
+	DB	-1,-1,0F0H,0,0		;DF
+
+	DB	0,0,16H,61H,0		;E0
+	DB	2,55H,65H,56H,40H	;E1
+	DB	7,55H,44H,44H,0		;E2
+	DB	0,0,75H,55H,0		;E3
+	DB	7,42H,12H,47H,0		;E4
+	DB	0,1,25H,52H,0		;E5
+	DB	0,5,55H,57H,44H		;E6
+	DB	0,7,22H,24H,0		;E7
+	DB	7,25H,55H,27H,0		;E8
+	DB	2,55H,75H,52H,0		;E9
+	DB	2,55H,52H,25H,0		;EA
+	DB	0,34H,25H,52H,0		;EB
+	DB	0,0,6FH,60H,0		;EC
+	DB	7,55H,75H,57H,0		;ED
+	DB	0,34H,74H,30H,0		;EE
+	DB	0,25H,55H,55H,0		;EF
+
+	DB	0,70H,70H,70H,0		;F0
+	DB	0,27H,20H,7,0		;F1
+	DB	4,21H,24H,7,0		;F2
+	DB	1,24H,21H,7,0		;F3
+	DB	2,54H,44H,42H,22H	;F4
+	DB	22H,11H,11H,52H,0	;F5
+	DB	0,20H,70H,20H,0		;F6
+	DB	0,63H,6,30H,0		;F7
+	DB	2,52H,0,0,0		;F8
+	DB	0,2,20H,0,0		;F9
+	DB	0,0,20H,0,0		;FA
+	DB	3,22H,0E6H,44H,0	;FB
+	DB	6,55H,0,0,0		;FC
+	DB	2,51H,27H,0,0		;FD
+	DB	0,0,33H,0,0		;FE
+	DB	0FH,99H,99H,99H,0F0H	;FF	(Rahmen)
+
+CCTL81:	; alternativer Zeichensatz 1 (ASCII-deutsch)
+	DB	3,42H,52H,16H,0		;40	õ
+	DB	5,25H,57H,55H,0		;5B	Ae
+	DB	5,7,55H,57H,0		;5C	Oe
+	DB	5,5,55H,57H,0		;5D	Ue
+	DB	0,21H,0,0,0		;60	`
+	DB	0,50H,25H,53H,0		;7B	ae
+	DB	0,50H,25H,52H,0		;7C	oe
+	DB	0,50H,55H,57H,0		;7D	ue
+	DB	2,55H,65H,56H,40H	;7E	ss
+
+CCTL82:	; alternativer Zeichensatz 2 (CAOS-Zeichensatz)
+	DB	6,51H,25H,53H,0		;40	@
+	DB	0Fh,0FFh,0FFh,0FFh,0F0h	;5B	Vollzeichen
+	DB	2,22H,22H,22H,0		;5C	|
+	DB	0,0F1H,0,0,0		;5D	Negationszeichen
+	DB	6,9FH,0DFH,96H,0	;60	(c)
+	DB	0,50H,25H,53H,0		;7B	ae
+	DB	0,50H,25H,52H,0		;7C	oe
+	DB	0,50H,55H,57H,0		;7D	ue
+	DB	2,55H,65H,56H,40H	;7E	ss
