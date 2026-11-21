@@ -37,109 +37,110 @@ DUENN49 Z80
    32                   ;**	07.10.2023 - CAOS 4.8 Patch 6		**
    33                   ;**	05.01.2024 - CAOS 4.8 Patch 7		**
    34                   ;**	04.10.2026 - CAOS 4.9 (ohne FLASH)	**
-   35                   ;**						**
-   36                   ;*************************************************
-   37                   
-   38                   ; !!! Versionsdatum nur noch in VORBL49.INC eintragen !!!
-   39                   
-   40         0000      BETA	equ	0		; 0 fuer Vollversion, 1 fuer beta-Version
-   41                   	;benoetigt 1 Byte im ROM C
-   42                   
-   43                   ; Die Bits 2, 3 und 4 von Port2 (86h) sind beim KC85/4 nicht benutzt worden.
-   44                   ; Fuer eine Nutzung beim KC85/5 gibt es mehrere Ideen/Optionen. Diese sind
-   45                   ; untereinander nicht kompatibel. CAOS 4.8 ist zur Nutzung des 512K-Flash-ROM
-   46                   ; mit Zeichensatz-Umschaltung vorbereitet. Die Erweiterung des RAM bzw. USER-ROM
-   47                   ; ist dadurch nicht mehr vorgesehen. Wenn kein Flash-ROM installiert ist, kann
-   48                   ; aber trotzdem durch nachgeladene Treiber z.B. der RAM mit 1 oder 2 MByte
-   49                   ; genutzt werden. Die einzelnen Optionen nutzen folgende Bits:
-   50                   ;
-   51                   ; Option  234	Beschreibung
-   52                   ; RAM1MB  xx-	Erweiterung des internen RAM auf 1MByte
-   53                   ; RAM2MB  xxx	Erweiterung des internen RAM auf 2MByte
-   54                   ; USER8   --x	Erweiterung des USER-ROM von 4 auf 8 Ebenen
-   55                   ; CAOS2   --x	Zeichensatz-Umschaltung durch zweite CAOS-ROM-Ebene
-   56                   ; SYSROM  xx-	Ansteuerung eines 512K Flash-ROM mit 8 CAOS-Versionen
+   35                   ;**	17.11.2026 - CAOS 4.9 ESC-D korrigiert	**
+   36                   ;**						**
+   37                   ;*************************************************
+   38                   
+   39                   ; !!! Versionsdatum nur noch in VORBL49.INC eintragen !!!
+   40                   
+   41         0000      BETA	equ	0		; 0 fuer Vollversion, 1 fuer beta-Version
+   42                   	;benoetigt 1 Byte im ROM C
+   43                   
+   44                   ; Die Bits 2, 3 und 4 von Port2 (86h) sind beim KC85/4 nicht benutzt worden.
+   45                   ; Fuer eine Nutzung beim KC85/5 gibt es mehrere Ideen/Optionen. Diese sind
+   46                   ; untereinander nicht kompatibel. CAOS 4.8 ist zur Nutzung des 512K-Flash-ROM
+   47                   ; mit Zeichensatz-Umschaltung vorbereitet. Die Erweiterung des RAM bzw. USER-ROM
+   48                   ; ist dadurch nicht mehr vorgesehen. Wenn kein Flash-ROM installiert ist, kann
+   49                   ; aber trotzdem durch nachgeladene Treiber z.B. der RAM mit 1 oder 2 MByte
+   50                   ; genutzt werden. Die einzelnen Optionen nutzen folgende Bits:
+   51                   ;
+   52                   ; Option  234	Beschreibung
+   53                   ; RAM1MB  xx-	Erweiterung des internen RAM auf 1MByte
+   54                   ; RAM2MB  xxx	Erweiterung des internen RAM auf 2MByte
+   55                   ; USER8   --x	Erweiterung des USER-ROM von 4 auf 8 Ebenen
+   56                   ; CAOS2   --x	Zeichensatz-Umschaltung durch zweite CAOS-ROM-Ebene
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   2
 CAOS49  Z80
 
-   57                   
-   58         0001      CAOS2	EQU	1		; Erweiterung zur Umschaltung des Zeichensatzes
-   59                   	;benoetigt 8 Byte im ROM C
-   60                   ; Diese Erweiterung setzt einen 16K grossen CAOS-ROM-C und einen 16K grossen
-   61                   ; CAOS-ROM-E voraus. In der ersten Haelfte der ROM's wird das System mit dem
-   62                   ; duennen Zeichensatz gebrannt, in der zweiten Haelfte der Standard-Zeichensatz.
-   63                   ; Umgeschaltet wird mit Bit 4 von Port 86h (IX+4) bzw. SWITCH 5 10
-   64                   
-   65         0001      SYSROM	EQU	1		; Erweiterung fuer 8 Ebenen System-ROM
-   66                   	;benoetigt 29 Byte im ROM C
-   67                   	;benoetigt 5 Byte im ROM F
-   68                   ; Diese Erweiterung setzt je einen Flash-ROM mit 8 CAOS-Versionen voraus.
-   69                   ; Ueber die Bits 2 und 3 des Port 86h wird ein Zaehler initiiert, welcher die
-   70                   ; aktuelle Ebene speichert und diese als Adresse an den Flash-ROM weiter gibt.
-   71                   ; Ein H-Impuls an Bit 3 (86h) bei Bit 2=High setzt den Zaehler zurueck
-   72                   ; Ein H-Impuls an Bit 3 (86h) bei Bit 2=Low zaehlt den Zaehler vorwaerts
-   73                   ;
-   74                   ; Umgeschalten werden die System-Ebenen mit JUMP 0 bis 7
-   75                   
-   76         0001      EX81	EQU	1		; erweitertes Steuerbyte Portadresse 81h
-   77                   	;benoetigt 37 Byte im ROM-C
-   78                   ; Diese Erweiterung gestattet die Steuerung von Modulen ueber ein 16 Bit breites
-   79                   ; Steuerbyte. 8 Bit mit Portadresse 80h und 8 Bit ueber Portadresse 81h
-   80                   ;
-   81                   ; SWITCH mm ssss	SWITCH-Kommando 16 Bit
-   82                   ;	Steuerbyte in Doppelregister DE
-   83                   ; UP MODU = 26H
-   84                   ; PE:	A=1	Modultyp lesen (Register L)
-   85                   ;	A=2	Modul schalten (Register DE und L)
-   86                   ;	L	Modulsteckplatz
-   87                   ;	DE	Modulsteuerbyte neu
-   88                   ; PA:	H	Modultyp (Strukturbyte)
-   89                   ;	D	Modulsteuerbyte neu
-   90                   ;	A	Modulsteuerbyte alt
-   91                   ; VR:	AF, D, H, BC
-   92                   ; Modul-Liste 16 Bit
-   93                   ; Ablage der hohen 8 Bit im Adressbereich B800H XOR 80H, also
-   94                   ; Steckplatz  8 auf B808h und B888h
-   95                   ; Steckplatz  C auf B80Ch und B88Ch
-   96                   ; ...
-   97                   ; Steckplatz F0 auf B8F0h und B870h
-   98                   ; Das sollte funktionieren, da es nie 7 D002 im KC-System geben wird.
-   99                   ; -----------------------------------------------------------------------------
-  100                   ; Uebersetzen ohne Erzeugen eines Listings:
-  101                   ;	SLRZ80 CAOS49.@@Z/F
-  102                   ; oder:	Z80ASM CAOS49.@@Z/F
-  103                   ;	REN CAOS49.COM CAOS49.KCC
-  104                   
-  105                   ; Uebersetzen mit Erzeugen eines Listings:
-  106                   ;	SLRZ80 CAOS49/F
-  107                   ; oder:	Z80ASM CAOS49/F
-  108                   ;	REN CAOS49.COM CAOS49.KCC
-  109                   
-  110                   ; Hardware:	KC85/5 oder KC85/5+ (mit Flash-ROM)
-  111                   ;
-  112                   ;256 KByte interner RAM (RAM0,RAM4,RAM8)
-  113                   ; 64 KByte IRM (2 unabhaengige Bilder)
-  114                   ; 16 KByte CAOS-ROM C000-FFFF (2 Ebenen, Zeichensatz-Umschaltung)
+   57                   ; SYSROM  xx-	Ansteuerung eines 512K Flash-ROM mit 8 CAOS-Versionen
+   58                   
+   59         0001      CAOS2	EQU	1		; Erweiterung zur Umschaltung des Zeichensatzes
+   60                   	;benoetigt 8 Byte im ROM C
+   61                   ; Diese Erweiterung setzt einen 16K grossen CAOS-ROM-C und einen 16K grossen
+   62                   ; CAOS-ROM-E voraus. In der ersten Haelfte der ROM's wird das System mit dem
+   63                   ; duennen Zeichensatz gebrannt, in der zweiten Haelfte der Standard-Zeichensatz.
+   64                   ; Umgeschaltet wird mit Bit 4 von Port 86h (IX+4) bzw. SWITCH 5 10
+   65                   
+   66         0001      SYSROM	EQU	1		; Erweiterung fuer 8 Ebenen System-ROM
+   67                   	;benoetigt 29 Byte im ROM C
+   68                   	;benoetigt 5 Byte im ROM F
+   69                   ; Diese Erweiterung setzt je einen Flash-ROM mit 8 CAOS-Versionen voraus.
+   70                   ; Ueber die Bits 2 und 3 des Port 86h wird ein Zaehler initiiert, welcher die
+   71                   ; aktuelle Ebene speichert und diese als Adresse an den Flash-ROM weiter gibt.
+   72                   ; Ein H-Impuls an Bit 3 (86h) bei Bit 2=High setzt den Zaehler zurueck
+   73                   ; Ein H-Impuls an Bit 3 (86h) bei Bit 2=Low zaehlt den Zaehler vorwaerts
+   74                   ;
+   75                   ; Umgeschalten werden die System-Ebenen mit JUMP 0 bis 7
+   76                   
+   77         0001      EX81	EQU	1		; erweitertes Steuerbyte Portadresse 81h
+   78                   	;benoetigt 37 Byte im ROM-C
+   79                   ; Diese Erweiterung gestattet die Steuerung von Modulen ueber ein 16 Bit breites
+   80                   ; Steuerbyte. 8 Bit mit Portadresse 80h und 8 Bit ueber Portadresse 81h
+   81                   ;
+   82                   ; SWITCH mm ssss	SWITCH-Kommando 16 Bit
+   83                   ;	Steuerbyte in Doppelregister DE
+   84                   ; UP MODU = 26H
+   85                   ; PE:	A=1	Modultyp lesen (Register L)
+   86                   ;	A=2	Modul schalten (Register DE und L)
+   87                   ;	L	Modulsteckplatz
+   88                   ;	DE	Modulsteuerbyte neu
+   89                   ; PA:	H	Modultyp (Strukturbyte)
+   90                   ;	D	Modulsteuerbyte neu
+   91                   ;	A	Modulsteuerbyte alt
+   92                   ; VR:	AF, D, H, BC
+   93                   ; Modul-Liste 16 Bit
+   94                   ; Ablage der hohen 8 Bit im Adressbereich B800H XOR 80H, also
+   95                   ; Steckplatz  8 auf B808h und B888h
+   96                   ; Steckplatz  C auf B80Ch und B88Ch
+   97                   ; ...
+   98                   ; Steckplatz F0 auf B8F0h und B870h
+   99                   ; Das sollte funktionieren, da es nie 7 D002 im KC-System geben wird.
+  100                   ; -----------------------------------------------------------------------------
+  101                   ; Uebersetzen ohne Erzeugen eines Listings:
+  102                   ;	SLRZ80 CAOS49.@@Z/F
+  103                   ; oder:	Z80ASM CAOS49.@@Z/F
+  104                   ;	REN CAOS49.COM CAOS49.KCC
+  105                   
+  106                   ; Uebersetzen mit Erzeugen eines Listings:
+  107                   ;	SLRZ80 CAOS49/F
+  108                   ; oder:	Z80ASM CAOS49/F
+  109                   ;	REN CAOS49.COM CAOS49.KCC
+  110                   
+  111                   ; Hardware:	KC85/5 oder KC85/5+ (mit Flash-ROM)
+  112                   ;
+  113                   ;256 KByte interner RAM (RAM0,RAM4,RAM8)
+  114                   ; 64 KByte IRM (2 unabhaengige Bilder)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   3
 CAOS49  Z80
 
-  115                   ; 32 KByte USER-ROM C000-DFFF (4 Ebenen)
-  116                   ; Statt der einzelnen ROMs kann auch die 512K Flash-ROM-Erweiterung von
-  117                   ; Andreas Schlechte verwendet werden. Dann stehen gleichzeitig 8 verschiedene
-  118                   ; CAOS-Versionen zur Verfuegung und auch beide Zeichensaetze von CAOS 4.8
-  119                   ;---------------------------------------------------------------------
-  120                   
-  121                   VB_NAME	MACRO
-  122                   	DB	'CAOS49  KCC'	; Dateiname im Vorblock
-  123                   	ENDM
-  124         4000      AADR	EQU	4000H		; AADR
-  125         8000      EADR	EQU	8000H		; EADR+1
-  126                   
-  127                   	INCLUDE	VORBL49.INC	; CAOS-Vorblock
+  115                   ; 16 KByte CAOS-ROM C000-FFFF (2 Ebenen, Zeichensatz-Umschaltung)
+  116                   ; 32 KByte USER-ROM C000-DFFF (4 Ebenen)
+  117                   ; Statt der einzelnen ROMs kann auch die 512K Flash-ROM-Erweiterung von
+  118                   ; Andreas Schlechte verwendet werden. Dann stehen gleichzeitig 8 verschiedene
+  119                   ; CAOS-Versionen zur Verfuegung und auch beide Zeichensaetze von CAOS 4.8
+  120                   ;---------------------------------------------------------------------
+  121                   
+  122                   VB_NAME	MACRO
+  123                   	DB	'CAOS49  KCC'	; Dateiname im Vorblock
+  124                   	ENDM
+  125         4000      AADR	EQU	4000H		; AADR
+  126         8000      EADR	EQU	8000H		; EADR+1
+  127                   
+  128                   	INCLUDE	VORBL49.INC	; CAOS-Vorblock
     1                   ; Erzeugen des CAOS-Vorblock fuer CAOS 4.9 und USER-ROM:
     2                   
     3                   DATUM	MACRO
-    4                   	DB	'04.10.2026'	; Versionsdatum nur hier aendern!
+    4                   	DB	'17.11.2026'	; Versionsdatum nur hier aendern!
     5                   	ENDM
     6                   
     7                   	VB_NAME			; Dateiname
@@ -151,9 +152,9 @@ CAOS49  Z80
    12 0115  00 00 00 00 	DS	75,0
    13 0160  4B 43 2D 43 	DB	'KC-Club, M. Leubner:  '
    14                   	DATUM			; Versionsdatum
-    1 0176  30 34 2E 31 	DB	'04.10.2026'	; Versionsdatum nur hier aendern!
-  128                   
-  129                   	INCLUDE	EQU49.INC	; Vereinbarungen, Uebersicht
+    1 0176  31 37 2E 31 	DB	'17.11.2026'	; Versionsdatum nur hier aendern!
+  129                   
+  130                   	INCLUDE	EQU49.INC	; Vereinbarungen, Uebersicht
     1                   ;*****************************************
     2                   ;**	CAOS 4.8 - 4.9			**
     3                   ;**					**
@@ -180,10 +181,10 @@ CAOS49  Z80
    24                   
    25                   ; Undokumentierter Opcode:
    26                   ;	IN	F,(C)
-   27                   INFC	MACRO
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   4
 EQU49   INC
 
+   27                   INFC	MACRO
    28                   	 DB	0EDh,70h
    29                   	ENDM
    30                   
@@ -241,10 +242,10 @@ EQU49   INC
    82                   			;	Bit 1 - RAM0 ein/aus
    83                   			;	Bit 2 - IRM ein/aus
    84                   			;	Bit 3 - Schreibschutz RAM0
-   85                   			;	Bit 4 - K_OUT
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   5
 EQU49   INC
 
+   85                   			;	Bit 4 - K_OUT
    86                   			;	Bit 5 - System-LED
    87                   			;	Bit 6 - Motorschaltspannung
    88                   			;	Bit 7 - USER-ROM ein/aus
@@ -302,10 +303,10 @@ EQU49   INC
   140                   			;		1 1 0	SETWR
   141                   			;		1 1 1	BASIC-Byte lesen/schreiben
   142         81F3      FCODE	EQU	081F3H	; Fehlercode
-  143         82F3      DIRBUF	EQU	082F3H	; Puffer fuer Dateiname oder Directory
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   6
 EQU49   INC
 
+  143         82F3      DIRBUF	EQU	082F3H	; Puffer fuer Dateiname oder Directory
   144         8EF3      BASBYT	EQU	08EF3H	; Datenbyte fuer BASIC-Byte-Schnittstelle
   145         B3F3      UROK	EQU	0B3F3H	; Betriebsart	0 = Anfangswert
   146                   			;		1 = CP/M-System lauft
@@ -363,10 +364,10 @@ EQU49   INC
   198                   ; IX+12	7-Bit-Scancode von Tastatur
   199                   ; IX+13	ASCII-Code von Tastatur
   200                   ; IX+14	Tastaturcodetabelle low
-  201                   ; IX+15	Tastaturcodetabelle high
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   7
 EQU49   INC
 
+  201                   ; IX+15	Tastaturcodetabelle high
   202                   
   203                   ; von den BASIC-Erweiterungen genutzte Arbeitszellen im RAM:
   204                   
@@ -424,10 +425,10 @@ EQU49   INC
   256         B200      VRAM0	EQU	0B200H	; ASCII-RAM Bild 0
   257                   	; bis	0B6FFh
   258         B700      CASS	EQU	0B700H	; 128 Byte Kassettenpuffer (bis	0B77FH)
-  259         B780      ARGC	EQU	0B780H	; UP-Nummer fuer PV2 und PV6
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   8
 EQU49   INC
 
+  259         B780      ARGC	EQU	0B780H	; UP-Nummer fuer PV2 und PV6
   260         B781      ARGN	EQU	0B781H	; Anzahl Argumente
   261         B782      ARG1	EQU	0B782H	; Argument 1
   262         B784      ARG2	EQU	0B784H	;    "	   2
@@ -485,10 +486,10 @@ EQU49   INC
   314                   		; Bit 3-7	Vordergrundfarbe + Blinken
   315         B7D7      MIXIT	EQU	0B7D7H	; IX-Merker (H-Teil von IX und I-Tabelle)
   316         B7D8      VORTN	EQU	0B7D8H	; Vortonlaenge fuer byteweise Kassettenausgabe
-  317         B7DA      DTPTR	EQU	0B7DAH	; CASS-Pointer (Zeiger in Kassettenpuffer)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page   9
 EQU49   INC
 
+  317         B7DA      DTPTR	EQU	0B7DAH	; CASS-Pointer (Zeiger in Kassettenpuffer)
   318         B7DB      CTCMD	EQU	0B7DBH	; CTC2-Modus
   319         B7DC      BLINK	EQU	0B7DCH	; Blinkfrequenz
   320         B7DD      L3TAB	EQU	0B7DDH	; Adresse der ESC-Steuerfunktionstabelle
@@ -546,10 +547,10 @@ EQU49   INC
   372         C493      LIN11	EQU	0C493H
   373         C4BB      ZPOIT	EQU	0C4BBH	; Zeiger auf Anfang naechste Zeile stellen
   374         C4BE      ZPOIT1	EQU	0C4BEH
-  375         C641      NEW1	EQU	0C641H	; BASIC-Programm loeschen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  10
 EQU49   INC
 
+  375         C641      NEW1	EQU	0C641H	; BASIC-Programm loeschen
   376         C689      CPREG	EQU	0C689H
   377         C8B7      DLI22	EQU	0C8B7H	; Ansprung Tokenverarbeitung
   378         C8BD      TCHAR	EQU	0C8BDH	; naechstes Zeichen holen
@@ -587,10 +588,10 @@ EQU49   INC
   410         DDE4      CI	EQU	0DDE4H	; Eingabe eines Zeichens (ASCII)
   411         DE25      OUTCHL	EQU	0DE25H	; Ausgabe zu Kanal
   412         DE5F      INCHNL	EQU	0DE5FH	; Eingabe von Kanal
-  130                   
-  131                   	.PHASE	0C000H
-  132                   
-  133                   	INCLUDE	CC49.INC	; ROM-C (C000-CFFF)
+  131                   
+  132                   	.PHASE	0C000H
+  133                   
+  134                   	INCLUDE	CC49.INC	; ROM-C (C000-CFFF)
     1                   ;*****************************************
     2                   ;**	CAOS 4.9	ROM C		**
     3                   ;**					**
@@ -607,10 +608,10 @@ EQU49   INC
    14 C000  F4A9        KCTAB1:	DW	NOOP		; Hardcopy-Adresse		B799
    15 C002  00          WIN0:	DB	0		; WINNR				B79B
    16 C003  0000        	DW	0		; WINON				B79C
-   17 C005  2028        	DW	2028H		; WINLG				B79E
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  11
 CC49    INC
 
+   17 C005  2028        	DW	2028H		; WINLG				B79E
    18 C007  0000        	DW	0		; CURSO				B7A0
    19 C009  80          	DB	80H		; STBT		(2-Monitor-Bit 7 gesetzt ab CAOS 4.8)
    20 C00A  39          	DB	39H		; COLOR				B7A3
@@ -667,11 +668,11 @@ CC49    INC
    71                   ; 02.03.2019: vor Loeschen des Speichers die Ports initialisieren um sicherzu-
    72                   ; stellen, dass vor dem Speicherloeschen der RAM0 und der IRM eingeschaltet ist
    73 C054  31 01C4     	LD	SP,STACK	; dazu SP setzen um CALL zu ermoeglichen
-   74 C057  21 D96C     	LD	HL,IOTAB1	; Daten der Erstinitialisierung
-   75 C05A  CD F548     	CALL	INIMEX		; komplett benutzen
+   74 C057  21 D968     	LD	HL,IOTAB1	; Daten der Erstinitialisierung
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  12
 CC49    INC
 
+   75 C05A  CD F548     	CALL	INIMEX		; komplett benutzen
    76                   
    77 C05D  01 0080     	LD	BC,0080H	; alle Module abschalten
    78 C060  ED 51       PWRC1:	OUT	(C),D		; D=0 vom vorhergehenden INIMEX
@@ -729,10 +730,10 @@ CC49    INC
   130 C095  3E 09       	LD	A,9		; Fenster Nr. 9
   131 C097  32 B79B     PWRC4:	LD	(WINNR),A	; Nr. eintragen
   132 C09A  CD C661     	CALL	WCOPY		; Fenstervektorspeicher initialisieren
-  133 C09D  D6 01       	SUB	1		; fuer 10 Fenster (9-0)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  13
 CC49    INC
 
+  133 C09D  D6 01       	SUB	1		; fuer 10 Fenster (9-0)
   134 C09F  30 F6       	JR	NC,PWRC4
   135 C0A1  CD F948     	CALL	ESC3		; Anzeige Bild 0, Zugriff Bild 1
   136 C0A4  CD E129     	CALL	CLSX		; Bild 1: CLS
@@ -744,7 +745,7 @@ CC49    INC
   142                   ;
   143 C0AD  F3          SYSI:	DI
   144 C0AE  ED 5E       	IM	2
-  145 C0B0  21 D96C     	LD	HL,IOTAB1	; PIO A,B und Ausgabe-Ports 84H/86H
+  145 C0B0  21 D968     	LD	HL,IOTAB1	; PIO A,B und Ausgabe-Ports 84H/86H
   146 C0B3  CD F548     	CALL	INIMEX		; initialisieren
   147 C0B6  DD 21 01F0  SYSI2:	LD	IX,1F0H
   148 C0BA  DD 36 01 28 	LD	(IX+1),28H	; OUT84-Merker (Bild 0, RAM8 Ebene 0)
@@ -778,7 +779,7 @@ CC49    INC
   176                   ; CAOS 4.6 - SUTAB vom ROM in den IRM kopieren:
   177                   
   178 C0ED  11 AA00     	LD	DE,SUT_IRM-1	; SUTAB im IRM (beginnend mit SULEN)
-  179 C0F0  21 D8D1     	LD	HL,SUTB-1	; SUTAB im ROM
+  179 C0F0  21 D8CD     	LD	HL,SUTB-1	; SUTAB im ROM
   180 C0F3  0E 9B       	LD	C,SUEND-SUTB+1	; Laenge (B=0 von CALL WINC2)
   181 C0F5  ED B0       	LDIR			; SUTAB zur Nutzung in den IRM kopieren
   182                   
@@ -790,10 +791,10 @@ CC49    INC
   188                   
   189                   ; CAOS 4.6 - Device-Treibertabellen erzeugen
   190                   
-  191 C0FC  11 A900     	LD	DE,DEVTAB	; Treibertabelle(n) im IRM aufbauen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  14
 CC49    INC
 
+  191 C0FC  11 A900     	LD	DE,DEVTAB	; Treibertabelle(n) im IRM aufbauen
   192                   ;	LD	A,8		; fuer 8 Treiber
   193 C0FF  21 EDBC     DINIT:	LD	HL,DRV0		; zunaechst den Kassettentreiber
   194 C102  01 0020     	LD	BC,32		; je 32 Byte (Groesse festgeschrieben)
@@ -851,10 +852,10 @@ CC49    INC
   246                   ;	ld	hl,4000h
   247                   ;	ld	a,(hl)		; ROM-Inhalt 1. Byte
   248 C14B  23          	inc	hl
-  249 C14C  BE          	cp	(hl)		; ROM-Inhalt 2. Byte
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  15
 CC49    INC
 
+  249 C14C  BE          	cp	(hl)		; ROM-Inhalt 2. Byte
   250 C14D  20 1A       	jr	nz,USB3		; Kennung 1+2 nicht identisch
   251 C14F  FE 46       	cp	46h		; Kennung Treiber korrekt? 
   252 C151  20 16       	jr	nz,USB3		; Kennung falsch
@@ -912,11 +913,11 @@ CC49    INC
   304 C193  01 0035     	LD	BC,01F9H-01C4H	; Alles im IX-Bereich von 01C4H bis 01F8H
   305 C196  57          	LD	D,A		; neuer Wert von IXH
   306 C197  5D          	LD	E,L		; DE = neue ISR-Tabelle
-  307 C198  ED B0       	LDIR			; kompletten IX-Bereich incl. ISR mitnehmen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  16
 CC49    INC
 
-  308 C19A  21 D990     	LD	HL,ISRTAB	; ISR-Tabelle fuer System-ISR im ROM
+  307 C198  ED B0       	LDIR			; kompletten IX-Bereich incl. ISR mitnehmen
+  308 C19A  21 D98C     	LD	HL,ISRTAB	; ISR-Tabelle fuer System-ISR im ROM
   309 C19D  1E E0       	LD	E,0E0H		; 01E0H = ISR fuer Joystick
   310 C19F  0E 10       	LD	C,IOTAB2-ISRTAB	; Interrupttabelle fuer 8 Interrupts
   311                   				; (B=0 vom vorherigen LDIR)
@@ -973,10 +974,10 @@ CC49    INC
   363 C1FC  E6 04       	AND	00000100b	; Zugriffs-Bit
   364 C1FE  0F          	RRCA		
   365 C1FF  0F          	RRCA
-  366 C200  C6 30       	ADD	A,'0'
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  17
 CC49    INC
 
+  366 C200  C6 30       	ADD	A,'0'
   367 C202  CD F09E     	CALL	OCHR		; Bildnummer
   368 C205  3A B801     	LD	A,(MODST+1)
   369 C208  E6 01       	AND	1		; IRM on?
@@ -1034,10 +1035,10 @@ CC49    INC
   421 C26D  CD F0F5     SYST5:	CALL	OSTR
   422 C270  43 41 4F 53 	DB	'CAOSC',0
   423 C276  3A B805     	LD	A,(MODST+5)
-  424 C279  E6 01       	AND	1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  18
 CC49    INC
 
+  424 C279  E6 01       	AND	1
   425 C27B  CD D35D     SYST6:	CALL	WONOF
   426 C27E  2C          	INC	L		; Steckplatz+1
   427 C27F  3E 06       	LD	A,6
@@ -1095,10 +1096,10 @@ CC49    INC
   480 C2E6  B9          	CP	C		; Strukturbyte in Tabelle MTAB?
   481 C2E7  28 07       	JR	Z,MODC6		; Text gefunden
   482 C2E9  7E          MODC5:	LD	A,(HL)
-  483 C2EA  23          	INC	HL		; weiter bis zum
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  19
 CC49    INC
 
+  483 C2EA  23          	INC	HL		; weiter bis zum
   484 C2EB  A7          	AND	A		; Stringende
   485 C2EC  20 FB       	JR	NZ,MODC5
   486 C2EE  18 F0       	JR	MODC4
@@ -1156,10 +1157,10 @@ CC49    INC
   538 C335  77          	ld	(hl),a		; regenerieren
   539 C336  21 D030     	ld	hl,M062B	; ROM
   540 C339  28 03       	jr	z,SLOT2
-  541 C33B  21 D027     	ld	hl,M062A	; RAM
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  20
 CC49    INC
 
+  541 C33B  21 D027     	ld	hl,M062A	; RAM
   542 C33E  CD F8E6     SLOT2:	call	zkout		; Testergebnis anzeigen
   543 C341  CD C3D1     SLOT3:	call	SLOT0		; Modulzustaende nach Tabelle regenerieren
   544 C344  18 C0       	jr	MODC7		; weiter suchen auf naechstem Steckplatz
@@ -1217,10 +1218,10 @@ CC49    INC
   596         0001      IF EX81
   597                   ; Module lesen und schalten 16 Bit (Menuewort):
   598                   
-  599 C385  62          SWIC:	LD	H,D		; erweitertes Steuerbyte
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  21
 CC49    INC
 
+  599 C385  62          SWIC:	LD	H,D		; erweitertes Steuerbyte
   600 C386  53          	LD	D,E		; D = Steuerbyte
   601 C387  5C          	LD	E,H		; E = erweitertes Steuerbyte
   602 C388  FE 01       	CP	1
@@ -1278,10 +1279,10 @@ CC49    INC
   679 C3CC  21 4000     	LD	HL,4000h	; Uebergabe der zu untersuchenden Adresse
   680 C3CF  7E          	ld	a,(hl)		; 1. Byte lesen
   681 C3D0  C9          	RET
-  682                   ;
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  22
 CC49    INC
 
+  682                   ;
   683                   ; Modulzustand regenerieren laut Modulsteuerbytetabelle
   684                   ; (erforderlich falls Modulsuche Aenderungen gemacht hat)
   685                   ; PE:	-
@@ -1339,10 +1340,10 @@ CC49    INC
   737 C3F6  3F          	CCF			; Wechsel in zweite Haelfte von MODST
   738 C3F7  CB 1D       	RR	L
   739 C3F9  46          	LD	B,(HL)		; Schaltzustand (H) lesen
-  740 C3FA  E1          	POP	HL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  23
 CC49    INC
 
+  740 C3FA  E1          	POP	HL
   741 C3FB  C5          	PUSH	BC		; aktuellen Schaltzustand merken
   742 C3FC  0E 80       	LD	C,80H		; I/O-Adresse fuer ext. Module
   743 C3FE  45          	LD	B,L		; Steckplatz
@@ -1400,10 +1401,10 @@ CC49    INC
   826 C434  17          	RLA			; Bit 0 = CY
   827 C435  07          	RLCA			; auf Bits 1,3 rotieren
   828 C436  B4          	OR	H
-  829 C437  18 23       	JR	OUT88
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  24
 CC49    INC
 
+  829 C437  18 23       	JR	OUT88
   830                   
   831 C439  10 0A       MODU3:	DJNZ	MODU4		; 1: IRM?
   832 C43B  E6 FB       	AND	11111011b
@@ -1461,10 +1462,10 @@ CC49    INC
   888 C486  10 53       MODU6:	DJNZ	MODU7		; 5=CAOSC
   889                   else
   891                   endif
-  892 C488  C1          	POP	BC		; 4=RAM4
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  25
 CC49    INC
 
+  892 C488  C1          	POP	BC		; 4=RAM4
   893 C489  C5          	PUSH	BC		; BC = aktueller Schaltzustand
   894 C48A  7A          	LD	A,D		; Steuerbyte neu
   895 C48B  A9          	XOR	C		; Vergleich Steuerbyte alt/neu
@@ -1522,10 +1523,10 @@ CC49    INC
   947 C4E1  18 F2       	JR	RAM42
   948                   endif
   949                   
-  950                   ; F-Taste belegen:
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  26
 CC49    INC
 
+  950                   ; F-Taste belegen:
   951                   
   952 C4E3  21 B900     KEYC:	LD	HL,FTASTE	; 0B900H
   953 C4E6  A7          	AND	A
@@ -1583,10 +1584,10 @@ CC49    INC
  1005 C538  B9          	CP	C		; geaendert!
  1006 C539  28 06       	JR	Z,KEY6
  1007 C53B  CD F37E     KERR:	CALL	CRLF
- 1008 C53E  C3 F374     	JP	ERRM
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  27
 CC49    INC
 
+ 1008 C53E  C3 F374     	JP	ERRM
  1009                   	;
  1010 C541  13          KEY6:	INC	DE
  1011 C542  13          	INC	DE
@@ -1644,10 +1645,10 @@ CC49    INC
  1063 C586  54          	LD	D,H
  1064 C587  68          	LD	L,B
  1065 C588  06 00       	LD	B,0
- 1066 C58A  ED B0       	LDIR			; Rest nach vorn
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  28
 CC49    INC
 
+ 1066 C58A  ED B0       	LDIR			; Rest nach vorn
  1067 C58C  C3 F37E     KEY12:	JP	CRLF
  1068                   
  1069                   ; Anzeige belegter F-Tasten:
@@ -1705,10 +1706,10 @@ CC49    INC
  1121 C5E8  CD F085     	CALL	SPACE
  1122 C5EB  3A B7A3     	LD	A,(COLOR)
  1123 C5EE  E6 07       	AND	7
- 1124 C5F0  6F          	LD	L,A
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  29
 CC49    INC
 
+ 1124 C5F0  6F          	LD	L,A
  1125 C5F1  CD ED69     	CALL	HLDEZ		; Anzeige Hintergrundfarbe
  1126 C5F4  CD F37E     	CALL	CRLF
  1127 C5F7  18 18       	JR	COLRC2
@@ -1766,10 +1767,10 @@ CC49    INC
  1179 C62D  5F          	LD	E,A		; Anzahl Spalten (Fensterbreite)
  1180                   
  1181 C62E  65          	LD	H,L		; H = erste Zeile
- 1182 C62F  69          	LD	L,C		; L = erste Spalte
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  30
 CC49    INC
 
+ 1182 C62F  69          	LD	L,C		; L = erste Spalte
  1183 C630  78          	LD	A,B		; A = Fensternummer
  1184                   
  1185 C631  CD C674     	CALL	WININC		; Fenster initialisieren
@@ -1827,10 +1828,10 @@ CC49    INC
  1237 C66B  21 B79C     	LD	HL,WINON	; ab Fensteranfang 10 Byte retten
  1238 C66E  01 000A     WCOP1:	LD	BC,10		; Laenge Fenstervektor
  1239 C671  ED B0       LDIRET:	LDIR
- 1240 C673  C9          	RET
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  31
 CC49    INC
 
+ 1240 C673  C9          	RET
  1241                   
  1242                   ; Initialisierung eines Fensters
  1243                   ; PE:	A	Fensternummer 0..9
@@ -1888,10 +1889,10 @@ CC49    INC
  1295 C6AC  21 C6B4     	LD	HL,CODEX	; Umschalt-Code vom ROM
  1296 C6AF  01 0010     	LD	BC,LENX		; Laenge
  1297 C6B2  18 BD       	JR	LDIRET		; in IRM kopieren und dort starten
- 1298                   ; ueberschreibt zwar CCTL-Zeichentabellen und auch den System-SP-Merker sowie
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  32
 CC49    INC
 
+ 1298                   ; ueberschreibt zwar CCTL-Zeichentabellen und auch den System-SP-Merker sowie
  1299                   ; den Zeiger auf die SUTAB - macht aber nichts, da mit dem Sprung zu F012H das
  1300                   ; gesamte System neu initialisiert wird (entspricht RESET)
  1301                   
@@ -1949,10 +1950,10 @@ CC49    INC
  1353 C6FE  4D          	LD	C,L		; Pixelzaehler
  1354 C6FF  D9          	 EXX
  1355 C700  C1          	 POP	BC		; BC'=MAX(...)
- 1356 C701  D1          	 POP	DE		; DE'=MIN(...)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  33
 CC49    INC
 
+ 1356 C701  D1          	 POP	DE		; DE'=MIN(...)
  1357 C702  60          	 LD	H,B
  1358 C703  69          	 LD	L,C
  1359 C704  CB 3C       	 SRL	H		; Slave mit 1/2
@@ -2010,10 +2011,10 @@ CC49    INC
  1411                   ;	(ARG3)	Radius, max. 255
  1412                   ;	(FARB)	Farbe des Kreises
  1413                   ; PA:	-
- 1414                   ; VR:	AF, BC, DE, HL, BC', DE', HL'
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  34
 CC49    INC
 
+ 1414                   ; VR:	AF, BC, DE, HL, BC', DE', HL'
  1415                   
  1416 C741  3A B786     CIRCLC:	LD	A,(ARG3)	; Radius R
  1417 C744  4F          	LD	C,A
@@ -2071,10 +2072,10 @@ CC49    INC
  1469                   
  1470                   ; setzt 4 Punkte um Mittelpunkt
  1471                   
- 1472 C78C  78          QUA:	LD	A,B
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  35
 CC49    INC
 
+ 1472 C78C  78          QUA:	LD	A,B
  1473 C78D  41          	LD	B,C
  1474 C78E  4F          	LD	C,A
  1475 C78F  AF          	XOR	A
@@ -2132,10 +2133,10 @@ CC49    INC
  1527                   ; Punkt setzen:
  1528 C7CD  B6          	OR	(HL)		; Bit setzen
  1529 C7CE  18 03       	JR	PUCOL
- 1530                   
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  36
 CC49    INC
 
+ 1530                   
  1531                   ; Punkt invertieren:
  1532 C7D0  AE          PUXOR:	XOR	(HL)		; alternierend
  1533 C7D1  CB 82       	RES	0,D
@@ -2193,10 +2194,10 @@ CC49    INC
  1585 C815  47          	LD	B,A		; Bitmaske
  1586 C816  7E          	LD	A,(HL)
  1587 C817  A0          	AND	B		; Bit in Pixelebene gesetzt?
- 1588 C818  28 02       	JR	Z,HIR4
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  37
 CC49    INC
 
+ 1588 C818  28 02       	JR	Z,HIR4
  1589 C81A  CB C2       	SET	0,D
  1590 C81C  CD F995     HIR4:	CALL	ESC9		; Umschaltung zu Farbebene
  1591 C81F  7E          	LD	A,(HL)
@@ -2254,10 +2255,10 @@ CC49    INC
  1643 C862  3E FF       	LD	A,0FFH
  1644 C864  82          	ADD	A,D
  1645 C865  38 09       	JR	C,CALEN
- 1646 C867  AB          	XOR	E		; CY=0, kein Fehler
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  38
 CC49    INC
 
+ 1646 C867  AB          	XOR	E		; CY=0, kein Fehler
  1647 C868  6F          	LD	L,A		; Zeile
  1648 C869  3A B7D6     	LD	A,(FARB)
  1649 C86C  57          	LD	D,A
@@ -2287,7 +2288,7 @@ CC49    INC
  1673 C87F  28 02       	JR	Z,DISP1
  1674 C881  1E 04       	LD	E,4		; default = 4 Zeilen
  1675 C883  D5          DISP1:	PUSH	DE
- 1676 C884  CD D826     DISP2:	CALL	DPMEMO		; 1 Zeile anzeigen
+ 1676 C884  CD D822     DISP2:	CALL	DPMEMO		; 1 Zeile anzeigen
  1677 C887  CD F37E     	CALL	CRLF
  1678 C88A  CD F655     	CALL	BRKT
  1679 C88D  38 06       	JR	C,DISP4		; Abbruch
@@ -2314,11 +2315,11 @@ CC49    INC
  1700 C8A9  FE 02       	CP	2		; 2 Argumente?
  1701 C8AB  30 02       	JR	NC,MODI1
  1702 C8AD  0E 01       	LD	C,1		; Standardbreite = 1 Byte
- 1703 C8AF  CD D826     MODI1:	CALL	DPMEMO		; 1 Zeile anzeigen
- 1704 C8B2  3E 05       	LD	A,5
+ 1703 C8AF  CD D822     MODI1:	CALL	DPMEMO		; 1 Zeile anzeigen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  39
 CC49    INC
 
+ 1704 C8B2  3E 05       	LD	A,5
  1705 C8B4  32 B7A0     	LD	(CURSO),A
  1706 C8B7  CD F47A     	CALL	INLIN		; Eingabe
  1707 C8BA  D8          	RET	C		; BRK
@@ -2376,10 +2377,10 @@ CC49    INC
  1759 C90C  CD FB5B     	CALL	LDMAE		; Zeichen eintragen
  1760 C90F  23          	INC	HL
  1761 C910  18 F1       	JR	MODI7
- 1762                   	;
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  40
 CC49    INC
 
+ 1762                   	;
  1763 C912  A7          MODI8:	AND	A		; Ende Zeile?
  1764 C913  28 9A       	JR	Z,MODI1
  1765 C915  FE 20       	CP	' '		; Leerzeichen?
@@ -2437,10 +2438,10 @@ CC49    INC
  1817 C958  2A B7E2     	LD	HL,(INTV1)
  1818 C95B  7B          	LD	A,E		; Steuerbyte
  1819 C95C  CD CA59     	CALL	INISIO
- 1820 C95F  21 FA17     	LD	HL,V24PR
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  41
 CC49    INC
 
+ 1820 C95F  21 FA17     	LD	HL,V24PR
  1821 C962  18 36       	JR	LSTC7
  1822                   
  1823                   ; Initialisierung der Druckerausgabe (intern):
@@ -2487,7 +2488,7 @@ CC49    INC
  1864                   ;	LD	A,2
  1865                   ;	LD	D,1
  1866 C98E  CD C3EC     	CALL	MODUC1		; M001 einschalten
- 1867 C991  21 D984     	LD	HL,DIOINI
+ 1867 C991  21 D980     	LD	HL,DIOINI
  1868 C994  CD CA8C     	CALL	IMEXDI		; PIO konfigurieren
  1869 C997  21 F9EE     	LD	HL,M001PR
  1870 C99A  22 B7EA     LSTC7:	LD	(OFILT + 1),HL
@@ -2498,10 +2499,10 @@ CC49    INC
  1875 C9A5  21 F9DE     	LD	HL,PRINT
  1876 C9A8  01 F4A9     	LD	BC,NOOP
  1877 C9AB  A7          	AND	A		; CY = 0
- 1878                   ;
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  42
 CC49    INC
 
+ 1878                   ;
  1879                   ; Eintragen der Sprungadressen eines I/O-Kanals:
  1880                   ;
  1881                   ; PE:	E = Steuerwort
@@ -2559,10 +2560,10 @@ CC49    INC
  1933 C9D9  30 E5       	JR	NC,IOEPOP	; Fehler: ungueltiger I/O-Kanal
  1934 C9DB  0F          	RRCA			; CY = 1 wenn User-Kanal #3
  1935 C9DC  CB 13       	RL	E		; Bit 1 einschieben
- 1936                   ;	LD	BC,NOOP
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  43
 CC49    INC
 
+ 1936                   ;	LD	BC,NOOP
  1937 C9DE  14          	INC	D		; D = 3
  1938 C9DF  7A          	LD	A,D
  1939 C9E0  BC          	CP	H		; mehr als 3 Argumente?
@@ -2620,10 +2621,10 @@ CC49    INC
  1991 CA23  28 11       	JR	Z,V24DC6	; nein
  1992 CA25  23          	INC	HL
  1993 CA26  FE 03       	CP	3		; WR3?
- 1994 CA28  28 F2       	JR	Z,V24DC1
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  44
 CC49    INC
 
+ 1994 CA28  28 F2       	JR	Z,V24DC1
  1995 CA2A  FE 05       	CP	5		; WR5?
  1996 CA2C  20 05       	JR	NZ,V24DC5
  1997 CA2E  3E 68       	LD	A,01101000b	; Sendeeinstellungen (5-8 Bit, ein/aus)
@@ -2681,12 +2682,12 @@ CC49    INC
  2049                   ; V.24-Modul suchen und initialisieren (bei POWER-ON und RESET):
  2050                   ;	-Tabellen in IRM kopieren
  2051                   ;	-M003 suchen und einschalten
- 2052                   ;	-M003-Steckplatz merken
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  45
 CC49    INC
 
+ 2052                   ;	-M003-Steckplatz merken
  2053                   
- 2054 CA6F  21 D8A4     V24INI:	LD	HL,V24TAB	; vorbereitete V24-Tabelle
+ 2054 CA6F  21 D8A0     V24INI:	LD	HL,V24TAB	; vorbereitete V24-Tabelle
  2055 CA72  11 A800     	LD	DE,V24PL	; Steckplatz (A800H)
  2056 CA75  01 0012     	LD	BC,V24UMT - V24TAB
  2057 CA78  ED B0       	LDIR			; in IRM kopieren
@@ -2697,7 +2698,7 @@ CC49    INC
  2062 CA80  32 A800     	LD	(V24PL),A	; Steckplatz eintragen
  2063 CA83  21 FA2C     	LD	HL,V24OT	; Duplex-Ausgaberoutine
  2064 CA86  22 B7C4     	LD	(UOUT2 + 1),HL	; fuer User-Kanal #3 eintragen
- 2065 CA89  21 D8B6     	LD	HL,V24UMT	; SIO-B: Empfangs-Interrupt
+ 2065 CA89  21 D8B2     	LD	HL,V24UMT	; SIO-B: Empfangs-Interrupt
  2066                   
  2067                   ; Initialisierung mehrerer Ports mit Sperren von Interrupts:
  2068                   ;
@@ -2742,10 +2743,10 @@ CC49    INC
  2107 CABF  C1          PRINT1:	POP	BC
  2108 CAC0  E1          	POP	HL
  2109 CAC1  F5          	PUSH	AF
- 2110 CAC2  F1          PRINT3:	POP	AF
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  46
 CC49    INC
 
+ 2110 CAC2  F1          PRINT3:	POP	AF
  2111 CAC3  FE 09       PRINT4:	CP	9		; CUR
  2112 CAC5  28 0D       	JR	Z,PRINT5
  2113 CAC7  F5          	PUSH	AF
@@ -2803,10 +2804,10 @@ CC49    INC
  2165 CB19  F5          	PUSH	AF
  2166 CB1A  E6 F0       	AND	0F0H
  2167 CB1C  F2 CB43     	JP	P,HCOPYC	; Hardcopy
- 2168                   
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  47
 CC49    INC
 
+ 2168                   
  2169                   ; Screencopy
  2170                   
  2171 CB1F  2A B7CB     	LD	HL,(VRAM)
@@ -2864,10 +2865,10 @@ CC49    INC
  2223 CB7F  20 E2       	JR	NZ,K6313b	; nein
  2224 CB81  7C          	LD	A,H
  2225 CB82  C6 08       	ADD	A,8		; Pixelzeile +8
- 2226 CB84  67          	LD	H,A
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  48
 CC49    INC
 
+ 2226 CB84  67          	LD	H,A
  2227 CB85  30 D7       	JR	NC,K6313a	; naechste Zeile drucken
  2228 CB87  3E 0D       HCCRLF:	LD	A,CR
  2229 CB89  CD B7E9     	CALL	OFILT
@@ -2925,10 +2926,10 @@ CC49    INC
  2281 CBE4  CB 16       ESCP2e:	RL	(HL)
  2282 CBE6  CB 13       	RL	E
  2283 CBE8  CB 12       	RL	D
- 2284 CBEA  17          	RLA
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  49
 CC49    INC
 
+ 2284 CBEA  17          	RLA
  2285 CBEB  23          	INC	HL
  2286 CBEC  10 F6       	DJNZ	ESCP2e		; Wandlung
  2287 CBEE  77          	LD	(HL),A
@@ -2986,10 +2987,10 @@ CC49    INC
  2339 CC43  BD          	CP	L
  2340 CC44  20 D2       	JR	NZ,K6314b
  2341 CC46  7C          	LD	A,H
- 2342 CC47  C6 04       	ADD	A,4
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  50
 CC49    INC
 
+ 2342 CC47  C6 04       	ADD	A,4
  2343 CC49  67          	LD	H,A
  2344 CC4A  30 C7       	JR	NC,K6314a
  2345 CC4C  C3 CB87     JHCRLF:	JP	HCCRLF
@@ -3047,10 +3048,10 @@ CC49    INC
  2397                   
  2398                   ; 8* 6-Nadel-Sprosse ausgeben
  2399                   
- 2400 CCA9  E5          SPRS:	PUSH	HL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  51
 CC49    INC
 
+ 2400 CCA9  E5          SPRS:	PUSH	HL
  2401 CCAA  C5          	PUSH	BC
  2402 CCAB  2E 80       	LD	L,80H
  2403 CCAD  06 00       SPRS1:	LD	B,0
@@ -3108,10 +3109,10 @@ CC49    INC
  2455 CCFC  C9          	RET
  2456                   
  2457                   ; 8* 24-Nadel-Sprosse ausgeben
- 2458                   
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  52
 CC49    INC
 
+ 2458                   
  2459 CCFD  E5          S3PRS:	PUSH	HL
  2460 CCFE  1E 08       	LD	E,8
  2461 CD00  0E 03       S3PR1:	LD	C,3		; 24 Nadeln = 3 Byte
@@ -3142,7 +3143,7 @@ CC49    INC
  2486 CD24  4F          	LD	C,A		; Druckertyp
  2487 CD25  ED 67       	RRD
  2488 CD27  0C          	INC	C
- 2489 CD28  21 D845     	LD	HL,C6313
+ 2489 CD28  21 D841     	LD	HL,C6313
  2490 CD2B  46          PRZK1:	LD	B,(HL)		; Laenge
  2491 CD2C  0D          	DEC	C
  2492 CD2D  28 09       	JR	Z,PRZK2
@@ -3169,10 +3170,10 @@ CC49    INC
  2513 CD47  11 B700     	LD	DE,CASS
  2514 CD4A  06 00       	LD	B,0
  2515 CD4C  ED B0       	LDIR
- 2516 CD4E  18 EF       	JR	POP2	; POP BC, HL	RET
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  53
 CC49    INC
 
+ 2516 CD4E  18 EF       	JR	POP2	; POP BC, HL	RET
  2517                   
  2518                   ; C Bytes zum Puffer & doppeln
  2519                   
@@ -3217,7 +3218,7 @@ CC49    INC
  2558 CD75  20 03       	JR	NZ,NOHIU
  2559 CD77  11 0500     	LD	DE,1280		; bei 'U' gedehnt
  2560 CD7A  ED 53 B7D8  NOHIU:	LD	(VORTN),DE
- 2561 CD7E  CD D80A     	CALL	BNAME		; Dateiname konvertieren/merken fuer ISRO
+ 2561 CD7E  CD D806     	CALL	BNAME		; Dateiname konvertieren/merken fuer ISRO
  2562 CD81  CD E4C9     	CALL	CLC		; Kassettenpuffer loeschen
  2563 CD84  CD ED3B     	CALL	DEV		; Kassette?
  2564 CD87  20 05       	JR	NZ,MBONN	; nein
@@ -3230,10 +3231,10 @@ CC49    INC
  2571 CD92  7D          MBOC1:	LD	A,L
  2572 CD93  32 B7DA     MBOC0:	LD	(DTPTR),A	; Zeiger neu setzen
  2573 CD96  A7          MBOCE:	AND	A		; CY=0 / kein Fehler (zusaetzlich ab CAOS 4.7)
- 2574 CD97  C1          MBCERR:	POP	BC
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  54
 CC49    INC
 
+ 2574 CD97  C1          MBCERR:	POP	BC
  2575 CD98  D1          	POP	DE
  2576 CD99  CB 9B       	RES	3,E		; Init zuruecksetzen
  2577 CD9B  C9          	RET
@@ -3291,10 +3292,10 @@ CC49    INC
  2629 CDEA  CD F37E     	CALL	CRLF
  2630 CDED  18 04       	JR	MBRES		; fertig (CY=1 bei Fehler)
  2631                   ;
- 2632 CDEF  CD E4D2     MBICL:	CALL	PV7
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  55
 CC49    INC
 
+ 2632 CDEF  CD E4D2     MBICL:	CALL	PV7
  2633 CDF2  05          	DB	5		; Dateieingabe stoppen mit CSRI
  2634 CDF3  DD CB 07 AE MBRES:	RES	5,(IX+7)	; 'U'-Merker ruecksetzen (Blocknummern anzeigen)
  2635 CDF7  18 9E       	JR	MBCERR		; fertig
@@ -3333,7 +3334,7 @@ CC49    INC
  2668 CE08  20 04       	JR	NZ,MBIC0
  2669 CE0A  DD CB 07 EE 	SET	5,(IX+7)	; merken zur Blocknummernausgabeunterdrueckung
  2670                   				; beim Einlesen von ASCII-Listings
- 2671 CE0E  CD D80A     MBIC0:	CALL	BNAME		; Dateiname konvertieren/merken fuer ISRI
+ 2671 CE0E  CD D806     MBIC0:	CALL	BNAME		; Dateiname konvertieren/merken fuer ISRI
  2672 CE11  21 B7F5     	LD	HL,FNAME	; konvertierter Dateiname
  2673 CE14  CD E4D2     	CALL	PV7
  2674 CE17  04          	DB	4		; Block 01h einlesen mit ISRI
@@ -3352,10 +3353,10 @@ CC49    INC
  2687 CE32  06 0B       	LD	B,11		; Laenge des Dateinamens bei Tape im Kassettenpuffer
  2688 CE34  1A          	LD	A,(DE)		; vorangestellter Dateityp: 1. Zeichen testen
  2689                   ;	CP	'U'+80H		; hohes 'U'?
- 2690                   ;	JR	NZ,MBIC3
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  56
 CC49    INC
 
+ 2690                   ;	JR	NZ,MBIC3
  2691                   ;	SET	5,(IX+7)	; merken zur Blocknummernausgabeunterdrueckung
  2692                   ;				; beim Einlesen von ASCII-Listings
  2693 CE35  C6 29       MBIC3:	ADD	A,29H		; geschuetztes Programm?
@@ -3413,10 +3414,10 @@ CC49    INC
  2745                   	;
  2746 CE91  DD 34 03    MBIU3:	INC	(IX+3)		; naechsten Block erwarten
  2747 CE94  3D          	DEC	A
- 2748 CE95  DD CB 07 6E 	BIT	5,(IX+7)	; Blocknummer unterdruecken?
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  57
 CC49    INC
 
+ 2748 CE95  DD CB 07 6E 	BIT	5,(IX+7)	; Blocknummer unterdruecken?
  2749 CE99  CC F640     	CALL	Z,LUP5		; Blocknummer ausgeben, ">" anhaengen und zum
  2750                   				; Zeilenanfan gehen
  2751 CE9C  21 B700     MBIU4:	LD	HL,CASS		; Pufferbeginn
@@ -3474,10 +3475,10 @@ CC49    INC
  2803 CF33  7A 35 31 32 	DB	07AH,'512K RAM',0	; M034
  2804 CF3D  7B 31 4D 20 	DB	07BH,'1M RAM',0		; M035, M035x4
  2805                   ;	DB	07CH,'32K EEPROM',0	; reserviert!
- 2806                   ;	DB	07DH,'64K EEPROM',0	; reserviert!
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  58
 CC49    INC
 
+ 2806                   ;	DB	07DH,'64K EEPROM',0	; reserviert!
  2807                   ;	DB	07EH,'128K EEPROM',0	; reserviert!
  2808                   ;	DB	07FH,'256K EEPROM',0	; M109 '256x8K CMOS RAM' (Tim Henning)
  2809 CF45  A7 46 4C 4F 	DB	0A7H,'FLOPPY',0		; D004, D008
@@ -3522,23 +3523,23 @@ CC49    INC
  2848 D039  20 46 4C 41 FLASH:	DB	' FLASH',0		; M044 (Bert Lange, Andreas Schlechte)
  2849                   
  2850                   ;	ABSFILL	0D000h,<ROM-C-Ende>
-  134                   
-  135                   	INCLUDE	CD49.INC	; ROM-D (D000-DAB7)
+  135                   
+  136                   	INCLUDE	CD49.INC	; ROM-D (D000-DAB7)
     1                   ;*****************************************
     2                   ;**	CAOS 4.9	ROM D		**
     3                   ;**					**
     4                   ;**	Adresse:  D000h bis DAB7h	**
     5                   ;**					**
-    6                   ;**	letzte Aenderung: 27.09.2026	**
+    6                   ;**	letzte Aenderung: 17.11.2026	**
     7                   ;*****************************************
     8                   
     9                   ;	ORG	0D000H
    10                   
    11                   ;*******************************************************************************
-   12                   ;	DEVICE-Treiber fuer Kassette (ab CAOS 4.7 im ROM-D)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  59
 CD49    INC
 
+   12                   ;	DEVICE-Treiber fuer Kassette (ab CAOS 4.7 im ROM-D)
    13                   ;*******************************************************************************
    14                   
    15                   ; Zeitkonstanten fuer TAPE-Schreiben:
@@ -3596,10 +3597,10 @@ CD49    INC
    67                   ; Eventuell ist das ja besser - deshalb ab CAOS 4.6 wieder eine Halbschwingung
    68                   ; als Endimpuls. (bemerkt von Micha im Forum am 02.02.2015)
    69                   
-   70 D083  CD D0A4     	CALL	HBITOT		; Trennzeichen (2. Halbschwingung)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  60
 CD49    INC
 
+   70 D083  CD D0A4     	CALL	HBITOT		; Trennzeichen (2. Halbschwingung)
    71 D086  5D          	LD	E,L
    72 D087  54          	LD	D,H		; DE=HL (Pufferende+1)
    73 D088  3E 03       	LD	A,3		; CTC stoppen
@@ -3657,10 +3658,10 @@ CD49    INC
   125 D0BE  FE BA       	CP	IKEG1		; Einsbit ?
   126 D0C0  CD D101     	CALL	LEDOO		; LED on/off
   127 D0C3  38 F2       	JR	C,MBI1
-  128 D0C5  10 F2       	DJNZ	MBI2		; 22 korrekte Schwingungen abwarten
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  61
 CD49    INC
 
+  128 D0C5  10 F2       	DJNZ	MBI2		; 22 korrekte Schwingungen abwarten
   129 D0C7  06 02       MBI3:	LD	B,2
   130 D0C9  AF          MBI4:	XOR	A
   131 D0CA  CD D110     	CALL	STOP2		; Lesen einer Halbschwingung
@@ -3718,10 +3719,10 @@ CD49    INC
   183 D11D  28 F6       	JR	Z,STOP21	; Warten auf 2. Halbschwingung
   184 D11F  81          	ADD	A,C		; beide 'Zeiten' addieren
   185 D120  C9          	RET
-  186                   
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  62
 CD49    INC
 
+  186                   
   187                   ; Einlesen eines Bytes von Kassette
   188                   ; PA:	A	Byte
   189                   ;	CY=1	Trennzeichen, Stoerung
@@ -3779,10 +3780,10 @@ CD49    INC
   241 D15F  C9          	RET
   242                   
   243                   ; Eingabedatei schliessen				**0B**
-  244                   ; PE:
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  63
 CD49    INC
 
+  244                   ; PE:
   245                   ; PA:	CY=1	bei Fehler
   246                   
   247 D160  3E 41       FCSRI:	LD	A,41H		; READ - close
@@ -3840,10 +3841,10 @@ CD49    INC
   299 D19D  CB 7F       	BIT	7,A		; Bit 7 gesetzt?
   300 D19F  C8          	RET	Z		; kein Fehler
   301 D1A0  01 83F1     FLERR:	LD	BC,DEPVER	; 83F1H
-  302 D1A3  ED 78       	IN	A,(C)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  64
 CD49    INC
 
+  302 D1A3  ED 78       	IN	A,(C)
   303 D1A5  FE 20       	CP	20H		; DEP ab 2.0?
   304 D1A7  30 0D       	JR	NC,FLER1	; ja
   305 D1A9  01 81F3     	LD	BC,FCODE	; 81F3H
@@ -3901,10 +3902,10 @@ CD49    INC
   357                   ; Name ein-, ausgeben: (fuer RENAME)
   358                   ; PE:	DE	Zeiger auf Dateinamen, wenn 0 dann Eingabe
   359                   ; PA:	CY=1	BRK
-  360                   ;	DE	Zeiger auf Zeichen nach Dateinamen (2. Name bei REN)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  65
 CD49    INC
 
+  360                   ;	DE	Zeiger auf Zeichen nach Dateinamen (2. Name bei REN)
   361                   ;
   362 D1E6  CD F55A     FNAM1:	CALL	NAMHL		; Dateiname eingeben
   363 D1E9  D8          	RET	C		; BRK
@@ -3962,10 +3963,10 @@ CD49    INC
   415 D239  D5          	PUSH	DE
   416 D23A  ED A0       MOLN2:	LDI			; zeichenweise
   417 D23C  ED A0       	LDI
-  418 D23E  ED A0       	LDI
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  66
 CD49    INC
 
+  418 D23E  ED A0       	LDI
   419 D240  ED A0       	LDI
   420 D242  ED A0       	LDI
   421 D244  ED A0       	LDI
@@ -4023,10 +4024,10 @@ CD49    INC
   473 D280  F5          	PUSH	AF
   474 D281  50          	LD	D,B		; DE=0
   475 D282  58          	LD	E,B		; Cursor links/oben
-  476 D283  CD E083     	CALL	DABR
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  67
 CD49    INC
 
+  476 D283  CD E083     	CALL	DABR
   477 D286  EB          	EX	DE,HL
   478 D287  21 0028     SCRL1:	LD	HL,40		; 1 Zeile tiefer
   479 D28A  19          	ADD	HL,DE
@@ -4084,10 +4085,10 @@ CD49    INC
   531 D2DA  20 1C       	JR	NZ,CLLHR	; HRG-Modus
   532 D2DC  0F          CLLALT:	RRCA			; Pixel AUS?
   533 D2DD  5F          	LD	E,A		; nach E merken
-  534 D2DE  38 06       	JR	C,CLLN2
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  68
 CD49    INC
 
+  534 D2DE  38 06       	JR	C,CLLN2
   535 D2E0  AF          	XOR	A
   536 D2E1  E5          	PUSH	HL
   537 D2E2  CD D25D     	CALL	CLLINE		; Pixel loeschen
@@ -4145,10 +4146,10 @@ CD49    INC
   589 D331  2E 00       	LD	L,0
   590 D333  11 8800     VIEW1:	LD	DE,8800H
   591 D336  01 2000     	LD	BC,2000H
-  592 D339  CD FB59     VIEW2:	CALL	LDAME		; Byte holen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  69
 CD49    INC
 
+  592 D339  CD FB59     VIEW2:	CALL	LDAME		; Byte holen
   593 D33C  12          	LD	(DE),A		; in IRM poken
   594 D33D  23          	INC	HL
   595 D33E  13          	INC	DE
@@ -4206,10 +4207,10 @@ CD49    INC
   652                   ;
   653                   ; Floppy-Treiber Funktion 0: Directory mit Maske
   654                   ; PE:	DE	LW:Maske
-  655                   ; PA:	HL	Anzahl passender Eintraege
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  70
 CD49    INC
 
+  655                   ; PA:	HL	Anzahl passender Eintraege
   656                   ; VR:	AF, BC, DE, HL
   657                   ;
   658 D38E  EB          FDIR:	EX	DE,HL		; HL=Maske aus Kommandozeile
@@ -4267,10 +4268,10 @@ CD49    INC
   710 D3E6  3E 05       	LD	A,5		; DIR weiter einlesen
   711 D3E8  18 B9       	JR	DIR1
   712                   	;
-  713 D3EA  3A B7A0     DIR6:	LD	A,(CURSO)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  71
 CD49    INC
 
+  713 D3EA  3A B7A0     DIR6:	LD	A,(CURSO)
   714 D3ED  A7          	AND	A		; Cursor auf neuer Zeile?
   715 D3EE  C4 F37E     	CALL	NZ,CRLF		; wenn nicht, dann jetzt ein Zeilenwechsel
   716                   
@@ -4328,10 +4329,10 @@ CD49    INC
   768                   ;
   769                   ; Floppy-Treiber Funktion 2: Datei loeschen
   770                   ; PE:	DE	Dateiname
-  771                   ;	(DE)=0	Dateinamen werden abgefragt
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  72
 CD49    INC
 
+  771                   ;	(DE)=0	Dateinamen werden abgefragt
   772                   ; PA:	CY=1	Fehler
   773                   ;
   774 D445  EB          FERA:	EX	DE,HL
@@ -4389,10 +4390,10 @@ CD49    INC
   826                   ; Floppy-Treiber Funktion 3: Datei umbenennen
   827                   ; PE:	DE	Zeiger auf Zeichenkette mit 2 Dateinamen
   828                   ;	(DE)=0	Dateinamen werden abgefragt
-  829                   ; PA:	CY=1	Fehler
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  73
 CD49    INC
 
+  829                   ; PA:	CY=1	Fehler
   830                   ;
   831 D488  1A          FREN:	LD	A,(DE)		; Parameter in Kommandozeile
   832 D489  E6 DF       	AND	0DFH		; angegeben?
@@ -4450,10 +4451,10 @@ CD49    INC
   884 D4F9  CD E12B     	CALL	CRT		; oben eine Zeile frei lassen
   885 D4FC  7B          TYPE2:	LD	A,E
   886 D4FD  FE 80       	CP	80h		; Ende Kassettenpuffer erreicht?
-  887 D4FF  20 09       	JR	NZ,TYPE5	; nein, weiter anzeigen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  74
 CD49    INC
 
+  887 D4FF  20 09       	JR	NZ,TYPE5	; nein, weiter anzeigen
   888 D501  CD E4D2     TYPE3:	CALL	PV7		; naechsten Block einlesen mit
   889 D504  01          	DB	1		; MBI
   890 D505  38 3D       	JR	C,TYPE10		; Fehler
@@ -4511,10 +4512,10 @@ CD49    INC
   942 D56D  3E 0A       	LD	A,LF
   943 D56F  CD E12B     	CALL	CRT		; oben eine Zeile frei lassen
   944 D572  7B          DUMP3:	LD	A,E
-  945 D573  FE 80       	CP	80h		; Ende Kassettenpuffer erreicht?
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  75
 CD49    INC
 
+  945 D573  FE 80       	CP	80h		; Ende Kassettenpuffer erreicht?
   946 D575  20 09       	JR	NZ,DUMP5	; nein, weiter anzeigen
   947 D577  CD E4D2     	CALL	PV7		; naechsten Block einlesen mit
   948 D57A  01          	DB	1		; MBI
@@ -4523,7 +4524,7 @@ CD49    INC
   951 D580  EB          DUMP5:	EX	DE,HL
   952 D581  CD F085     	CALL	SPACE		; Zeile mit Leerzeichen beginnen
   953 D584  0E 08       	LD	C,8		; 8 Bytes
-  954 D586  CD D829     	CALL	DPME0		; Anzeigen mit der Display-Rutine
+  954 D586  CD D825     	CALL	DPME0		; Anzeigen mit der Display-Rutine
   955 D589  EB          	EX	DE,HL
   956 D58A  CD F37E     	CALL	CRLF		; neue Zeile
   957 D58D  3A B7A1     	LD	A,(CURSO+1)
@@ -4572,10 +4573,10 @@ CD49    INC
  1000 D5D5  7D          	LD	A,L
  1001 D5D6  FE 80       	CP	80H		; Pufferende?
  1002 D5D8  20 E3       	JR	NZ,INIT2	; weitere Zeichen bearbeiten
- 1003 D5DA  AF          INIT4:	XOR	A
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  76
 CD49    INC
 
+ 1003 D5DA  AF          INIT4:	XOR	A
  1004 D5DB  12          	LD	(DE),A		; Ende-Kennung anhaengen
  1005 D5DC  21 A880     	LD	HL,INITU	; Ablage hier (bei DEP 3.2/3.3 noch ab 100h)
  1006 D5DF  22 B7D1     	LD	(FTAST),HL	; Aktivierung als ob es
@@ -4633,10 +4634,10 @@ CD49    INC
  1058 D615  30 21       	JR	NC,SETD1	; A = 9-FF
  1059 D617  FE 08       	CP	8
  1060 D619  20 04       	JR	NZ,SETD0	; A = 0-7
- 1061 D61B  CC D690     	CALL	Z,DNAME		; Bei A=8: Treibernummer aus Name berechnen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  77
 CD49    INC
 
+ 1061 D61B  CC D691     SETD8:	CALL	Z,DNAME		; Bei A=8: Treibernummer aus Name berechnen
  1062 D61E  D8          	RET	C		; Fehler
  1063 D61F              SETD0:	; bei A=0..7 neues DEVICE einstellen
  1064 D61F  4F          	LD	C,A		; Nr. zum Vergleich merken
@@ -4694,10 +4695,10 @@ CD49    INC
  1116 D670  23          	inc	hl
  1117 D671  23          	inc	hl
  1118 D672  23          	inc	hl
- 1119 D673  23          	inc	hl		; Zeiger auf String
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  78
 CD49    INC
 
+ 1119 D673  23          	inc	hl		; Zeiger auf String
  1120 D674  CD D652     	CALL	DLI1		; Treiber-Name anzeigen
  1121                   ;	CALL	SPACE		; danach je ein Leerzeichen
  1122 D677  CD F0F5     	CALL	OSTR
@@ -4713,14 +4714,14 @@ CD49    INC
  1132 D687  CD F0F5     	CALL	OSTR
  1133 D68A  08 29 00    	DB	8,')',0
  1134 D68D  F1          	POP	AF
- 1135 D68E  18 4E       	JR	DLI8		; neue Zeile
+ 1135 D68E  C3 F37E     	JP	CRLF		; neue Zeile
  1136                   
  1137                   ; DEVICE-Nr. aus DEVICE-Name ermitteln
  1138                   ; PE	DE	Zeichenkette mit (Nummer oder) Name
  1139                   ; PA	A	Nummer
  1140                   ;	CY=1	Fehler
  1141                   
- 1142 D690              DNAME:	; 1. Suche nach gueeltiger Ziffer 0-7:
+ 1142 D691              DNAME:	; 1. Suche nach gueeltiger Ziffer 0-7:
  1143                   ;	PUSH	DE
  1144                   ;	CALL	RHEX		; zunaechst testen, ob eine Nr. angegeben wurde
  1145                   ;	POP	DE
@@ -4733,706 +4734,705 @@ CD49    INC
  1152                   ;	CCF
  1153                   ;	RET	NC		; OK (Zahl zwischen 0 und 7)
  1154                   	; 2. Suche des Namens in der Device-Tabelle:
- 1155 D690  21 A900     dn0:	LD	HL,DEVTAB	; Device-Treiber-Tabelle
- 1156 D693  AF          	XOR	A		; Mit Treiber 0 beginnen
- 1157 D694  BE          dn1:	CP	(HL)		; Treiber installiert?
- 1158 D695  20 1F       	JR	NZ,DNERR	; nein, mit Fehler abbrechen
- 1159 D697  D5          	 push	de
- 1160 D698  23          	 INC	HL
- 1161 D699  23          	 INC	HL
- 1162 D69A  23          	 INC	HL
- 1163 D69B  23          	 INC	HL		; Name in Byte 4 bis 7
- 1164 D69C  F5          	  push	af		; Treiber-Zaehler
- 1165 D69D  01 0401     	  ld	bc,401h		; B=4 Zeichen, C=1 (0 Fehler)
- 1166 D6A0  1A          dn2:	  ld	a,(de)
- 1167 D6A1  13          	  inc	de
- 1168 D6A2  BE          	  cp	(hl)		; stimmt der Name?
- 1169 D6A3  23          	  inc	hl
- 1170 D6A4  28 01       	  jr	z,dn3		; ja
- 1171 D6A6  0C          	  inc	c
- 1172 D6A7  10 F7       dn3:	  djnz	dn2		; fuer 4 Byte wiederholen
- 1173 D6A9  F1          	 pop	af		; Treiber-Zaehler
- 1174 D6AA  D1          	pop	de
- 1175 D6AB  0D          	dec	c		; stimmen alle 4 Zeichen ueberein?
- 1176 D6AC  C8          	ret	z		; ja, Treiber gefunden
- 1177 D6AD  01 0018     	ld	bc,24		; nechster Treiber
+ 1155 D691  21 A900     dn0:	LD	HL,DEVTAB	; Device-Treiber-Tabelle
+ 1156 D694  AF          	XOR	A		; Mit Treiber 0 beginnen
+ 1157 D695  BE          dn1:	CP	(HL)		; Treiber installiert?
+ 1158 D696  20 1F       	JR	NZ,DNERR	; nein, mit Fehler abbrechen
+ 1159 D698  D5          	 push	de
+ 1160 D699  23          	 INC	HL
+ 1161 D69A  23          	 INC	HL
+ 1162 D69B  23          	 INC	HL
+ 1163 D69C  23          	 INC	HL		; Name in Byte 4 bis 7
+ 1164 D69D  F5          	  push	af		; Treiber-Zaehler
+ 1165 D69E  01 0401     	  ld	bc,401h		; B=4 Zeichen, C=1 (0 Fehler)
+ 1166 D6A1  1A          dn2:	  ld	a,(de)
+ 1167 D6A2  13          	  inc	de
+ 1168 D6A3  BE          	  cp	(hl)		; stimmt der Name?
+ 1169 D6A4  23          	  inc	hl
+ 1170 D6A5  28 01       	  jr	z,dn3		; ja
+ 1171 D6A7  0C          	  inc	c
+ 1172 D6A8  10 F7       dn3:	  djnz	dn2		; fuer 4 Byte wiederholen
+ 1173 D6AA  F1          	 pop	af		; Treiber-Zaehler
+ 1174 D6AB  D1          	pop	de
+ 1175 D6AC  0D          	dec	c		; stimmen alle 4 Zeichen ueberein?
+ 1176 D6AD  C8          	ret	z		; ja, Treiber gefunden
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  79
 CD49    INC
 
- 1178 D6B0  09          	add	hl,bc
- 1179 D6B1  3C          	inc	a		; Treiber-Nr. +1
- 1180 D6B2  E6 07       	and	7		; 0-7
- 1181 D6B4  20 DE       	jr	nz,dn1		; noch nicht ausgesucht
- 1182 D6B6  37          DNERR:	SCF
- 1183 D6B7  C9          	RET
+ 1177 D6AE  01 0018     	ld	bc,24		; nechster Treiber
+ 1178 D6B1  09          	add	hl,bc
+ 1179 D6B2  3C          	inc	a		; Treiber-Nr. +1
+ 1180 D6B3  E6 07       	and	7		; 0-7
+ 1181 D6B5  20 DE       	jr	nz,dn1		; noch nicht ausgesucht
+ 1182 D6B7  37          DNERR:	SCF
+ 1183 D6B8  C9          	RET
  1184                   
  1185                   ; Laufwerkwechsel per ESC-D:
  1186                   
- 1187 D6B8  CD F37E     ESCDD:	CALL	CRLF		; neue Zeile
- 1188 D6BB  CD D65E     	CALL	DLI3		; Treiber auflisten
- 1189 D6BE  CD F0F5     DLI6:	CALL	OSTR
- 1190 D6C1  02 3F 00    	DB	2,'?',0		; Eingabeaufforderung anzeigen
- 1191 D6C4  CD F3DA     	CALL	KBD		; Tastatureingabe
- 1192 D6C7  FE 30       	CP	'0'
- 1193 D6C9  38 F3       	JR	C,DLI6		; Eingabewert zu klein!
- 1194 D6CB  FE 38       	CP	'8'
- 1195 D6CD  30 EF       	JR	NC,DLI6		; zu gross
- 1196 D6CF  F5          	push	af
- 1197 D6D0  E6 0F       	AND	0FH
- 1198 D6D2  CD D613     	CALL	SET_DD		; Treiber einstellen
- 1199 D6D5  30 03       	jr	nc,DLI7		; kein Fehler
- 1200 D6D7  F1          	pop	af
- 1201 D6D8  18 E4       	jr	DLI6		; wiederholen
- 1202                   	;
- 1203 D6DA  F1          DLI7:	pop	af
- 1204 D6DB  CD F09E     	call	OCHR		; anzeigen
- 1205 D6DE  C3 F37E     DLI8:	jp	crlf		; neue Zeile
- 1206                   ;
- 1207                   ; Floppy-Treiber Funktion 1: Laufwerkwechsel (DEP 2.0)
- 1208                   ; PE:	DE	Zeichenkette neues Laufwerk
- 1209                   ;	(DE)=0	Anzeige aktuelles Laufwerk
- 1210                   ; PA:	CY=1	Fehler
- 1211                   ;
- 1212 D6E1  01 83F1     DRIVE:	LD	BC,DEPVER	; 083F1H
- 1213 D6E4  ED 78       	IN	A,(C)
- 1214 D6E6  FE 20       	CP	20H		; DEP ab 2.0?
- 1215 D6E8  30 13       	JR	NC,DRIVE1	; OK, Laufwerkwechsel moeglich
- 1216 D6EA  CD F0F5     	CALL	OSTR
- 1217 D6ED  4B 65 69 6E 	DB	'Kein DEP2!',7,CR,LF,0
- 1218 D6FB  37          	SCF
- 1219 D6FC  C9          	RET
- 1220                   	;
- 1221 D6FD  3E 01       DRIVE1:	LD	A,1		; aktuelles Laufwerk/USER lesen
- 1222 D6FF  CD D1C3     	CALL	STEUB2
- 1223 D702  1A          	LD	A,(DE)		; erstes Zeichen testen
- 1224 D703  E6 DF       	AND	0DFH		; 00h oder 20h?
- 1225 D705  20 2E       	JR	NZ,DRIVE3	; mit Argument aufgerufen!
- 1226 D707  CD F0F5     	CALL	OSTR
- 1227 D70A  44 72 69 76 	DB	'Drive ',0
- 1228 D711  01 81F1     	LD	BC,LWANF	; 081F1H
- 1229 D714  ED 78       	IN	A,(C)
- 1230 D716  CD F09E     	CALL	OCHR		; Laufwerksbuchstabe anzeigen
- 1231 D719  04          	INC	B		; 082F1H
- 1232 D71A  ED 68       	IN	L,(C)		; aktueller User-Bereich
- 1233 D71C  26 00       	LD	H,0
- 1234 D71E  CD ED69     	CALL	HLDEZ		; Userbereich dezimal anzeigen
- 1235 D721  3E 3A       	LD	A,':'
+ 1187 D6B9  CD F37E     ESCDD:	CALL	CRLF		; neue Zeile
+ 1188 D6BC  CD D65E     	CALL	DLI3		; Treiber auflisten
+ 1189 D6BF  CD F0F5     DLI6:	CALL	OSTR
+ 1190 D6C2  02 3F 00    	DB	2,'?',0		; Eingabeaufforderung anzeigen
+ 1191 D6C5  21 B7DF     	LD	HL,L3SIZ	; Anzahl ESC-Sequenzen merken
+ 1192 D6C8  4E          	LD	C,(HL)		; und begrenzen auf 0-C,
+ 1193 D6C9  36 0D       	LD	(HL),13		; damit ESC-D nicht nochmal aufgerufen werden kann
+ 1194 D6CB  CD F47A     	CALL	INLIN		; Eingabe Zeichenkette
+ 1195 D6CE  71          	LD	(HL),C
+ 1196 D6CF  D8          	RET	C		; BRK
+ 1197 D6D0  13          	INC	DE		; Position nach dem Fragezeichen
+ 1198 D6D1  1A          	LD	A,(DE)		; erstes Zeichen
+ 1199 D6D2  E6 DF       	AND	0DFH		; 0 oder leer?
+ 1200 D6D4  C8          	RET	Z		; nichts eingegeben
+ 1201 D6D5  AF          	XOR	A
+ 1202 D6D6  CD D61B     	CALL	SETD8		; DEVICE einstellen
+ 1203 D6D9  DA F374     	JP	C,ERRM		; Eingabe war fehlerhaft
+ 1204 D6DC  C9          	RET
+ 1205                   ;
+ 1206                   ; Floppy-Treiber Funktion 1: Laufwerkwechsel (DEP 2.0)
+ 1207                   ; PE:	DE	Zeichenkette neues Laufwerk
+ 1208                   ;	(DE)=0	Anzeige aktuelles Laufwerk
+ 1209                   ; PA:	CY=1	Fehler
+ 1210                   ;
+ 1211 D6DD  01 83F1     DRIVE:	LD	BC,DEPVER	; 083F1H
+ 1212 D6E0  ED 78       	IN	A,(C)
+ 1213 D6E2  FE 20       	CP	20H		; DEP ab 2.0?
+ 1214 D6E4  30 13       	JR	NC,DRIVE1	; OK, Laufwerkwechsel moeglich
+ 1215 D6E6  CD F0F5     	CALL	OSTR
+ 1216 D6E9  4B 65 69 6E 	DB	'Kein DEP2!',7,CR,LF,0
+ 1217 D6F7  37          	SCF
+ 1218 D6F8  C9          	RET
+ 1219                   	;
+ 1220 D6F9  3E 01       DRIVE1:	LD	A,1		; aktuelles Laufwerk/USER lesen
+ 1221 D6FB  CD D1C3     	CALL	STEUB2
+ 1222 D6FE  1A          	LD	A,(DE)		; erstes Zeichen testen
+ 1223 D6FF  E6 DF       	AND	0DFH		; 00h oder 20h?
+ 1224 D701  20 2E       	JR	NZ,DRIVE3	; mit Argument aufgerufen!
+ 1225 D703  CD F0F5     	CALL	OSTR
+ 1226 D706  44 72 69 76 	DB	'Drive ',0
+ 1227 D70D  01 81F1     	LD	BC,LWANF	; 081F1H
+ 1228 D710  ED 78       	IN	A,(C)
+ 1229 D712  CD F09E     	CALL	OCHR		; Laufwerksbuchstabe anzeigen
+ 1230 D715  04          	INC	B		; 082F1H
+ 1231 D716  ED 68       	IN	L,(C)		; aktueller User-Bereich
+ 1232 D718  26 00       	LD	H,0
+ 1233 D71A  CD ED69     	CALL	HLDEZ		; Userbereich dezimal anzeigen
+ 1234 D71D  3E 3A       	LD	A,':'
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  80
 CD49    INC
 
- 1236 D723  CD F09E     	CALL	OCHR		; Doppelpunkt anhaengen
- 1237 D726  3E 06       	LD	A,6
- 1238 D728  32 B7A0     	LD	(CURSO),A
- 1239 D72B  CD F47A     	CALL	INLIN		; Eingabe
- 1240 D72E  3F          	CCF
- 1241 D72F  D0          	RET	NC		; BRK
- 1242 D730  21 0006     	LD	HL,6
- 1243 D733  19          	ADD	HL,DE
- 1244 D734  EB          	EX	DE,HL		; Zeichenkette in DE
- 1245 D735  1A          DRIVE3:	LD	A,(DE)
- 1246 D736  A7          	AND	A		; leer?
- 1247 D737  C8          	RET	Z		; nichts angegeben
- 1248 D738  01 81F1     	LD	BC,LWANF	; 081F1H
- 1249 D73B  CD F52D     	CALL	UPCASE
- 1250 D73E  FE 41       	CP	'A'
- 1251 D740  38 07       	JR	C, DRIVE4	; kleiner als "A", dann nur USER-Bereich?
- 1252 D742  ED 79       	OUT	(C),A		; neuen LW-Code eintragen
- 1253 D744  13          	INC	DE		; weiter zum zweiten Zeichen
- 1254 D745  1A          	LD	A,(DE)
- 1255 D746  A7          	AND	A		; USER mit angegeben?
- 1256 D747  28 0B       	JR	Z,DRIVE5	; nein
- 1257 D749  CD F4C7     DRIVE4:	CALL	RDEZ		; Dezimalzahl erfassen
- 1258                   ;	JP	C,ERRM		; Zahl fehlerhaft
- 1259                   ; 17.01.2026: Durch den folgenden Doppelpunkt bringt RDEZ eine Fehlermeldung
- 1260                   ; Die Zahl wird dennoch korrekt erfasst. Falls der USER-Bereich nicht zulaessig
- 1261                   ; ist, kommt eine Fehlermeldung von DEP
- 1262 D74C  3A B797     	LD	A,(NUMVX)	; Wert der erfassten Zahl
- 1263 D74F  01 82F1     	LD	BC,UANF		; 082F1H
- 1264 D752  ED 79       	OUT	(C),A		; neue USER-Nr. eintragen
- 1265 D754  3E 07       DRIVE5:	LD	A,7		; LW+User anfordern
- 1266 D756  CD D1C3     	CALL	STEUB2		; Stack-Unwinding:
- 1267 D759  C9          	RET			; nicht in JP umwandeln!
- 1268                   
- 1269                   ; Geraetetreiber-Funktion aufrufen
- 1270                   ; PE:	A	Funktionsnummer
- 1271                   ;		0 = DIR bzw. TAPELIST
- 1272                   ;		1 = DRIVE oder CD
- 1273                   ;		2 = ERA (Datei loeschen)
- 1274                   ;		3 = REN (Datei umbenennen)
- 1275                   ;		?? (SETWR, SETRO)
- 1276                   ;	DE	Dateiname bzw. Maske
- 1277                   ; PA:		entsprechend Treiber
- 1278                   ; VR:	AF,BC,DE,HL
- 1279                   
- 1280 D75A  E6 03       FKT_DD:	and	3		; nur Treiberfunktionen 0..3 definiert
- 1281 D75C  4F          	ld	c,a
- 1282 D75D  CD ED3B     	CALL	DEV		; DEVICE-Nr. in Bit 2-4
- 1283 D760  81          	add	a,c		; FKT-Nummer dazu
- 1284 D761  81          	add	a,c
- 1285 D762  4F          	ld	c,a
- 1286 D763  06 00       	ld	b,0
- 1287 D765  21 A918     	ld	HL,DEVTAB+24	; DIR-Kommando des jeweiligen Treibers
- 1288 D768  09          	ADD	HL,BC
- 1289 D769  7E          	LD	A,(HL)
- 1290 D76A  23          	INC	HL
- 1291 D76B  66          	LD	H,(HL)		; Aus Treibertabelle ermitteln
- 1292 D76C  6F          	LD	L,A
- 1293 D76D  E9          	JP	(HL)		; und anspringen
+ 1235 D71F  CD F09E     	CALL	OCHR		; Doppelpunkt anhaengen
+ 1236 D722  3E 06       	LD	A,6
+ 1237 D724  32 B7A0     	LD	(CURSO),A
+ 1238 D727  CD F47A     	CALL	INLIN		; Eingabe
+ 1239 D72A  3F          	CCF
+ 1240 D72B  D0          	RET	NC		; BRK
+ 1241 D72C  21 0006     	LD	HL,6
+ 1242 D72F  19          	ADD	HL,DE
+ 1243 D730  EB          	EX	DE,HL		; Zeichenkette in DE
+ 1244 D731  1A          DRIVE3:	LD	A,(DE)
+ 1245 D732  A7          	AND	A		; leer?
+ 1246 D733  C8          	RET	Z		; nichts angegeben
+ 1247 D734  01 81F1     	LD	BC,LWANF	; 081F1H
+ 1248 D737  CD F52D     	CALL	UPCASE
+ 1249 D73A  FE 41       	CP	'A'
+ 1250 D73C  38 07       	JR	C, DRIVE4	; kleiner als "A", dann nur USER-Bereich?
+ 1251 D73E  ED 79       	OUT	(C),A		; neuen LW-Code eintragen
+ 1252 D740  13          	INC	DE		; weiter zum zweiten Zeichen
+ 1253 D741  1A          	LD	A,(DE)
+ 1254 D742  A7          	AND	A		; USER mit angegeben?
+ 1255 D743  28 0B       	JR	Z,DRIVE5	; nein
+ 1256 D745  CD F4C7     DRIVE4:	CALL	RDEZ		; Dezimalzahl erfassen
+ 1257                   ;	JP	C,ERRM		; Zahl fehlerhaft
+ 1258                   ; 17.01.2026: Durch den folgenden Doppelpunkt bringt RDEZ eine Fehlermeldung
+ 1259                   ; Die Zahl wird dennoch korrekt erfasst. Falls der USER-Bereich nicht zulaessig
+ 1260                   ; ist, kommt eine Fehlermeldung von DEP
+ 1261 D748  3A B797     	LD	A,(NUMVX)	; Wert der erfassten Zahl
+ 1262 D74B  01 82F1     	LD	BC,UANF		; 082F1H
+ 1263 D74E  ED 79       	OUT	(C),A		; neue USER-Nr. eintragen
+ 1264 D750  3E 07       DRIVE5:	LD	A,7		; LW+User anfordern
+ 1265 D752  CD D1C3     	CALL	STEUB2		; Stack-Unwinding:
+ 1266 D755  C9          	RET			; nicht in JP umwandeln!
+ 1267                   
+ 1268                   ; Geraetetreiber-Funktion aufrufen
+ 1269                   ; PE:	A	Funktionsnummer
+ 1270                   ;		0 = DIR bzw. TAPELIST
+ 1271                   ;		1 = DRIVE oder CD
+ 1272                   ;		2 = ERA (Datei loeschen)
+ 1273                   ;		3 = REN (Datei umbenennen)
+ 1274                   ;		?? (SETWR, SETRO)
+ 1275                   ;	DE	Dateiname bzw. Maske
+ 1276                   ; PA:		entsprechend Treiber
+ 1277                   ; VR:	AF,BC,DE,HL
+ 1278                   
+ 1279 D756  E6 03       FKT_DD:	and	3		; nur Treiberfunktionen 0..3 definiert
+ 1280 D758  4F          	ld	c,a
+ 1281 D759  CD ED3B     	CALL	DEV		; DEVICE-Nr. in Bit 2-4
+ 1282 D75C  81          	add	a,c		; FKT-Nummer dazu
+ 1283 D75D  81          	add	a,c
+ 1284 D75E  4F          	ld	c,a
+ 1285 D75F  06 00       	ld	b,0
+ 1286 D761  21 A918     	ld	HL,DEVTAB+24	; DIR-Kommando des jeweiligen Treibers
+ 1287 D764  09          	ADD	HL,BC
+ 1288 D765  7E          	LD	A,(HL)
+ 1289 D766  23          	INC	HL
+ 1290 D767  66          	LD	H,(HL)		; Aus Treibertabelle ermitteln
+ 1291 D768  6F          	LD	L,A
+ 1292 D769  E9          	JP	(HL)		; und anspringen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  81
 CD49    INC
 
- 1294                   ;
- 1295                   ; TAPELIST = DIR-Kommando fuer Kassette
- 1296                   ;
- 1297 D76E  CD F0F5     TLIST:	CALL	OSTR
- 1298 D771  54 61 70 65 	DB	'Tape-Directory:',CR,LF,0
- 1299 D783  21 0000     	ld	hl,0
- 1300 D786  22 B797     	ld	(NUMVX),hl	; Zaehler fuer angezeigte Dateien
- 1301 D789  DB 88       	IN	A,(PIOAD)
- 1302 D78B  F6 40       	OR	01000000b	; Motor ein
- 1303 D78D  D3 88       	OUT	(PIOAD),A
- 1304 D78F  3E 0A       	LD	A,10
- 1305 D791  CD FC0E     	CALL	WAIT		; 60ms warten (Bandanlauf)
- 1306 D794  CD F536     	CALL	KPUFF		; Standard-Puffer einstellen
- 1307 D797              TLW:	;LD	(IX+3),1	; Block Nr. 1 erwarten
- 1308 D797  CD D0B1     	CALL	TMBI		; MBI im TAPE-Modus direkt aufrufen
- 1309 D79A  38 4B       	JR	C,TLBRK		; Fehler aufgetreten
- 1310 D79C  DD 7E 02    	LD	A,(IX+2)	; gelesene Blocknummer
- 1311 D79F  B7          	OR	A
- 1312 D7A0  28 08       	JR	Z,TL01		; Block Nr. 0 erkannt
- 1313 D7A2  3D          	DEC	A
- 1314 D7A3  28 05       	JR	Z,TL01		; Block Nr. 1 gefunden
- 1315 D7A5  CD F637     BL0:	CALL	BLNOT		; falsche Blocknummer mit * anzeigen
- 1316 D7A8  18 3D       	JR	TLBRK
- 1317                   	;
- 1318 D7AA  06 0B       TL01:	LD	B,11		; maximal 11 Zeichen
- 1319                   				; (da bei BASIC ab dem 12. Zeichen Daten stehen)
- 1320 D7AC  CD F661     	CALL	TLNAME		; Name aus Vorblock anzeigen
- 1321 D7AF  2A B797     	ld	hl,(NUMVX)
- 1322 D7B2  23          	inc	hl		; angezeigte Dateien mitzaehlen
- 1323 D7B3  22 B797     	ld	(NUMVX),HL
- 1324 D7B6  3A B710     	LD	A,(CASS+10H)	; Anzahl der Argumente
- 1325 D7B9  D6 02       	SUB	2
- 1326 D7BB  FE 08       	CP	8		; 2 bis 10 Argumente?
- 1327 D7BD  30 1A       	JR	NC,TLNO		; keine MC-Datei!
- 1328 D7BF  3E 0C       	LD	A,12
- 1329 D7C1  32 B7A0     	LD	(CURSO),A	; Adressen immer ab Spalte 12 anzeigen
- 1330 D7C4  2A B711     	LD	HL,(CASS+11H)	; AADR
- 1331 D7C7  ED 5B B713  	LD	DE,(CASS+13H)	; EADR+1
- 1332 D7CB  CD F0A4     	CALL	HLDE		; Anfangsadresse und Endadresse anzeigen
- 1333 D7CE  2A B715     	LD	HL,(CASS+15H)	; SADR
- 1334 D7D1  3A B710     	LD	A,(CASS+10H)
- 1335 D7D4  FE 03       	CP	3
- 1336 D7D6  D4 F07D     	CALL	NC,HLHX		; Startadresse anzeigen
- 1337 D7D9  CD F37E     TLNO:	CALL	CRLF		; Zeilenvorschub nach Dateiname + Adressen
- 1338 D7DC  DD 7E 02    	LD	A,(IX+2)
- 1339 D7DF  B7          	OR	A		; wurde Name aus Block Nr. 00 angezeigt?
- 1340 D7E0  20 05       	JR	NZ,TLBRK	; nein
- 1341 D7E2  CD D0B1     	CALL	TMBI		; naechsten Block 01 lesen
- 1342 D7E5  18 BE       	JR	BL0		; mit * anzeigen
- 1343                   	;
- 1344 D7E7  CD F655     TLBRK:	CALL	BRKT
- 1345 D7EA  30 AB       	JR	NC,TLW		; wiederholen bis BRK gedrueckt wird
- 1346 D7EC  2A B797     TLX:	ld	hl,(NUMVX)	; Anzahl Dateien zurueck geben
- 1347 D7EF  E5          	PUSH	HL
- 1348 D7F0  CD ED69     	CALL	HLDEZ		; dezimal anzeigen
- 1349 D7F3  CD F0F5     	CALL	OSTR
- 1350 D7F6  20 44 61 74 	DB	' Dateien.',CR,LF,0
- 1351 D802  E1          	POP	HL
+ 1293                   ;
+ 1294                   ; TAPELIST = DIR-Kommando fuer Kassette
+ 1295                   ;
+ 1296 D76A  CD F0F5     TLIST:	CALL	OSTR
+ 1297 D76D  54 61 70 65 	DB	'Tape-Directory:',CR,LF,0
+ 1298 D77F  21 0000     	ld	hl,0
+ 1299 D782  22 B797     	ld	(NUMVX),hl	; Zaehler fuer angezeigte Dateien
+ 1300 D785  DB 88       	IN	A,(PIOAD)
+ 1301 D787  F6 40       	OR	01000000b	; Motor ein
+ 1302 D789  D3 88       	OUT	(PIOAD),A
+ 1303 D78B  3E 0A       	LD	A,10
+ 1304 D78D  CD FC0E     	CALL	WAIT		; 60ms warten (Bandanlauf)
+ 1305 D790  CD F536     	CALL	KPUFF		; Standard-Puffer einstellen
+ 1306 D793              TLW:	;LD	(IX+3),1	; Block Nr. 1 erwarten
+ 1307 D793  CD D0B1     	CALL	TMBI		; MBI im TAPE-Modus direkt aufrufen
+ 1308 D796  38 4B       	JR	C,TLBRK		; Fehler aufgetreten
+ 1309 D798  DD 7E 02    	LD	A,(IX+2)	; gelesene Blocknummer
+ 1310 D79B  B7          	OR	A
+ 1311 D79C  28 08       	JR	Z,TL01		; Block Nr. 0 erkannt
+ 1312 D79E  3D          	DEC	A
+ 1313 D79F  28 05       	JR	Z,TL01		; Block Nr. 1 gefunden
+ 1314 D7A1  CD F637     BL0:	CALL	BLNOT		; falsche Blocknummer mit * anzeigen
+ 1315 D7A4  18 3D       	JR	TLBRK
+ 1316                   	;
+ 1317 D7A6  06 0B       TL01:	LD	B,11		; maximal 11 Zeichen
+ 1318                   				; (da bei BASIC ab dem 12. Zeichen Daten stehen)
+ 1319 D7A8  CD F661     	CALL	TLNAME		; Name aus Vorblock anzeigen
+ 1320 D7AB  2A B797     	ld	hl,(NUMVX)
+ 1321 D7AE  23          	inc	hl		; angezeigte Dateien mitzaehlen
+ 1322 D7AF  22 B797     	ld	(NUMVX),HL
+ 1323 D7B2  3A B710     	LD	A,(CASS+10H)	; Anzahl der Argumente
+ 1324 D7B5  D6 02       	SUB	2
+ 1325 D7B7  FE 08       	CP	8		; 2 bis 10 Argumente?
+ 1326 D7B9  30 1A       	JR	NC,TLNO		; keine MC-Datei!
+ 1327 D7BB  3E 0C       	LD	A,12
+ 1328 D7BD  32 B7A0     	LD	(CURSO),A	; Adressen immer ab Spalte 12 anzeigen
+ 1329 D7C0  2A B711     	LD	HL,(CASS+11H)	; AADR
+ 1330 D7C3  ED 5B B713  	LD	DE,(CASS+13H)	; EADR+1
+ 1331 D7C7  CD F0A4     	CALL	HLDE		; Anfangsadresse und Endadresse anzeigen
+ 1332 D7CA  2A B715     	LD	HL,(CASS+15H)	; SADR
+ 1333 D7CD  3A B710     	LD	A,(CASS+10H)
+ 1334 D7D0  FE 03       	CP	3
+ 1335 D7D2  D4 F07D     	CALL	NC,HLHX		; Startadresse anzeigen
+ 1336 D7D5  CD F37E     TLNO:	CALL	CRLF		; Zeilenvorschub nach Dateiname + Adressen
+ 1337 D7D8  DD 7E 02    	LD	A,(IX+2)
+ 1338 D7DB  B7          	OR	A		; wurde Name aus Block Nr. 00 angezeigt?
+ 1339 D7DC  20 05       	JR	NZ,TLBRK	; nein
+ 1340 D7DE  CD D0B1     	CALL	TMBI		; naechsten Block 01 lesen
+ 1341 D7E1  18 BE       	JR	BL0		; mit * anzeigen
+ 1342                   	;
+ 1343 D7E3  CD F655     TLBRK:	CALL	BRKT
+ 1344 D7E6  30 AB       	JR	NC,TLW		; wiederholen bis BRK gedrueckt wird
+ 1345 D7E8  2A B797     TLX:	ld	hl,(NUMVX)	; Anzahl Dateien zurueck geben
+ 1346 D7EB  E5          	PUSH	HL
+ 1347 D7EC  CD ED69     	CALL	HLDEZ		; dezimal anzeigen
+ 1348 D7EF  CD F0F5     	CALL	OSTR
+ 1349 D7F2  20 44 61 74 	DB	' Dateien.',CR,LF,0
+ 1350 D7FE  E1          	POP	HL
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  82
 CD49    INC
 
- 1352                   ;	IN	A,(PIOAD)
- 1353                   ;	AND	10011111b	; Motor+LED aus
- 1354                   ;	OUT	(PIOAD),A
- 1355                   ;	RET
- 1356                   ;
- 1357                   ; Kassette ein/aus (CD im Tape-Mode)
- 1358                   ;
- 1359 D803  DB 88       MOT:	IN	A,(PIOAD)
- 1360 D805  EE 40       	XOR	01000000b	; Motor ein/aus
- 1361 D807  D3 88       	OUT	(PIOAD),A
- 1362 D809  C9          	RET
- 1363                   ;
- 1364                   ; BASIC-Dateiname ab NAME im Format 8.3 kopieren
- 1365                   ;
- 1366                   ; PE:	HL	Zeiger auf Dateiname im BASIC-Format = SSSName
- 1367                   ;
- 1368                   ; PA:	FNAME	Dateiname 8.3-Format = Name.SSS
- 1369                   ;
- 1370                   ; VR:	BC, AF
- 1371                   ;
- 1372 D80A  E5          BNAME:	PUSH	HL
- 1373 D80B  D5          	PUSH	DE
- 1374 D80C  E5          	push	hl		; Beginn Dateityp merken
- 1375 D80D  23          	inc	hl
- 1376 D80E  23          	inc	hl
- 1377 D80F  23          	inc	hl		; mit Name beginnen
- 1378 D810  11 B7F5     	ld	de,FNAME	; Ablage Dateiname im IRM
- 1379 D813  01 0008     	ld	bc,8
- 1380 D816  ED B0       	ldir			; Name direkt kopieren
- 1381 D818  E1          	pop	hl
- 1382 D819  06 03       	ld	b,3
- 1383 D81B  7E          bnam2:	ld	a,(hl)
- 1384 D81C  23          	inc	hl
- 1385 D81D  E6 7F       	and	7fh		; bei Dateityp Bit 7 ruecksetzen
- 1386 D81F  12          	ld	(de),a
- 1387 D820  13          	inc	de
- 1388 D821  10 F8       	djnz	bnam2
- 1389 D823  D1          	POP	DE
- 1390 D824  E1          	POP	HL
- 1391 D825  C9          	RET
- 1392                   
- 1393                   ; Ausgabe einer Displayzeile
- 1394                   ; HL=Adresse, C=Anzahl Bytes
- 1395                   
- 1396 D826  CD F07D     DPMEMO:	CALL	HLHX		; Adresse
- 1397 D829  E5          DPME0:	PUSH	HL		; Hier Einsprung von DUMP-Routine
- 1398 D82A  41          	LD	B,C		; Anzahl Bytes
- 1399 D82B  CD FB59     DPME1:	CALL	LDAME		; Byte holen
- 1400 D82E  23          	INC	HL
- 1401 D82F  CD F082     	CALL	AHSPC		; anzeigen
- 1402 D832  10 F7       	DJNZ	DPME1		; C*
- 1403 D834  E1          	POP	HL
- 1404 D835  41          	LD	B,C
- 1405 D836  3E 09       	LD	A,9
- 1406 D838  CD F09E     	CALL	OCHR		; Cursor nach rechts
- 1407 D83B  CD FB59     DPME2:	CALL	LDAME		; Byte holen
- 1408 D83E  23          	INC	HL
- 1409 D83F  CD E384     	CALL	CSTBT		; als ASCII anzeigen
+ 1351                   ;	IN	A,(PIOAD)
+ 1352                   ;	AND	10011111b	; Motor+LED aus
+ 1353                   ;	OUT	(PIOAD),A
+ 1354                   ;	RET
+ 1355                   ;
+ 1356                   ; Kassette ein/aus (CD im Tape-Mode)
+ 1357                   ;
+ 1358 D7FF  DB 88       MOT:	IN	A,(PIOAD)
+ 1359 D801  EE 40       	XOR	01000000b	; Motor ein/aus
+ 1360 D803  D3 88       	OUT	(PIOAD),A
+ 1361 D805  C9          	RET
+ 1362                   ;
+ 1363                   ; BASIC-Dateiname ab NAME im Format 8.3 kopieren
+ 1364                   ;
+ 1365                   ; PE:	HL	Zeiger auf Dateiname im BASIC-Format = SSSName
+ 1366                   ;
+ 1367                   ; PA:	FNAME	Dateiname 8.3-Format = Name.SSS
+ 1368                   ;
+ 1369                   ; VR:	BC, AF
+ 1370                   ;
+ 1371 D806  E5          BNAME:	PUSH	HL
+ 1372 D807  D5          	PUSH	DE
+ 1373 D808  E5          	push	hl		; Beginn Dateityp merken
+ 1374 D809  23          	inc	hl
+ 1375 D80A  23          	inc	hl
+ 1376 D80B  23          	inc	hl		; mit Name beginnen
+ 1377 D80C  11 B7F5     	ld	de,FNAME	; Ablage Dateiname im IRM
+ 1378 D80F  01 0008     	ld	bc,8
+ 1379 D812  ED B0       	ldir			; Name direkt kopieren
+ 1380 D814  E1          	pop	hl
+ 1381 D815  06 03       	ld	b,3
+ 1382 D817  7E          bnam2:	ld	a,(hl)
+ 1383 D818  23          	inc	hl
+ 1384 D819  E6 7F       	and	7fh		; bei Dateityp Bit 7 ruecksetzen
+ 1385 D81B  12          	ld	(de),a
+ 1386 D81C  13          	inc	de
+ 1387 D81D  10 F8       	djnz	bnam2
+ 1388 D81F  D1          	POP	DE
+ 1389 D820  E1          	POP	HL
+ 1390 D821  C9          	RET
+ 1391                   
+ 1392                   ; Ausgabe einer Displayzeile
+ 1393                   ; HL=Adresse, C=Anzahl Bytes
+ 1394                   
+ 1395 D822  CD F07D     DPMEMO:	CALL	HLHX		; Adresse
+ 1396 D825  E5          DPME0:	PUSH	HL		; Hier Einsprung von DUMP-Routine
+ 1397 D826  41          	LD	B,C		; Anzahl Bytes
+ 1398 D827  CD FB59     DPME1:	CALL	LDAME		; Byte holen
+ 1399 D82A  23          	INC	HL
+ 1400 D82B  CD F082     	CALL	AHSPC		; anzeigen
+ 1401 D82E  10 F7       	DJNZ	DPME1		; C*
+ 1402 D830  E1          	POP	HL
+ 1403 D831  41          	LD	B,C
+ 1404 D832  3E 09       	LD	A,9
+ 1405 D834  CD F09E     	CALL	OCHR		; Cursor nach rechts
+ 1406 D837  CD FB59     DPME2:	CALL	LDAME		; Byte holen
+ 1407 D83A  23          	INC	HL
+ 1408 D83B  CD E384     	CALL	CSTBT		; als ASCII anzeigen
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  83
 CD49    INC
 
- 1410 D842  10 F7       	DJNZ	DPME2		; C*
- 1411 D844  C9          	RET
- 1412                   
- 1413                   ; Grafiksteuersequenzen fuer die Drucker
- 1414                   
- 1415 D845  0A          C6313:	DB	10		; Laenge
- 1416 D846  0D 09       	DB	CR,9
- 1417 D848  1B 4A 18    	DB	ESC,'J',24	; Vorschub 1/9"
- 1418 D84B  1B 2A 05    	DB	ESC,'*',5
- 1419 D84E  0140        	DW	320
- 1420                   
- 1421 D850  0A          C6314:	DB	10		; Laenge
- 1422 D851  0D 09       	DB	CR,9
- 1423 D853  1B 4A 18    	DB	ESC,'J',24
- 1424 D856  1B 2A 05    	DB	ESC,'*',5
- 1425 D859  0280        	DW	640
- 1426                   
- 1427 D85B  0E          C6311:	DB	14		; Laenge
- 1428 D85C  1B 5B 30 31 	DB	ESC,'[01e'
- 1429 D861  1B 5B 31 32 	DB	ESC,'[12`'
- 1430 D866  1B 4B       	DB	ESC,'K'
- 1431 D868  0140        	DW	320
- 1432                   
- 1433 D86A  0E          C6312:	DB	14		; Laenge
- 1434 D86B  1B 5B 30 31 	DB	ESC,'[01e'
- 1435 D870  1B 5B 31 32 	DB	ESC,'[12`'
- 1436 D875  1B 4B       	DB	ESC,'K'
- 1437 D877  0280        	DW	640
- 1438                   
- 1439 D879  09          C6304:	DB	9		; Laenge
- 1440 D87A  0D 09       	DB	CR,9
- 1441 D87C  1B 4A 18    	DB	ESC,'J',24
- 1442 D87F  1B 4B       	DB	ESC,'K'
- 1443 D881  0140        	DW	320
- 1444                   
- 1445 D883  0A          CMINI:	DB	10		; Laenge
- 1446 D884  0D 09       	DB	CR,9
- 1447 D886  1B 4A 18    	DB	ESC,'J',24
- 1448 D889  1B 2A 27    	DB	ESC,'*',39
- 1449 D88C  0140        	DW	320
- 1450                   
- 1451 D88E  0A          C24N1:	DB	10		; Laenge
- 1452 D88F  0D 09       	DB	CR,9
- 1453 D891  1B 4A 18    	DB	ESC,'J',24
- 1454 D894  1B 2A 00    	DB	ESC,'*',0
- 1455 D897  0140        	DW	320
- 1456                   
- 1457 D899  0A          C24N2:	DB	10		; Laenge
- 1458 D89A  0D 09       	DB	CR,9
- 1459 D89C  1B 4A 18    	DB	ESC,'J',24
- 1460 D89F  1B 2A 27    	DB	ESC,'*',39
- 1461 D8A2  03C0        	DW	960
- 1462                   
- 1463                   ; V.24-Tabellen, zum Kopieren in den IRM ab A800H:
- 1464                   
- 1465 D8A4  00          V24TAB:	DB	0		; Steckplatz M003 (Aktualisierung durch Suche)
- 1466                   
- 1467                   ; Kanal 1 - Druckerausgabe (9600 Baud)
+ 1409 D83E  10 F7       	DJNZ	DPME2		; C*
+ 1410 D840  C9          	RET
+ 1411                   
+ 1412                   ; Grafiksteuersequenzen fuer die Drucker
+ 1413                   
+ 1414 D841  0A          C6313:	DB	10		; Laenge
+ 1415 D842  0D 09       	DB	CR,9
+ 1416 D844  1B 4A 18    	DB	ESC,'J',24	; Vorschub 1/9"
+ 1417 D847  1B 2A 05    	DB	ESC,'*',5
+ 1418 D84A  0140        	DW	320
+ 1419                   
+ 1420 D84C  0A          C6314:	DB	10		; Laenge
+ 1421 D84D  0D 09       	DB	CR,9
+ 1422 D84F  1B 4A 18    	DB	ESC,'J',24
+ 1423 D852  1B 2A 05    	DB	ESC,'*',5
+ 1424 D855  0280        	DW	640
+ 1425                   
+ 1426 D857  0E          C6311:	DB	14		; Laenge
+ 1427 D858  1B 5B 30 31 	DB	ESC,'[01e'
+ 1428 D85D  1B 5B 31 32 	DB	ESC,'[12`'
+ 1429 D862  1B 4B       	DB	ESC,'K'
+ 1430 D864  0140        	DW	320
+ 1431                   
+ 1432 D866  0E          C6312:	DB	14		; Laenge
+ 1433 D867  1B 5B 30 31 	DB	ESC,'[01e'
+ 1434 D86C  1B 5B 31 32 	DB	ESC,'[12`'
+ 1435 D871  1B 4B       	DB	ESC,'K'
+ 1436 D873  0280        	DW	640
+ 1437                   
+ 1438 D875  09          C6304:	DB	9		; Laenge
+ 1439 D876  0D 09       	DB	CR,9
+ 1440 D878  1B 4A 18    	DB	ESC,'J',24
+ 1441 D87B  1B 4B       	DB	ESC,'K'
+ 1442 D87D  0140        	DW	320
+ 1443                   
+ 1444 D87F  0A          CMINI:	DB	10		; Laenge
+ 1445 D880  0D 09       	DB	CR,9
+ 1446 D882  1B 4A 18    	DB	ESC,'J',24
+ 1447 D885  1B 2A 27    	DB	ESC,'*',39
+ 1448 D888  0140        	DW	320
+ 1449                   
+ 1450 D88A  0A          C24N1:	DB	10		; Laenge
+ 1451 D88B  0D 09       	DB	CR,9
+ 1452 D88D  1B 4A 18    	DB	ESC,'J',24
+ 1453 D890  1B 2A 00    	DB	ESC,'*',0
+ 1454 D893  0140        	DW	320
+ 1455                   
+ 1456 D895  0A          C24N2:	DB	10		; Laenge
+ 1457 D896  0D 09       	DB	CR,9
+ 1458 D898  1B 4A 18    	DB	ESC,'J',24
+ 1459 D89B  1B 2A 27    	DB	ESC,'*',39
+ 1460 D89E  03C0        	DW	960
+ 1461                   
+ 1462                   ; V.24-Tabellen, zum Kopieren in den IRM ab A800H:
+ 1463                   
+ 1464 D8A0  00          V24TAB:	DB	0		; Steckplatz M003 (Aktualisierung durch Suche)
+ 1465                   
+ 1466                   ; Kanal 1 - Druckerausgabe (9600 Baud)
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  84
 CD49    INC
 
- 1468 D8A5  47          	DB	01000111b	; CTC: DI, Zaehler, neg. Flanke, RESET
- 1469 D8A6  5B          	DB	91		; Zeitkonstante
- 1470 D8A7  04 04       	DB	4,00000100b	; WR4: Vorteiler=1, 1 Stop-Bit, ohne Paritaet
- 1471 D8A9  03 20       	DB	3,00100000b	; WR3: Empfaenger aus, CTS+DCD-Steuerung
- 1472 D8AB  05 6A       	DB	5,01101010b	; WR5: Sender ein, 8Bit, /DTR=1, RTS=1
- 1473                   
- 1474                   ; Kanal 2 - Duplex (1200 Baud)
- 1475 D8AD  47          	DB	01000111b	; CTC: DI, Zaehler, neg. Flanke, RESET
- 1476 D8AE  2E          	DB	46		; Zeitkonstante
- 1477 D8AF  18          	DB	00011000b	; Port-RESET
- 1478 D8B0  04 44       	DB	4,01000100b	; WR4: Vorteiler=16, 1 Stop-Bit, ohne Paritaet
- 1479 D8B2  03 E1       	DB	3,11100001b	; WR3: Empfaenger ein, 8Bit, CTS+DCD-Steuerung
- 1480 D8B4  05 6A       	DB	5,01101010b	; WR5: Sender ein, 8Bit, /DTR=1, RTS=1
- 1481                   
- 1482                   ; Initialisierung SIO-B fuer Empfangs-Interrupt (1200 Baud):
- 1483                   
- 1484 D8B6  02          V24UMT:	DB	2		; 2 Ports
- 1485 D8B7  0D 02       	 DB	0Dh,2		; CTC1
- 1486 D8B9  47          	  DB	01000111b	; DI, Zaehler, neg. Flanke, ZK folgt, RESET
- 1487 D8BA  2E          	  DB	46		; Zeitkonstante
- 1488 D8BB  0B 0B       V24INT:	 DB	0Bh,11		; SIO-B Steuerwort
- 1489 D8BD  18          	  DB	00011000b	; Port-RESET
- 1490 D8BE  02 E2       	  DB	2,0E2h		; WR2: INT-Vektor
- 1491 D8C0  04 44       	  DB	4,01000100b	; WR4: Vorteiler=16, 1 Stop-Bit, ohne Paritaet
- 1492 D8C2  03 E1       	  DB	3,11100001b	; WR3: Empfaenger ein, 8Bit, CTS/DCD-Steuerung
- 1493 D8C4  05 EA       	  DB	5,11101010b	; WR5: Sender ein, 8Bit, /DTR=0 (bereit), RTS=1
- 1494 D8C6  11 18       	  DB	11h,00011000b	; WR1: Interrupt bei Zeichenempfang
- 1495                   
- 1496                   ; Initialisierung SIO-B fuer Polling-Betrieb:
- 1497                   
- 1498 D8C8  0B 07       V24POL:	DB	0Bh,7		; SIO-B Steuerwort, 7 Byte
- 1499 D8CA  18          	 DB	00011000b	; Port RESET
- 1500 D8CB  04 44       	 DB	4,01000100b	; Vorteiler 16, 1 Stop-Bit, ohne Paritaet
- 1501 D8CD  03 E1       	 DB	3,11100001b	; Empfaenger ein, 8 Bit, CTS/DCD-Steuerung
- 1502 D8CF  05 6A       	 DB	5,01101010b	; Sender ein, 8 Bit, DTR aus, RTS ein
- 1503                   ;
- 1504                   ; Unterprogrammtabelle (wird seit CAOS 4.6 in IRM kopiert):
- 1505                   ;
- 1506 D8D1  4D          	DB	(SUEND-SUTB)/2	; Laenge der SUTAB bzw. erste unbenutzte UP-Nr.
- 1507 D8D2  E12B        SUTB:	DW	CRT	; 00
- 1508 D8D4  FBF0        	DW	MBO	; 01
- 1509 D8D6  B7BD        	DW	UOUT1	; 02
- 1510 D8D8  B7C3        	DW	UOUT2	; 03
- 1511 D8DA  F3DA        	DW	KBD	; 04
- 1512 D8DC  FBF5        	DW	MBI	; 05
- 1513 D8DE  B7C0        	DW	UIN1	; 06
- 1514 D8E0  B7C6        	DW	UIN2	; 07
- 1515 D8E2  FBFA        	DW	ISRO	; 08
- 1516 D8E4  FBFF        	DW	CSRO	; 09
- 1517 D8E6  FC04        	DW	ISRI	; 0A
- 1518 D8E8  FC09        	DW	CSRI	; 0B
- 1519 D8EA  E370        	DW	KBDS	; 0C
- 1520 D8EC  F19A        	DW	BYE	; 0D
- 1521 D8EE  E37B        	DW	KBDZ	; 0E
- 1522 D8F0  F7AD        	DW	COLR	; 0F
- 1523 D8F2  F6CC        	DW	LOAD	; 10
- 1524                   
- 1525 D8F4  F6B5        	DW	VERIF	; 11
+ 1467 D8A1  47          	DB	01000111b	; CTC: DI, Zaehler, neg. Flanke, RESET
+ 1468 D8A2  5B          	DB	91		; Zeitkonstante
+ 1469 D8A3  04 04       	DB	4,00000100b	; WR4: Vorteiler=1, 1 Stop-Bit, ohne Paritaet
+ 1470 D8A5  03 20       	DB	3,00100000b	; WR3: Empfaenger aus, CTS+DCD-Steuerung
+ 1471 D8A7  05 6A       	DB	5,01101010b	; WR5: Sender ein, 8Bit, /DTR=1, RTS=1
+ 1472                   
+ 1473                   ; Kanal 2 - Duplex (1200 Baud)
+ 1474 D8A9  47          	DB	01000111b	; CTC: DI, Zaehler, neg. Flanke, RESET
+ 1475 D8AA  2E          	DB	46		; Zeitkonstante
+ 1476 D8AB  18          	DB	00011000b	; Port-RESET
+ 1477 D8AC  04 44       	DB	4,01000100b	; WR4: Vorteiler=16, 1 Stop-Bit, ohne Paritaet
+ 1478 D8AE  03 E1       	DB	3,11100001b	; WR3: Empfaenger ein, 8Bit, CTS+DCD-Steuerung
+ 1479 D8B0  05 6A       	DB	5,01101010b	; WR5: Sender ein, 8Bit, /DTR=1, RTS=1
+ 1480                   
+ 1481                   ; Initialisierung SIO-B fuer Empfangs-Interrupt (1200 Baud):
+ 1482                   
+ 1483 D8B2  02          V24UMT:	DB	2		; 2 Ports
+ 1484 D8B3  0D 02       	 DB	0Dh,2		; CTC1
+ 1485 D8B5  47          	  DB	01000111b	; DI, Zaehler, neg. Flanke, ZK folgt, RESET
+ 1486 D8B6  2E          	  DB	46		; Zeitkonstante
+ 1487 D8B7  0B 0B       V24INT:	 DB	0Bh,11		; SIO-B Steuerwort
+ 1488 D8B9  18          	  DB	00011000b	; Port-RESET
+ 1489 D8BA  02 E2       	  DB	2,0E2h		; WR2: INT-Vektor
+ 1490 D8BC  04 44       	  DB	4,01000100b	; WR4: Vorteiler=16, 1 Stop-Bit, ohne Paritaet
+ 1491 D8BE  03 E1       	  DB	3,11100001b	; WR3: Empfaenger ein, 8Bit, CTS/DCD-Steuerung
+ 1492 D8C0  05 EA       	  DB	5,11101010b	; WR5: Sender ein, 8Bit, /DTR=0 (bereit), RTS=1
+ 1493 D8C2  11 18       	  DB	11h,00011000b	; WR1: Interrupt bei Zeichenempfang
+ 1494                   
+ 1495                   ; Initialisierung SIO-B fuer Polling-Betrieb:
+ 1496                   
+ 1497 D8C4  0B 07       V24POL:	DB	0Bh,7		; SIO-B Steuerwort, 7 Byte
+ 1498 D8C6  18          	 DB	00011000b	; Port RESET
+ 1499 D8C7  04 44       	 DB	4,01000100b	; Vorteiler 16, 1 Stop-Bit, ohne Paritaet
+ 1500 D8C9  03 E1       	 DB	3,11100001b	; Empfaenger ein, 8 Bit, CTS/DCD-Steuerung
+ 1501 D8CB  05 6A       	 DB	5,01101010b	; Sender ein, 8 Bit, DTR aus, RTS ein
+ 1502                   ;
+ 1503                   ; Unterprogrammtabelle (wird seit CAOS 4.6 in IRM kopiert):
+ 1504                   ;
+ 1505 D8CD  4D          	DB	(SUEND-SUTB)/2	; Laenge der SUTAB bzw. erste unbenutzte UP-Nr.
+ 1506 D8CE  E12B        SUTB:	DW	CRT	; 00
+ 1507 D8D0  FBF0        	DW	MBO	; 01
+ 1508 D8D2  B7BD        	DW	UOUT1	; 02
+ 1509 D8D4  B7C3        	DW	UOUT2	; 03
+ 1510 D8D6  F3DA        	DW	KBD	; 04
+ 1511 D8D8  FBF5        	DW	MBI	; 05
+ 1512 D8DA  B7C0        	DW	UIN1	; 06
+ 1513 D8DC  B7C6        	DW	UIN2	; 07
+ 1514 D8DE  FBFA        	DW	ISRO	; 08
+ 1515 D8E0  FBFF        	DW	CSRO	; 09
+ 1516 D8E2  FC04        	DW	ISRI	; 0A
+ 1517 D8E4  FC09        	DW	CSRI	; 0B
+ 1518 D8E6  E370        	DW	KBDS	; 0C
+ 1519 D8E8  F19A        	DW	BYE	; 0D
+ 1520 D8EA  E37B        	DW	KBDZ	; 0E
+ 1521 D8EC  F7AD        	DW	COLR	; 0F
+ 1522 D8EE  F6CC        	DW	LOAD	; 10
+ 1523                   
+ 1524 D8F0  F6B5        	DW	VERIF	; 11
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  85
 CD49    INC
 
- 1526 D8F6  F29D        	DW	LOOP	; 12
- 1527 D8F8  F3BD        	DW	NORM	; 13
- 1528 D8FA  FC0E        	DW	WAIT	; 14
- 1529 D8FC  F5E7        	DW	LARG	; 15
- 1530 D8FE  F069        	DW	INTB	; 16
- 1531 D900  F47A        	DW	INLIN	; 17
- 1532 D902  F4BF        	DW	RHEX	; 18 - Erfassung HEX-Wert aus Zeichenkette
- 1533 D904  F374        	DW	ERRM	; 19
- 1534 D906  F07D        	DW	HLHX	; 1A
- 1535 D908  F0A4        	DW	HLDE	; 1B
- 1536 D90A  F08D        	DW	AHEX	; 1C
- 1537 D90C  F390        	DW	ZSUCH	; 1D
- 1538 D90E  F3C3        	DW	SOUT	; 1E
- 1539 D910  F3D0        	DW	SIN	; 1F
- 1540                   
- 1541 D912  F3C0        	DW	NOUT	; 20
- 1542 D914  F3CD        	DW	NIN	; 21
- 1543 D916  F504        	DW	GARG	; 22
- 1544 D918  F0F5        	DW	OSTR	; 23
- 1545 D91A  F09E        	DW	OCHR	; 24
- 1546 D91C  F805        	DW	CUCP	; 25
- 1547 D91E  F128        	DW	MODU	; 26
- 1548 D920  F14C        	DW	JUMP	; 27
- 1549 D922  E2D4        	DW	LDMA	; 28
- 1550 D924  E2D6        	DW	LDAM	; 29
- 1551 D926  F655        	DW	BRKT	; 2A
- 1552 D928  F085        	DW	SPACE	; 2B
- 1553 D92A  F37E        	DW	CRLF	; 2C
- 1554 D92C  F089        	DW	HOME	; 2D
- 1555 D92E  F7CE        	DW	MODI	; 2E
- 1556 D930  F839        	DW	PUDE	; 2F
- 1557                   
- 1558 D932  F831        	DW	PUSE	; 30
- 1559 D934  FB72        	DW	SIXD	; 31
- 1560 D936  E083        	DW	DABR	; 32
- 1561 D938  E073        	DW	TCIF	; 33
- 1562 D93A  E063        	DW	PADR	; 34
- 1563 D93C  F8EC        	DW	TON	; 35
- 1564 D93E  F575        	DW	SAVE	; 36
- 1565                   	; bis hier in HC900-CAOS, CAOS 2.2 und 2.3 enthalten
- 1566 D940  F84C        	DW	MBIN	; 37 - Byteweise Eingabe fuer BASIC
- 1567 D942  F854        	DW	MBOUT	; 38 - Byteweise Ausgabe fuer BASIC
- 1568 D944  F800        	DW	KEY	; 39
- 1569 D946  F7FA        	DW	KEYLI	; 3A
- 1570 D948  F7BD        	DW	DISP	; 3B
- 1571 D94A  F7E5        	DW	WININ	; 3C
- 1572 D94C  F7EA        	DW	WINAK	; 3D
- 1573                   	; bis hier in CAOS 2.4 und 2.5 enthalten
- 1574 D94E  F847        	DW	LINE	; 3E
- 1575 D950  F842        	DW	CIRCL	; 3F
- 1576                   
- 1577 D952  ED33        	DW	SQR	; 40
- 1578 D954  FB90        	DW	MULT	; 41
- 1579 D956  E384        	DW	CSTBT	; 42
- 1580                   	; bis hier in HC901-CAOS enthalten
- 1581 D958  F53F        	DW	INIEA	; 43
- 1582 D95A  F551        	DW	INIME	; 44
- 1583 D95C  F8E6        	DW	ZKOUT	; 45
+ 1525 D8F2  F29D        	DW	LOOP	; 12
+ 1526 D8F4  F3BD        	DW	NORM	; 13
+ 1527 D8F6  FC0E        	DW	WAIT	; 14
+ 1528 D8F8  F5E7        	DW	LARG	; 15
+ 1529 D8FA  F069        	DW	INTB	; 16
+ 1530 D8FC  F47A        	DW	INLIN	; 17
+ 1531 D8FE  F4BF        	DW	RHEX	; 18 - Erfassung HEX-Wert aus Zeichenkette
+ 1532 D900  F374        	DW	ERRM	; 19
+ 1533 D902  F07D        	DW	HLHX	; 1A
+ 1534 D904  F0A4        	DW	HLDE	; 1B
+ 1535 D906  F08D        	DW	AHEX	; 1C
+ 1536 D908  F390        	DW	ZSUCH	; 1D
+ 1537 D90A  F3C3        	DW	SOUT	; 1E
+ 1538 D90C  F3D0        	DW	SIN	; 1F
+ 1539                   
+ 1540 D90E  F3C0        	DW	NOUT	; 20
+ 1541 D910  F3CD        	DW	NIN	; 21
+ 1542 D912  F504        	DW	GARG	; 22
+ 1543 D914  F0F5        	DW	OSTR	; 23
+ 1544 D916  F09E        	DW	OCHR	; 24
+ 1545 D918  F805        	DW	CUCP	; 25
+ 1546 D91A  F128        	DW	MODU	; 26
+ 1547 D91C  F14C        	DW	JUMP	; 27
+ 1548 D91E  E2D4        	DW	LDMA	; 28
+ 1549 D920  E2D6        	DW	LDAM	; 29
+ 1550 D922  F655        	DW	BRKT	; 2A
+ 1551 D924  F085        	DW	SPACE	; 2B
+ 1552 D926  F37E        	DW	CRLF	; 2C
+ 1553 D928  F089        	DW	HOME	; 2D
+ 1554 D92A  F7CE        	DW	MODI	; 2E
+ 1555 D92C  F839        	DW	PUDE	; 2F
+ 1556                   
+ 1557 D92E  F831        	DW	PUSE	; 30
+ 1558 D930  FB72        	DW	SIXD	; 31
+ 1559 D932  E083        	DW	DABR	; 32
+ 1560 D934  E073        	DW	TCIF	; 33
+ 1561 D936  E063        	DW	PADR	; 34
+ 1562 D938  F8EC        	DW	TON	; 35
+ 1563 D93A  F575        	DW	SAVE	; 36
+ 1564                   	; bis hier in HC900-CAOS, CAOS 2.2 und 2.3 enthalten
+ 1565 D93C  F84C        	DW	MBIN	; 37 - Byteweise Eingabe fuer BASIC
+ 1566 D93E  F854        	DW	MBOUT	; 38 - Byteweise Ausgabe fuer BASIC
+ 1567 D940  F800        	DW	KEY	; 39
+ 1568 D942  F7FA        	DW	KEYLI	; 3A
+ 1569 D944  F7BD        	DW	DISP	; 3B
+ 1570 D946  F7E5        	DW	WININ	; 3C
+ 1571 D948  F7EA        	DW	WINAK	; 3D
+ 1572                   	; bis hier in CAOS 2.4 und 2.5 enthalten
+ 1573 D94A  F847        	DW	LINE	; 3E
+ 1574 D94C  F842        	DW	CIRCL	; 3F
+ 1575                   
+ 1576 D94E  ED33        	DW	SQR	; 40
+ 1577 D950  FB90        	DW	MULT	; 41
+ 1578 D952  E384        	DW	CSTBT	; 42
+ 1579                   	; bis hier in HC901-CAOS enthalten
+ 1580 D954  F53F        	DW	INIEA	; 43
+ 1581 D956  F551        	DW	INIME	; 44
+ 1582 D958  F8E6        	DW	ZKOUT	; 45
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  86
 CD49    INC
 
- 1584 D95E  F22C        	DW	MENU	; 46
- 1585                   	; bis hier in CAOS 3.1, 3.3, 3.4 und OS/PI'88/'90 enthalten
- 1586 D960  F9C2        	DW	V24OUT	; 47 - Initialisierung Druckerausgabe
- 1587 D962  F9D1        	DW	V24DUP	; 48 - Initialisierung V.24-Duplexbetrieb
- 1588                   	; bis hier in CAOS 4.1 bis 4.5 enthalten
- 1589 D964  FBBC        	DW	SETDEV	; 49 - Speichergeraet einstellen/anzeigen
- 1590                   	; bis hier in CAOS 4.6 und 4.7 enthalten
- 1591 D966  ED69        	DW	HLDEZ	; 4A - HL dezimal anzeigen
- 1592 D968  F4C7        	DW	RDEZ	; 4B - Erfassung Dezimalzahl aus Zeichenkette
- 1593 D96A  F506        	DW	GARGC	; 4C - Argumente erfassen mit beliebiger Zahlenbasis
- 1594 D96C              SUEND:	; bis hier in CAOS 4.8 enthalten
- 1595                   
- 1596                   ;
- 1597                   ; Portinitialisierungstabelle fuer Erstinitialisierung (POWER ON und RESET):
- 1598                   ;
- 1599                   ; Bei Erstinitialisierung des PIO-Port-A muss sichergestellt werden, dass der
- 1600                   ; CAOS-ROM-E immer im Zugriff bleibt. Im Einschaltzustand sind die PIO-Ports
- 1601                   ; hochohmig und werden ueber Pull-Up-Widerstaende auf High gezogen, deshalb:
- 1602                   ; 1. PIO-Port B initialisieren, und PIO damit aus dem RESET-Zustand holen
- 1603                   ;    (so wird auch das Ausgaberegister von Port A beschreibbar)
- 1604                   ; 2. Port A Datenwort einschreiben
- 1605                   ; 3. Port A Betriebsart Byte-Ausgabe einstellen um das Datenwort zu uebernehmen.
- 1606                   ; Der RESET-Impuls zur D005-Tastatur wirkt nur, wenn die PIO bereits vorher
- 1607                   ; auf Byte-Ausgabe initialisiert ist (also nur bei RESET, nicht bei POWER-ON)
- 1608                   ;
- 1609 D96C  06          IOTAB1:	DB	6		; 6 Ports fuer Erstinitialisierung
- 1610                   
- 1611 D96D  8B 03       	 DB	PIOBS,3		; PIO-B Steuerwort
- 1612 D96F  E6          	  DB	0E6h		; Interruptvektor
- 1613 D970  0F          	  DB	00001111b	; Byte-Ausgabemodus
- 1614 D971  83          	  DB	10000011b	; EI
- 1615                   
- 1616 D972  89 01       	 DB	PIOBD,1		; PIO-B Daten
- 1617 D974  FF          	  DB	11111111b	; Blinken ein, RAM8 WR, Lautstaerke 0
- 1618                   
- 1619 D975  88 02       	 DB	PIOAD,2		; PIO-A Daten
- 1620 D977  1F          	  DB	00011111b	; D005-Reset (KOUT 1-Impuls)
- 1621 D978  0F          	  DB	00001111b	; IRM ein, RAM0 WR ein, CAOS-E ein, USER-ROM aus
- 1622                   
- 1623 D979  8A 03       	 DB	PIOAS,3		; PIO-A Steuerwort
- 1624 D97B  E4          	  DB	0E4h		; Interruptvektor
- 1625 D97C  0F          	  DB	00001111b	; Byte-Ausgabemodus
- 1626 D97D  03          	  DB	00000011b	; DI
- 1627                   
- 1628 D97E  84 01       	 DB	PORT1,1		; Ausgabeport 84h
- 1629 D980  28          	  DB	00101000b	; RAM8 0, LoRes
- 1630                   
- 1631 D981  86 01       	 DB	PORT2,1		; Ausgabeport 86h
- 1632 D983  E3          	  DB	11100011b	; RAM4 ein, USER-C 3, CAOS-C ein
- 1633                   ;
- 1634                   ; Initialisierungstabelle fuer M001 als Centronics-Druckerschnittstelle:
- 1635                   ;
- 1636 D984  03          DIOINI:	DB	3
- 1637 D985  06 02       	 DB	06h,2		; PIO-A Steuerwort
- 1638 D987  CF          	  DB	11001111b	; Bitbetrieb
- 1639 D988  00          	  DB	00000000b	; alles Ausgaenge
- 1640 D989  07 02       	 DB	07h,2		; PIO-B Steuerwort
- 1641 D98B  CF          	  DB	11001111b	; Bitbetrieb
+ 1583 D95A  F22C        	DW	MENU	; 46
+ 1584                   	; bis hier in CAOS 3.1, 3.3, 3.4 und OS/PI'88/'90 enthalten
+ 1585 D95C  F9C2        	DW	V24OUT	; 47 - Initialisierung Druckerausgabe
+ 1586 D95E  F9D1        	DW	V24DUP	; 48 - Initialisierung V.24-Duplexbetrieb
+ 1587                   	; bis hier in CAOS 4.1 bis 4.5 enthalten
+ 1588 D960  FBBC        	DW	SETDEV	; 49 - Speichergeraet einstellen/anzeigen
+ 1589                   	; bis hier in CAOS 4.6 und 4.7 enthalten
+ 1590 D962  ED69        	DW	HLDEZ	; 4A - HL dezimal anzeigen
+ 1591 D964  F4C7        	DW	RDEZ	; 4B - Erfassung Dezimalzahl aus Zeichenkette
+ 1592 D966  F506        	DW	GARGC	; 4C - Argumente erfassen mit beliebiger Zahlenbasis
+ 1593 D968              SUEND:	; bis hier in CAOS 4.8 enthalten
+ 1594                   
+ 1595                   ;
+ 1596                   ; Portinitialisierungstabelle fuer Erstinitialisierung (POWER ON und RESET):
+ 1597                   ;
+ 1598                   ; Bei Erstinitialisierung des PIO-Port-A muss sichergestellt werden, dass der
+ 1599                   ; CAOS-ROM-E immer im Zugriff bleibt. Im Einschaltzustand sind die PIO-Ports
+ 1600                   ; hochohmig und werden ueber Pull-Up-Widerstaende auf High gezogen, deshalb:
+ 1601                   ; 1. PIO-Port B initialisieren, und PIO damit aus dem RESET-Zustand holen
+ 1602                   ;    (so wird auch das Ausgaberegister von Port A beschreibbar)
+ 1603                   ; 2. Port A Datenwort einschreiben
+ 1604                   ; 3. Port A Betriebsart Byte-Ausgabe einstellen um das Datenwort zu uebernehmen.
+ 1605                   ; Der RESET-Impuls zur D005-Tastatur wirkt nur, wenn die PIO bereits vorher
+ 1606                   ; auf Byte-Ausgabe initialisiert ist (also nur bei RESET, nicht bei POWER-ON)
+ 1607                   ;
+ 1608 D968  06          IOTAB1:	DB	6		; 6 Ports fuer Erstinitialisierung
+ 1609                   
+ 1610 D969  8B 03       	 DB	PIOBS,3		; PIO-B Steuerwort
+ 1611 D96B  E6          	  DB	0E6h		; Interruptvektor
+ 1612 D96C  0F          	  DB	00001111b	; Byte-Ausgabemodus
+ 1613 D96D  83          	  DB	10000011b	; EI
+ 1614                   
+ 1615 D96E  89 01       	 DB	PIOBD,1		; PIO-B Daten
+ 1616 D970  FF          	  DB	11111111b	; Blinken ein, RAM8 WR, Lautstaerke 0
+ 1617                   
+ 1618 D971  88 02       	 DB	PIOAD,2		; PIO-A Daten
+ 1619 D973  1F          	  DB	00011111b	; D005-Reset (KOUT 1-Impuls)
+ 1620 D974  0F          	  DB	00001111b	; IRM ein, RAM0 WR ein, CAOS-E ein, USER-ROM aus
+ 1621                   
+ 1622 D975  8A 03       	 DB	PIOAS,3		; PIO-A Steuerwort
+ 1623 D977  E4          	  DB	0E4h		; Interruptvektor
+ 1624 D978  0F          	  DB	00001111b	; Byte-Ausgabemodus
+ 1625 D979  03          	  DB	00000011b	; DI
+ 1626                   
+ 1627 D97A  84 01       	 DB	PORT1,1		; Ausgabeport 84h
+ 1628 D97C  28          	  DB	00101000b	; RAM8 0, LoRes
+ 1629                   
+ 1630 D97D  86 01       	 DB	PORT2,1		; Ausgabeport 86h
+ 1631 D97F  E3          	  DB	11100011b	; RAM4 ein, USER-C 3, CAOS-C ein
+ 1632                   ;
+ 1633                   ; Initialisierungstabelle fuer M001 als Centronics-Druckerschnittstelle:
+ 1634                   ;
+ 1635 D980  03          DIOINI:	DB	3
+ 1636 D981  06 02       	 DB	06h,2		; PIO-A Steuerwort
+ 1637 D983  CF          	  DB	11001111b	; Bitbetrieb
+ 1638 D984  00          	  DB	00000000b	; alles Ausgaenge
+ 1639 D985  07 02       	 DB	07h,2		; PIO-B Steuerwort
+ 1640 D987  CF          	  DB	11001111b	; Bitbetrieb
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  87
 CD49    INC
 
- 1642 D98C  FE          	  DB	11111110b	; Bit 0 Ausgang
- 1643 D98D  05 01       	 DB	05h,1		; PIO-B Daten
- 1644 D98F  01          	  DB	00000001b	; Strobe passiv
- 1645                   ;
- 1646                   ; Interrupttabelle (wird in den RAM kopiert):
- 1647                   ;
- 1648 D990              ISRTAB:	;DW	IRET	; 01D0	(IX-32) M052 USB-PIO (USB-Tastatur)
- 1649                   	;DW	IRET	; 01D2	(IX-30) -
- 1650                   	;DW	IRET	; 01D4	(IX-28) Empfehlung fuer CTC Kanal 2 des 2. M003
- 1651                   	;DW	IRET	; 01D6	(IX-26) Empfehlung fuer CTC Kanal 3 des 2. M003
- 1652                   	;DW	IRET	; 01D8	(IX-24) Empfehlung fuer SIO des 2. M003 
- 1653                   	;DW	IRET	; 01DA	(IX-22) Empfehlung fuer SIO des 1. M003
- 1654                   	;DW	IRET	; 01DC	(IX-20) Empfehlung fuer CTC Kanal 2 des 1. M003
- 1655                   	;DW	IRET	; 01DE	(IX-18) Empfehlung fuer CTC Kanal 3 des 1. M003
- 1656 D990  E3E0        	DW	ISRJ	; 01E0	(IX-16) M008 PIO A: Joystick
- 1657 D992  FA7B        	DW	ISRSB	; 01E2	(IX-14) M003 SIO B: V.24-Empfang
- 1658 D994  E57C        	DW	ISRPA	; 01E4	(IX-12) PIO A: Kassette
- 1659 D996  E2ED        	DW	ISRPB	; 01E6	(IX-10) PIO B: Tastatur
- 1660 D998  E58B        	DW	IRET	; 01E8	(IX-8)  CTC 0: frei (TEMO Schrittbetrieb)
- 1661 D99A  E56C        	DW	ISRC1	; 01EA	(IX-6)  CTC 1: Kassette
- 1662 D99C  E368        	DW	ISRC2	; 01EC	(IX-4)  CTC 2: Tondauer
- 1663 D99E  E2E1        	DW	ISRC3	; 01EE	(IX-2)  CTC 3: Tastatur
- 1664                   ;
- 1665                   ; Portinitialisierungstabelle fuer Neuinitialisierung bei SIXD
- 1666                   ;
- 1667 D9A0  04          IOTAB2:	DB	4		; 4 Ports initialisieren
- 1668                   
- 1669 D9A1  8A 01       	 DB	PIOAS,1		; PIO-A Steuerwort
- 1670 D9A3  E4          	  DB	0E4h		; Interruptvektor
- 1671                   
- 1672 D9A4  8B 01       	 DB	PIOBS,1		; PIO-B Steuerwort
- 1673 D9A6  E6          	  DB	0E6h		; Interruptvektor
- 1674                   
- 1675 D9A7  8C 01       	 DB	CTC0,1		; CTC Kanal 0
- 1676 D9A9  E8          	  DB	0E8h		; Interruptvektor
- 1677                   
- 1678 D9AA  8E 02       	 DB	CTC2,2		; CTC Kanal 2: blinken
- 1679 D9AC  47          	  DB	01000111b	; DI, Zaehler, RESET
- 1680 D9AD  0C          	  DB	12		; Zeitkonstante
- 1681                   
- 1682                   ; Anzeige der CAOS-Version mit Datum
- 1683                   
- 1684 D9AE  7F7F        	DW	7F7FH
- 1685 D9B0  48 45 4C 50 	DB	'HELP'
- 1686 D9B4  01          	DB	1
- 1687 D9B5  3E 01       HELP:	LD	A,1
- 1688 D9B7  CD DA80     	CALL	VER		; Versionsanzeige (Langform mit Datum)
- 1689 D9BA  CD F0F5     	CALL	OSTR
- 1690 D9BD  0D 0A 0A    	DB	CR,LF,LF
- 1691 D9C0  20 20 43 6F 	DB	'  Commands (Prolog=',0
- 1692 D9D4  DD 7E 09    	LD	A,(IX+9)
- 1693 D9D7  CD F0F2     	CALL	AHOSTR		; Prolog und folgenden Text anzeigen
- 1694                   ;	CALL	OSTR
- 1695 D9DA  29 3A 0D 0A 	DB	'):',CR,LF,LF,0
- 1696 D9E0  21 D9FF     	LD	HL,HELPX	; Programmteil zur Menuewortsuche und Anzeige
- 1697 D9E3  11 B700     	LD	DE,CASS		; in den Kassettenpuffer kopieren
- 1698 D9E6  01 0080     	LD	BC,MENEND-HELPX	; maximal 128 Byte (reicht gerade so!!!)
- 1699 D9E9  ED B0       	LDIR
+ 1641 D988  FE          	  DB	11111110b	; Bit 0 Ausgang
+ 1642 D989  05 01       	 DB	05h,1		; PIO-B Daten
+ 1643 D98B  01          	  DB	00000001b	; Strobe passiv
+ 1644                   ;
+ 1645                   ; Interrupttabelle (wird in den RAM kopiert):
+ 1646                   ;
+ 1647 D98C              ISRTAB:	;DW	IRET	; 01D0	(IX-32) M052 USB-PIO (USB-Tastatur)
+ 1648                   	;DW	IRET	; 01D2	(IX-30) -
+ 1649                   	;DW	IRET	; 01D4	(IX-28) Empfehlung fuer CTC Kanal 2 des 2. M003
+ 1650                   	;DW	IRET	; 01D6	(IX-26) Empfehlung fuer CTC Kanal 3 des 2. M003
+ 1651                   	;DW	IRET	; 01D8	(IX-24) Empfehlung fuer SIO des 2. M003 
+ 1652                   	;DW	IRET	; 01DA	(IX-22) Empfehlung fuer SIO des 1. M003
+ 1653                   	;DW	IRET	; 01DC	(IX-20) Empfehlung fuer CTC Kanal 2 des 1. M003
+ 1654                   	;DW	IRET	; 01DE	(IX-18) Empfehlung fuer CTC Kanal 3 des 1. M003
+ 1655 D98C  E3E0        	DW	ISRJ	; 01E0	(IX-16) M008 PIO A: Joystick
+ 1656 D98E  FA7B        	DW	ISRSB	; 01E2	(IX-14) M003 SIO B: V.24-Empfang
+ 1657 D990  E57C        	DW	ISRPA	; 01E4	(IX-12) PIO A: Kassette
+ 1658 D992  E2ED        	DW	ISRPB	; 01E6	(IX-10) PIO B: Tastatur
+ 1659 D994  E58B        	DW	IRET	; 01E8	(IX-8)  CTC 0: frei (TEMO Schrittbetrieb)
+ 1660 D996  E56C        	DW	ISRC1	; 01EA	(IX-6)  CTC 1: Kassette
+ 1661 D998  E368        	DW	ISRC2	; 01EC	(IX-4)  CTC 2: Tondauer
+ 1662 D99A  E2E1        	DW	ISRC3	; 01EE	(IX-2)  CTC 3: Tastatur
+ 1663                   ;
+ 1664                   ; Portinitialisierungstabelle fuer Neuinitialisierung bei SIXD
+ 1665                   ;
+ 1666 D99C  04          IOTAB2:	DB	4		; 4 Ports initialisieren
+ 1667                   
+ 1668 D99D  8A 01       	 DB	PIOAS,1		; PIO-A Steuerwort
+ 1669 D99F  E4          	  DB	0E4h		; Interruptvektor
+ 1670                   
+ 1671 D9A0  8B 01       	 DB	PIOBS,1		; PIO-B Steuerwort
+ 1672 D9A2  E6          	  DB	0E6h		; Interruptvektor
+ 1673                   
+ 1674 D9A3  8C 01       	 DB	CTC0,1		; CTC Kanal 0
+ 1675 D9A5  E8          	  DB	0E8h		; Interruptvektor
+ 1676                   
+ 1677 D9A6  8E 02       	 DB	CTC2,2		; CTC Kanal 2: blinken
+ 1678 D9A8  47          	  DB	01000111b	; DI, Zaehler, RESET
+ 1679 D9A9  0C          	  DB	12		; Zeitkonstante
+ 1680                   
+ 1681                   ; Anzeige der CAOS-Version mit Datum
+ 1682                   
+ 1683 D9AA  7F7F        	DW	7F7FH
+ 1684 D9AC  48 45 4C 50 	DB	'HELP'
+ 1685 D9B0  01          	DB	1
+ 1686 D9B1  3E 01       HELP:	LD	A,1
+ 1687 D9B3  CD DA7C     	CALL	VER		; Versionsanzeige (Langform mit Datum)
+ 1688 D9B6  CD F0F5     	CALL	OSTR
+ 1689 D9B9  0D 0A 0A    	DB	CR,LF,LF
+ 1690 D9BC  20 20 43 6F 	DB	'  Commands (Prolog=',0
+ 1691 D9D0  DD 7E 09    	LD	A,(IX+9)
+ 1692 D9D3  CD F0F2     	CALL	AHOSTR		; Prolog und folgenden Text anzeigen
+ 1693                   ;	CALL	OSTR
+ 1694 D9D6  29 3A 0D 0A 	DB	'):',CR,LF,LF,0
+ 1695 D9DC  21 D9FB     	LD	HL,HELPX	; Programmteil zur Menuewortsuche und Anzeige
+ 1696 D9DF  11 B700     	LD	DE,CASS		; in den Kassettenpuffer kopieren
+ 1697 D9E2  01 0080     	LD	BC,MENEND-HELPX	; maximal 128 Byte (reicht gerade so!!!)
+ 1698 D9E5  ED B0       	LDIR
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  88
 CD49    INC
 
- 1700                   ;	LD	B,0		; Suchgroesse = 64K (B=0 vom LDIR)
- 1701 D9EB  3A B802     	LD	A,(MODST+2)	; Schaltzustand USER-ROM
- 1702 D9EE  32 B780     	LD	(ARGC),A	; hier merken
- 1703 D9F1  3A B805     	LD	A,(MODST+5)	; Schaltzustand CAOS-ROM C
- 1704 D9F4  5F          	LD	E,A		; in Register E merken
- 1705 D9F5  3E 02       	LD	A,2		; Start-Spalte erstes Menuewort
- 1706 D9F7  08          	EX	AF,AF'		; Position in A' merken
- 1707 D9F8  21 E4C9     	LD	HL,CLC		; Kassettenpuffer nach Nutzung wieder saebern
- 1708 D9FB  E5          	PUSH	HL		; Als-RET-Adresse auf Stack legen
- 1709 D9FC  C3 B700     	JP	CASS		; weiter in Kassettenpuffer
- 1710                   
- 1711 D9FF  CD FB78     HELPX:	CALL	COFF
- 1712 DA02  CD B73E     	CALL	MENUX		; Menueworte im sichtbaren Bereich anzeigen
- 1713                   
- 1714                   ;CAOS ROM C
- 1715 DA05  CD FB87     	CALL	CON		; CAOS-ROM C einschalten
- 1716 DA08  CB 43       	BIT	0,E		; war CAOS-ROM C ein waehrend erster Suche?
- 1717 DA0A  CC B73C     	CALL	Z,MENX8K	; nein, Menueworte im CAOS-ROM C anzeigen
- 1718                   
- 1719                   ;USER-ROM (ausser BASIC)
- 1720 DA0D  16 D1       HELP1:	LD	D,0D1H		; 1. Ebene (BASIC nicht mit durchsuchen)
- 1721 DA0F  CD F124     HELP2:	CALL	MODUL2		; USER-ROM-C Ebene ein
- 1722                   	RESIXA	7,4		; RES 7,(IX+4),A
-    1 DA12  DD CB 04    	 DB	0DDh,0CBh,4
-    2 DA15  BF          	 DB	7 SHL 3 OR 10000111b
- 1723 DA16  D3 86       	OUT	(PORT2),A	; CAOS-ROM C aus!
- 1724 DA18  D5          	PUSH	DE
- 1725 DA19  CB 43       	BIT	0,E		; war CAOS-ROM C ein waehrend erster Suche?
- 1726 DA1B  20 04       	JR	NZ,HELP3	; ja, dann USER-ROM komplett anzeigen
- 1727 DA1D  3A B780     	LD	A,(ARGC)	; USER-ROM
- 1728 DA20  BA          	CP	D		; aktuelle Ebene ein waehrend erster Suche?
- 1729 DA21  C4 B73C     HELP3:	CALL	NZ,MENX8K	; Menueworte aus USER-ROM anzeigen
- 1730 DA24  D1          	POP	DE
- 1731 DA25  3E 10       	LD	A,10H		; Offset zur naechsten Ebene: C1, D1, E1, F1
- 1732 DA27  82          	ADD	A,D		; naechste Ebene berechnen
- 1733 DA28  57          	LD	D,A
- 1734 DA29  30 E4       	JR	NC,HELP2
- 1735                   
- 1736                   ; Schaltzustand CAOS-C und USER-ROM regenerieren:
- 1737 DA2B  ED 5B B77F  	LD	DE,(ARGC-1)	; D = USER-ROM-Schaltzustand vor Suche
- 1738 DA2F  CD F124     	CALL	MODUL2		; USER-ROM C wie zuvor
- 1739 DA32  3A B7A0     	LD	A,(CURSO)
- 1740 DA35  FE 02       	CP	2
- 1741 DA37  C4 F37E     	CALL	NZ,CRLF		; Neue Zeile, falls nicht auf erster Spalte
- 1742 DA3A  C9          	RET
- 1743                   ;-------
- 1744         B73C      MENX8K	EQU	$+CASS-HELPX
- 1745 DA3B  06 20       	LD	B,20H		; Suchgroesse = 8K
- 1746         B73E      MENUX	EQU	$+CASS-HELPX
- 1747 DA3D  21 C000     	LD	HL,0C000H	; Suchbeginn
- 1748 DA40  4D          	LD	C,L
- 1749 DA41  08          MENX0:	EX	AF,AF'
- 1750 DA42  32 B7A0     MENX1:	LD	(CURSO),A	; Cursor-Spalte setzen
- 1751 DA45  08          	EX	AF,AF'
- 1752 DA46  CD F85C     	CALL	CLR12		; angefangenes Menuewort loeschen
- 1753                   
- 1754                   ;Menuewort suchen und anzeigen
- 1755 DA49  DD 7E 09    	LD	A,(IX+9)	; Prologbyte
+ 1699                   ;	LD	B,0		; Suchgroesse = 64K (B=0 vom LDIR)
+ 1700 D9E7  3A B802     	LD	A,(MODST+2)	; Schaltzustand USER-ROM
+ 1701 D9EA  32 B780     	LD	(ARGC),A	; hier merken
+ 1702 D9ED  3A B805     	LD	A,(MODST+5)	; Schaltzustand CAOS-ROM C
+ 1703 D9F0  5F          	LD	E,A		; in Register E merken
+ 1704 D9F1  3E 02       	LD	A,2		; Start-Spalte erstes Menuewort
+ 1705 D9F3  08          	EX	AF,AF'		; Position in A' merken
+ 1706 D9F4  21 E4C9     	LD	HL,CLC		; Kassettenpuffer nach Nutzung wieder saebern
+ 1707 D9F7  E5          	PUSH	HL		; Als-RET-Adresse auf Stack legen
+ 1708 D9F8  C3 B700     	JP	CASS		; weiter in Kassettenpuffer
+ 1709                   
+ 1710 D9FB  CD FB78     HELPX:	CALL	COFF
+ 1711 D9FE  CD B73E     	CALL	MENUX		; Menueworte im sichtbaren Bereich anzeigen
+ 1712                   
+ 1713                   ;CAOS ROM C
+ 1714 DA01  CD FB87     	CALL	CON		; CAOS-ROM C einschalten
+ 1715 DA04  CB 43       	BIT	0,E		; war CAOS-ROM C ein waehrend erster Suche?
+ 1716 DA06  CC B73C     	CALL	Z,MENX8K	; nein, Menueworte im CAOS-ROM C anzeigen
+ 1717                   
+ 1718                   ;USER-ROM (ausser BASIC)
+ 1719 DA09  16 D1       HELP1:	LD	D,0D1H		; 1. Ebene (BASIC nicht mit durchsuchen)
+ 1720 DA0B  CD F124     HELP2:	CALL	MODUL2		; USER-ROM-C Ebene ein
+ 1721                   	RESIXA	7,4		; RES 7,(IX+4),A
+    1 DA0E  DD CB 04    	 DB	0DDh,0CBh,4
+    2 DA11  BF          	 DB	7 SHL 3 OR 10000111b
+ 1722 DA12  D3 86       	OUT	(PORT2),A	; CAOS-ROM C aus!
+ 1723 DA14  D5          	PUSH	DE
+ 1724 DA15  CB 43       	BIT	0,E		; war CAOS-ROM C ein waehrend erster Suche?
+ 1725 DA17  20 04       	JR	NZ,HELP3	; ja, dann USER-ROM komplett anzeigen
+ 1726 DA19  3A B780     	LD	A,(ARGC)	; USER-ROM
+ 1727 DA1C  BA          	CP	D		; aktuelle Ebene ein waehrend erster Suche?
+ 1728 DA1D  C4 B73C     HELP3:	CALL	NZ,MENX8K	; Menueworte aus USER-ROM anzeigen
+ 1729 DA20  D1          	POP	DE
+ 1730 DA21  3E 10       	LD	A,10H		; Offset zur naechsten Ebene: C1, D1, E1, F1
+ 1731 DA23  82          	ADD	A,D		; naechste Ebene berechnen
+ 1732 DA24  57          	LD	D,A
+ 1733 DA25  30 E4       	JR	NC,HELP2
+ 1734                   
+ 1735                   ; Schaltzustand CAOS-C und USER-ROM regenerieren:
+ 1736 DA27  ED 5B B77F  	LD	DE,(ARGC-1)	; D = USER-ROM-Schaltzustand vor Suche
+ 1737 DA2B  CD F124     	CALL	MODUL2		; USER-ROM C wie zuvor
+ 1738 DA2E  3A B7A0     	LD	A,(CURSO)
+ 1739 DA31  FE 02       	CP	2
+ 1740 DA33  C4 F37E     	CALL	NZ,CRLF		; Neue Zeile, falls nicht auf erster Spalte
+ 1741 DA36  C9          	RET
+ 1742                   ;-------
+ 1743         B73C      MENX8K	EQU	$+CASS-HELPX
+ 1744 DA37  06 20       	LD	B,20H		; Suchgroesse = 8K
+ 1745         B73E      MENUX	EQU	$+CASS-HELPX
+ 1746 DA39  21 C000     	LD	HL,0C000H	; Suchbeginn
+ 1747 DA3C  4D          	LD	C,L
+ 1748 DA3D  08          MENX0:	EX	AF,AF'
+ 1749 DA3E  32 B7A0     MENX1:	LD	(CURSO),A	; Cursor-Spalte setzen
+ 1750 DA41  08          	EX	AF,AF'
+ 1751 DA42  CD F85C     	CALL	CLR12		; angefangenes Menuewort loeschen
+ 1752                   
+ 1753                   ;Menuewort suchen und anzeigen
+ 1754 DA45  DD 7E 09    	LD	A,(IX+9)	; Prologbyte
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  89
 CD49    INC
 
- 1756 DA4C  ED B1       MENX3:	CPIR
- 1757 DA4E  E0          	RET	PO		; ausgesucht
- 1758 DA4F  ED A1       	CPI			; 2mal nacheinander?
- 1759 DA51  E0          	RET	PO		; ausgesucht
- 1760 DA52  20 F8       	JR	NZ,MENX3	; nicht 2mal
- 1761 DA54  7E          MENX4:	LD	A,(HL)
- 1762 DA55  FE 20       	CP	20h		; Epilog (0..1Fh)?
- 1763 DA57  38 0E       	JR	C,MENX5		; Epilog beendet Menuewort
- 1764 DA59  FE 7B       	CP	'z'+1		; <= 'z'?
- 1765 DA5B  30 E4       	JR	NC,MENX0	; groesser als 'z' -> kein Menuewort
- 1766 DA5D  CD F09E     	CALL	OCHR
- 1767 DA60  ED A1       	CPI			; INC HL, DEC BC
- 1768 DA62  E2 F85C     	JP	PO,CLR12	; BC=0, also ausgesucht
- 1769 DA65  18 ED       	JR	MENX4
- 1770                   
- 1771                   ;Cursor auf naechste Spalte setzen (02h, 0Eh, 1Ah)
- 1772 DA67  3A B7A0     MENX5:	LD	A,(CURSO)
- 1773 DA6A  FE 1A       	CP	1AH
- 1774 DA6C  38 07       	JR	C,MENX6
- 1775 DA6E  CD F37E     	CALL	CRLF		; neue Zeile
- 1776 DA71  3E 02       	LD	A,2		; linke Spalte
- 1777 DA73  18 CD       	JR	MENX1
- 1778                   	;
- 1779 DA75  FE 0E       MENX6:	CP	0EH
- 1780 DA77  3E 0E       	LD	A,0EH		; mittlere Spalte
- 1781 DA79  38 C7       	JR	C,MENX1
- 1782 DA7B  3E 1A       	LD	A,1AH		; rechte Spalte
- 1783 DA7D  18 C3       	JR	MENX1
- 1784 DA7F              MENEND:	
- 1785                   ;-------------------------------------------------------------------------------
- 1786                   ;
- 1787                   ; Anzeige CAOS-Version (Titelzeile) in Kurz- oder Langform
- 1788                   ;
- 1789                   ;PE:	A=0	Kurzform ohne Datum
- 1790                   ;	A<>0	Langform mit Datum
- 1791 DA7F  AF          SHORT:	XOR	A		; Kurzform
- 1792 DA80  F5          VER:	PUSH	AF
- 1793 DA81  CD F0F5     	CALL	OSTR
- 1794 DA84  0C 0A       	DB	0CH,LF
- 1795 DA86  2A 20 4B 43 	DB	'* KC-CAOS 4.9'
- 1796         0000      if beta
- 1798                   endif
- 1799 DA93  00          	DB	0
- 1800 DA94  F1          	POP	AF
- 1801 DA95  B7          	OR	A
- 1802 DA96  28 11       	JR	Z,VER1
- 1803 DA98  CD F0F5     	CALL	OSTR
- 1804 DA9B  20 28       	DB	' ('
- 1805                   	DATUM			; Versionsdatum
-    1 DA9D  30 34 2E 31 	DB	'04.10.2026'	; Versionsdatum nur hier aendern!
- 1806 DAA7  29 00       	DB	')',0
- 1807 DAA9  CD F085     VER1:	CALL	SPACE
- 1808 DAAC  CD D64F     	CALL	DLIST		; aktuelles Device anzeigen
- 1809 DAAF  CD F0F5     	CALL	OSTR
- 1810 DAB2  20 2A 00    	DB	' *',0
- 1811 DAB5  C9          	RET
- 1812                   
- 1813                   	ABSFILL	0DAB8h,<ROM-D-Ende>
+ 1755 DA48  ED B1       MENX3:	CPIR
+ 1756 DA4A  E0          	RET	PO		; ausgesucht
+ 1757 DA4B  ED A1       	CPI			; 2mal nacheinander?
+ 1758 DA4D  E0          	RET	PO		; ausgesucht
+ 1759 DA4E  20 F8       	JR	NZ,MENX3	; nicht 2mal
+ 1760 DA50  7E          MENX4:	LD	A,(HL)
+ 1761 DA51  FE 20       	CP	20h		; Epilog (0..1Fh)?
+ 1762 DA53  38 0E       	JR	C,MENX5		; Epilog beendet Menuewort
+ 1763 DA55  FE 7B       	CP	'z'+1		; <= 'z'?
+ 1764 DA57  30 E4       	JR	NC,MENX0	; groesser als 'z' -> kein Menuewort
+ 1765 DA59  CD F09E     	CALL	OCHR
+ 1766 DA5C  ED A1       	CPI			; INC HL, DEC BC
+ 1767 DA5E  E2 F85C     	JP	PO,CLR12	; BC=0, also ausgesucht
+ 1768 DA61  18 ED       	JR	MENX4
+ 1769                   
+ 1770                   ;Cursor auf naechste Spalte setzen (02h, 0Eh, 1Ah)
+ 1771 DA63  3A B7A0     MENX5:	LD	A,(CURSO)
+ 1772 DA66  FE 1A       	CP	1AH
+ 1773 DA68  38 07       	JR	C,MENX6
+ 1774 DA6A  CD F37E     	CALL	CRLF		; neue Zeile
+ 1775 DA6D  3E 02       	LD	A,2		; linke Spalte
+ 1776 DA6F  18 CD       	JR	MENX1
+ 1777                   	;
+ 1778 DA71  FE 0E       MENX6:	CP	0EH
+ 1779 DA73  3E 0E       	LD	A,0EH		; mittlere Spalte
+ 1780 DA75  38 C7       	JR	C,MENX1
+ 1781 DA77  3E 1A       	LD	A,1AH		; rechte Spalte
+ 1782 DA79  18 C3       	JR	MENX1
+ 1783 DA7B              MENEND:	
+ 1784                   ;-------------------------------------------------------------------------------
+ 1785                   ;
+ 1786                   ; Anzeige CAOS-Version (Titelzeile) in Kurz- oder Langform
+ 1787                   ;
+ 1788                   ;PE:	A=0	Kurzform ohne Datum
+ 1789                   ;	A<>0	Langform mit Datum
+ 1790 DA7B  AF          SHORT:	XOR	A		; Kurzform
+ 1791 DA7C  F5          VER:	PUSH	AF
+ 1792 DA7D  CD F0F5     	CALL	OSTR
+ 1793 DA80  0C 0A       	DB	0CH,LF
+ 1794 DA82  2A 20 4B 43 	DB	'* KC-CAOS 4.9'
+ 1795         0000      if beta
+ 1797                   endif
+ 1798 DA8F  00          	DB	0
+ 1799 DA90  F1          	POP	AF
+ 1800 DA91  B7          	OR	A
+ 1801 DA92  28 11       	JR	Z,VER1
+ 1802 DA94  CD F0F5     	CALL	OSTR
+ 1803 DA97  20 28       	DB	' ('
+ 1804                   	DATUM			; Versionsdatum
+    1 DA99  31 37 2E 31 	DB	'17.11.2026'	; Versionsdatum nur hier aendern!
+ 1805 DAA3  29 00       	DB	')',0
+ 1806 DAA5  CD F085     VER1:	CALL	SPACE
+ 1807 DAA8  CD D64F     	CALL	DLIST		; aktuelles Device anzeigen
+ 1808 DAAB  CD F0F5     	CALL	OSTR
+ 1809 DAAE  20 2A 00    	DB	' *',0
+ 1810 DAB1  C9          	RET
+ 1811                   
+ 1812                   	ABSFILL	0DAB8h,<ROM-D-Ende>
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page  90
 CD49    INC
 
-    7 DAB6  FF FF       	  DS	0DAB8h - $,0FFh
-  136         0001      if duenn
-  137                   	INCLUDE	DAB8DFFF.INC	; IBM-Zeichensatz duenn
+    7 DAB2  FF FF FF FF 	  DS	0DAB8h - $,0FFh
+  137         0001      if duenn
+  138                   	INCLUDE	DAB8DFFF.INC	; IBM-Zeichensatz duenn
     1                   ;*****************************************
     2                   ;**	CAOS 4.8 IBM-Zeichensatz	**
     3                   ;**					**
@@ -5633,10 +5633,10 @@ DAB8DFFFINC
   189 DFE8  30 48 10 20 	DB	030H, 048H, 010H, 020H, 078H, 000H, 000H, 000H	; FEh
   190 DFF0  00 00 3C 3C 	DB	000H, 000H, 03CH, 03CH, 03CH, 03CH, 000H, 000H	; FEh
   191 DFF8  FF 81 81 81 	DB	0FFH, 081H, 081H, 081H, 081H, 081H, 081H, 0FFH	; FFh
-  138                   else
-  140                   endif
-  141                   
-  142                   	INCLUDE	CE49.INC	; ROM-E (E000-EDFF)
+  139                   else
+  141                   endif
+  142                   
+  143                   	INCLUDE	CE49.INC	; ROM-E (E000-EDFF)
     1                   ;*****************************************
     2                   ;**	CAOS 4.9	ROM E		**
     3                   ;**					**
@@ -8348,8 +8348,8 @@ CE49    INC
  2567 EDCE  E487        	DW	TCSRI		; 05/0B Eingabedatei schliessen
  2568 EDD0  ED67        	DW	VER0		; 06: Abfrage Treiber-Version
  2569 EDD2  E071        	DW	NOK		; 07: Treiberspezifische Funktionen (nicht benutzt)
- 2570 EDD4  D76E        	DW	TLIST		; 08: DIR = TAPELIST
- 2571 EDD6  D803        	DW	MOT		; 09: CD  = Kassette ein/aus (statt Laufwerkwechsel)
+ 2570 EDD4  D76A        	DW	TLIST		; 08: DIR = TAPELIST
+ 2571 EDD6  D7FF        	DW	MOT		; 09: CD  = Kassette ein/aus (statt Laufwerkwechsel)
  2572 EDD8  F335        	DW	ERR1		; 10: ERA - nicht vorgesehen
  2573 EDDA  F335        	DW	ERR1		; 11: REN - nicht vorgesehen
  2574                   
@@ -8371,7 +8371,7 @@ CE49    INC
  2587 EDF0  ED67        	DW	VER0		; 06: Abfrage Treiber-Version
  2588 EDF2  E071        	DW	NOK		; 07: Treiberspezifische Funktionen (nicht benutzt)
  2589 EDF4  D38E        	DW	FDIR		; 08: DIR = Verzeichnisanzeige mit Maske
- 2590 EDF6  D6E1        	DW	DRIVE		; 09: CD  = Laufwerkwechsel
+ 2590 EDF6  D6DD        	DW	DRIVE		; 09: CD  = Laufwerkwechsel
  2591 EDF8  D445        	DW	FERA		; 10: ERA = Datei loeschen
  2592 EDFA  D488        	DW	FREN		; 11: REN = Datei umbenennen
  2593                   
@@ -8388,9 +8388,9 @@ CE49    INC
  2603                   
  2604 EDFF              VERSION:
  2605 EDFF  48          	DB	48H		; CAOS-Version 4.8
-  143 EE00              LARGE:
-  144         0001      if duenn
-  145                   	INCLUDE	EE00EFFF.INC	; Zeichensatz Grossbuchstaben duenn
+  144 EE00              LARGE:
+  145         0001      if duenn
+  146                   	INCLUDE	EE00EFFF.INC	; Zeichensatz Grossbuchstaben duenn
     1                   ;*****************************************
     2                   ;**	CAOS 4.8 Zeichensatz Gross	**
     3                   ;**					**
@@ -8472,9 +8472,9 @@ EE00EFFFINC
    76 EFE8  00 FC 04 04 	DB	000H, 0FCH, 004H, 004H, 000H, 000H, 000H, 000H	; 5Dh
    77 EFF0  10 28 44 00 	DB	010H, 028H, 044H, 000H, 000H, 000H, 000H, 000H	; 5Eh
    78 EFF8  00 00 00 00 	DB	000H, 000H, 000H, 000H, 000H, 000H, 000H, 0FFH	; 5Fh _
-  146                   else
-  148                   endif
-  149                   	INCLUDE	CF49.INC	; ROM-F (F000-FDFF)
+  147                   else
+  149                   endif
+  150                   	INCLUDE	CF49.INC	; ROM-F (F000-FDFF)
     1                   ;*****************************************
     2                   ;**	CAOS 4.9	ROM F		**
 SLR180 SuperFast Relocating Macro Assembler     			    SLR180 1.31 Page 140
@@ -8760,11 +8760,11 @@ CF49    INC
   268 F12B  C3 FB75     JROMC2:	JP	CLROMC		; im ROM-C ausfuehren
   269                   
   270 F12E  CD FB87     ESCD:	CALL	CON
-  271 F131  CD D6B8     	CALL	ESCDD		; DEVICE-Umschaltung
+  271 F131  CD D6B9     	CALL	ESCDD		; DEVICE-Umschaltung
   272 F134  18 E5       	JR	ESC61
   273                   
   274 F136  CD FB87     ESCH:	CALL	CON
-  275 F139  CD D9B5     	CALL	HELP		; alle erreichbaren Menueworte auflisten
+  275 F139  CD D9B1     	CALL	HELP		; alle erreichbaren Menueworte auflisten
   276 F13C  ED 5B B7A0  	LD	DE,(CURSO)	; aktuelle Cursorposition
   277 F140  1E 00       	LD	E,0		; jedoch Spalte 0 setzen
   278 F142  18 DB       	JR	MCOFF
@@ -8924,7 +8924,7 @@ CF49    INC
   425 F21D  7F7F        	DW	7F7FH
   426 F21F  4D 45 4E 55 	DB	'MENU',1
   427 F224  E1          	POP	HL		; Stack clear
-  428 F225  01 DA7F     MEN0:	LD	BC,SHORT	; Kurzform CAOS-Titelzeile mit DEVICE anzeigen
+  428 F225  01 DA7B     MEN0:	LD	BC,SHORT	; Kurzform CAOS-Titelzeile mit DEVICE anzeigen
   429 F228  CD FB75     	CALL	CLROMC		; im ROM-C ausfuehren
   430 F22B  3E          	DB	3EH	; LD A,n (uebergeht POP HL)
   431                   ;_____________________________________________________________
@@ -10645,7 +10645,7 @@ CF49    INC
     2 FA98  FF          	 DB	7 SHL 3 OR 11000111b
  2059 FA99  D3 86       	 OUT	(PORT2),A	; CAOS-C einschalten
  2060 FA9B  D9          	EXX
- 2061 FA9C  21 D8C8     	LD	HL,V24POL
+ 2061 FA9C  21 D8C4     	LD	HL,V24POL
  2062 FA9F  F3          	DI
  2063 FAA0  DB 09       	IN	A,(9)		; empfangenes Zeichen von SIO abholen
  2064 FAA2  CD F53F     	CALL	INIEA		; DTR off
@@ -10665,7 +10665,7 @@ CF49    INC
  2078 FABA  26 B8       ISB1:	LD	H,HIGH(MODST)	; Modulsteuerbytespeicher
  2079 FABC  68          	LD	L,B		; Steckplatz
  2080 FABD  CD E391     	CALL	IRMGET		; Schaltzustand vor ISR ermitteln
- 2081 FAC0  21 D8BB     	LD	HL,V24INT	; SIO Kanal B wieder auf Interrupt einstellen
+ 2081 FAC0  21 D8B7     	LD	HL,V24INT	; SIO Kanal B wieder auf Interrupt einstellen
  2082 FAC3  0E 80       	LD	C,80h
  2083 FAC5  F3          	DI
  2084 FAC6  CD F53F     	CALL	INIEA		; initialisieren
@@ -10748,7 +10748,7 @@ CF49    INC
  2151 FB2F  5F          	LD	E,A		; DE = Startadresse
  2152 FB30  CD FA33     	CALL	V24I
  2153 FB33  57          	LD	D,A
- 2154 FB34  21 D8BB     	LD	HL,V24INT	; SIO Kanal B wieder auf Interrupt einstellen
+ 2154 FB34  21 D8B7     	LD	HL,V24INT	; SIO Kanal B wieder auf Interrupt einstellen
  2155 FB37  D9          	EXX
  2156 FB38  78          	 LD	A,B		; gemerkter IRM-Schaltzustand
  2157 FB39  D9          	EXX
@@ -11460,9 +11460,9 @@ CF49    INC
  2638                   ; Adresse FDF8h fest - wird von anderen Programmen (z.B. TEMO) mit genutzt!
  2639                   
  2640 FDF8  80 40 20 10 BITTAB:	DB	80H,40H,20H,10H,8,4,2,1
-  150 FE00              SMALL:
-  151         0001      if duenn
-  152                   	INCLUDE	FE00FFFF.INC	; Zeichensatz Grossbuchstaben duenn
+  151 FE00              SMALL:
+  152         0001      if duenn
+  153                   	INCLUDE	FE00FFFF.INC	; Zeichensatz Grossbuchstaben duenn
     1                   ;*****************************************
     2                   ;**	CAOS 4.8 Zeichensatz Klein	**
     3                   ;**					**
@@ -11547,12 +11547,12 @@ FE00FFFFINC
    76 FFE8  00 44 00 44 	DB	000H, 044H, 000H, 044H, 044H, 044H, 03AH, 000H	; 7Dh
    77 FFF0  38 44 44 58 	DB	038H, 044H, 044H, 058H, 044H, 044H, 058H, 040H	; 7Eh
    78 FFF8  FF 81 81 81 	DB	0FFH, 081H, 081H, 081H, 081H, 081H, 081H, 0FFH	; 7Fh
-  153                   else
-  155                   endif
-  156                   	.DEPHASE
-  157                   
+  154                   else
+  156                   endif
+  157                   	.DEPHASE
+  158                   
     2                   	END
  0 Error(s) Detected.
- 16512 Absolute Bytes. 1324 Symbols Detected.
+ 16512 Absolute Bytes. 1323 Symbols Detected.
 H, 000H, 044H, 044H, 028H, 028H, 010H, 000H	; 76h v
-   70 FFB8  00 00 44 44 	DB	000H, 000H, 044H, 044H, 054H, 054H,
+   70 FFB8 

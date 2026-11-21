@@ -3,7 +3,7 @@
 ;**					**
 ;**	Adresse:  D000h bis DAB7h	**
 ;**					**
-;**	letzte Aenderung: 27.09.2026	**
+;**	letzte Aenderung: 17.11.2026	**
 ;*****************************************
 
 ;	ORG	0D000H
@@ -1058,7 +1058,7 @@ SET_DD:	CP	9
 	JR	NC,SETD1	; A = 9-FF
 	CP	8
 	JR	NZ,SETD0	; A = 0-7
-	CALL	Z,DNAME		; Bei A=8: Treibernummer aus Name berechnen
+SETD8:	CALL	Z,DNAME		; Bei A=8: Treibernummer aus Name berechnen
 	RET	C		; Fehler
 SETD0:	; bei A=0..7 neues DEVICE einstellen
 	LD	C,A		; Nr. zum Vergleich merken
@@ -1132,7 +1132,7 @@ DLI5:	ld	a,l
 	CALL	OSTR
 	DB	8,')',0
 	POP	AF
-	JR	DLI8		; neue Zeile
+	JP	CRLF		; neue Zeile
 
 ; DEVICE-Nr. aus DEVICE-Name ermitteln
 ; PE	DE	Zeichenkette mit (Nummer oder) Name
@@ -1188,21 +1188,20 @@ ESCDD:	CALL	CRLF		; neue Zeile
 	CALL	DLI3		; Treiber auflisten
 DLI6:	CALL	OSTR
 	DB	2,'?',0		; Eingabeaufforderung anzeigen
-	CALL	KBD		; Tastatureingabe
-	CP	'0'
-	JR	C,DLI6		; Eingabewert zu klein!
-	CP	'8'
-	JR	NC,DLI6		; zu gross
-	push	af
-	AND	0FH
-	CALL	SET_DD		; Treiber einstellen
-	jr	nc,DLI7		; kein Fehler
-	pop	af
-	jr	DLI6		; wiederholen
-	;
-DLI7:	pop	af
-	call	OCHR		; anzeigen
-DLI8:	jp	crlf		; neue Zeile
+	LD	HL,L3SIZ	; Anzahl ESC-Sequenzen merken
+	LD	C,(HL)		; und begrenzen auf 0-C,
+	LD	(HL),13		; damit ESC-D nicht nochmal aufgerufen werden kann
+	CALL	INLIN		; Eingabe Zeichenkette
+	LD	(HL),C
+	RET	C		; BRK
+	INC	DE		; Position nach dem Fragezeichen
+	LD	A,(DE)		; erstes Zeichen
+	AND	0DFH		; 0 oder leer?
+	RET	Z		; nichts eingegeben
+	XOR	A
+	CALL	SETD8		; DEVICE einstellen
+	JP	C,ERRM		; Eingabe war fehlerhaft
+	RET
 ;
 ; Floppy-Treiber Funktion 1: Laufwerkwechsel (DEP 2.0)
 ; PE:	DE	Zeichenkette neues Laufwerk
